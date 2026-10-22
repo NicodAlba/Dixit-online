@@ -125,14 +125,32 @@ public class GameService {
         return gameRepository.save(game);
     }
 
+    @Transactional
+    public Game findByIdForUpdate(Integer id) {
+        return gameRepository.findByIdForUpdate(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Game", "id", id));
+    }
+
+    @Transactional(rollbackFor = {PlayerAlreadyInGameException.class, TooManyPlayersException.class})
+    public Game joinGame(Integer gameId, User user, String password)
+        throws PlayerAlreadyInGameException, TooManyPlayersException {
+        Game game = findByIdForUpdate(gameId);
+        if (game.getPassword() != null && !game.getPassword().isBlank() && !game.getPassword().equals(password)) {
+            throw new IllegalArgumentException("Incorrect password");
+        }
+        addPlayerToGame(game, user);
+        return game;
+    }
+
+    void ensureLobbyOpen(Game game) {
+        if (game.getStartDate() != null || game.hasFinished() || !game.getTurns().isEmpty()) {
+            throw new IllegalStateException("The game has already started or finished");
+        }
+    }
+
     @Transactional(rollbackFor = {PlayerAlreadyInGameException.class, TooManyPlayersException.class})
     public void addPlayerToGame(Game game, User user) throws PlayerAlreadyInGameException, TooManyPlayersException {
-        Player player = new Player();
-        player.setGame(game);
-        player.setUser(user);
-        playerService.savePlayer(player);
-        user.getPlayers().add(player);
-
+        ensureLobbyOpen(game);
         if (playerInGame(game, user)) {
             throw new PlayerAlreadyInGameException();
         }
@@ -140,7 +158,12 @@ public class GameService {
             throw new TooManyPlayersException();
         }
 
+        Player player = new Player();
+        player.setGame(game);
+        player.setUser(user);
+        playerService.savePlayer(player);
         game.getPlayers().add(player);
+        user.getPlayers().add(player);
         gameRepository.save(game);
     }
 

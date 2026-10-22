@@ -163,7 +163,7 @@ public class GameRestControllerTest {
         Map<String, String> body = new HashMap<>();
         body.put("password", PASSWORD);
 
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+        when(gameService.joinGame(GAME_ID, testUser, PASSWORD)).thenReturn(testGame);
         when(userService.findCurrentUser()).thenReturn(testUser);
 
         mockMvc.perform(patch(BASE_URL + "/{id}/join", GAME_ID)
@@ -172,7 +172,7 @@ public class GameRestControllerTest {
                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk());
 
-        verify(gameService).addPlayerToGame(testGame, testUser);
+        verify(gameService).joinGame(GAME_ID, testUser, PASSWORD);
     }
 
     @Test
@@ -181,7 +181,8 @@ public class GameRestControllerTest {
         Map<String, String> body = new HashMap<>();
         body.put("password", "wrong_pass");
 
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(gameService.joinGame(GAME_ID, testUser, "wrong_pass")).thenThrow(new IllegalArgumentException("Incorrect password"));
 
         mockMvc.perform(patch(BASE_URL + "/{id}/join", GAME_ID)
                 .with(csrf())
@@ -217,21 +218,15 @@ public class GameRestControllerTest {
     @WithMockUser
     void testAcceptInvitationSuccess() throws Exception {
         Integer invId = 100;
-        GameInvitation invitation = new GameInvitation();
-        invitation.setId(invId);
-        invitation.setGameId(GAME_ID);
-        invitation.setInvited(testUser);
-
-        when(gameInvitationRepository.findById(invId)).thenReturn(Optional.of(invitation));
         when(userService.findCurrentUser()).thenReturn(testUser);
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+        when(gameInvitationService.acceptInvitation(invId, testUser)).thenReturn(testGame);
 
         mockMvc.perform(patch(BASE_URL + "/invitations/{invitationId}/accept", invId)
                 .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Invitation successfully accepted!"));
 
-        verify(gameService).addPlayerToGame(testGame, testUser);
+        verify(gameInvitationService).acceptInvitation(invId, testUser);
     }
 
     @Test

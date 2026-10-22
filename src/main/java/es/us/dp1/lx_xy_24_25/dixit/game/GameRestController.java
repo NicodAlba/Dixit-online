@@ -4,8 +4,6 @@ import es.us.dp1.lx_xy_24_25.dixit.auth.payload.response.MessageResponse;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.PlayerAlreadyInGameException;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.TooManyPlayersException;
-import es.us.dp1.lx_xy_24_25.dixit.social.GameInvitation;
-import es.us.dp1.lx_xy_24_25.dixit.social.GameInvitationRepository;
 import es.us.dp1.lx_xy_24_25.dixit.social.GameInvitationService;
 import es.us.dp1.lx_xy_24_25.dixit.social.InvitationDetails;
 import es.us.dp1.lx_xy_24_25.dixit.user.User;
@@ -38,17 +36,15 @@ public class GameRestController {
     private final TurnService turnService;
     private final SimpMessagingTemplate messagingTemplate;
     private final GameInvitationService gameInvitationService;
-    private final GameInvitationRepository gameInvitationRepository;
 
 
     @Autowired
-    public GameRestController(GameService gameService, UserService userService, TurnService turnService, SimpMessagingTemplate messagingTemplate, GameInvitationService gameInvitationService, GameInvitationRepository gameInvitationRepository){
+    public GameRestController(GameService gameService, UserService userService, TurnService turnService, SimpMessagingTemplate messagingTemplate, GameInvitationService gameInvitationService){
         this.gameService = gameService;
         this.userService = userService;
         this.turnService = turnService;
         this.messagingTemplate = messagingTemplate;
         this.gameInvitationService = gameInvitationService;
-        this.gameInvitationRepository = gameInvitationRepository;
     }
 
     @GetMapping
@@ -160,20 +156,15 @@ public class GameRestController {
         @ApiResponse(responseCode = "409", description = "Player is already in the game")
     })
     public ResponseEntity<?> joinGame(@PathVariable Integer id, @RequestBody HashMap<String, String> body) throws TooManyPlayersException, PlayerAlreadyInGameException {
-        Game game = gameService.findById(id);
-
         User currentUser = userService.findCurrentUser();
-
-        String inputPassword = body.get("password");
-        String realPassword = game.getPassword();
-
-        if (realPassword != null && !realPassword.isBlank()) {
-            if (!realPassword.equals(inputPassword)) {
-                return new ResponseEntity<>(new MessageResponse("Incorrect password"), HttpStatus.UNAUTHORIZED);
-            }
+        Game game;
+        try {
+            game = gameService.joinGame(id, currentUser, body.get("password"));
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.UNAUTHORIZED);
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.CONFLICT);
         }
-
-        gameService.addPlayerToGame(game, currentUser);
 
         messagingTemplate.convertAndSend("/topic/game/" + id, game);
 
@@ -288,18 +279,14 @@ public class GameRestController {
         @ApiResponse(responseCode = "409", description = "Player is already in the game")
     })
     public ResponseEntity<MessageResponse> acceptInvitation(@PathVariable Integer invitationId) throws TooManyPlayersException, PlayerAlreadyInGameException {
-        GameInvitation invitation = gameInvitationRepository.findById(invitationId)
-            .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
-        User currentUser = userService.findCurrentUser();
-        Game game = gameService.findById(invitation.getGameId());
-        if (invitation.getInvited().equals(currentUser)) {
-            gameInvitationRepository.delete(invitation);
-            gameService.addPlayerToGame(game, currentUser);
-            messagingTemplate.convertAndSend("/topic/game/" + invitation.getGameId(), game);
-            return new ResponseEntity<>(new MessageResponse("Invitation successfully accepted!"), HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(new MessageResponse("You are not invited to this game"), HttpStatus.FORBIDDEN);
+        Game game;
+        try {
+            game = gameInvitationService.acceptInvitation(invitationId, userService.findCurrentUser());
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.CONFLICT);
         }
+        messagingTemplate.convertAndSend("/topic/game/" + game.getId(), game);
+        return new ResponseEntity<>(new MessageResponse("Invitation successfully accepted!"), HttpStatus.OK);
     }
 
     @PatchMapping("/{id}/spectate/{playerId}")
