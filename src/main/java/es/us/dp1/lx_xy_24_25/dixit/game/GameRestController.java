@@ -22,7 +22,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
@@ -217,11 +216,12 @@ public class GameRestController {
 
     })
     public ResponseEntity<?> startGame(@PathVariable Integer id) {
-        Game game = gameService.findById(id);
-        game.setStartDate(new Date());
-        gameService.addSpectatorsToGame(game);
-        gameService.saveGame(game);
-        turnService.initializeFirstTurn(game);
+        Game game;
+        try {
+            game = turnService.startGame(id, userService.findCurrentUser());
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
         messagingTemplate.convertAndSend("/topic/game/" + id, game);
 
         return new ResponseEntity<>(game, HttpStatus.OK);

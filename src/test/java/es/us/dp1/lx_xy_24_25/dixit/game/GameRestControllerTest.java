@@ -206,13 +206,38 @@ public class GameRestControllerTest {
         verify(gameService).deleteGame(testGame);
     }
 
-    @Test @WithMockUser void testStartGameSuccess() throws Exception {
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+    @Test
+    @WithMockUser
+    void testStartGameSuccess() throws Exception {
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(turnService.startGame(GAME_ID, testUser)).thenReturn(testGame);
         mockMvc.perform(patch(BASE_URL + "/{id}/start", GAME_ID)
             .with(csrf())).andExpect(status().isOk());
-        verify(gameService).saveGame(any(Game.class));
-        verify(turnService).initializeFirstTurn(any(Game.class)); }
+        verify(turnService).startGame(GAME_ID, testUser);
+        verify(messagingTemplate).convertAndSend("/topic/game/" + GAME_ID, testGame);
+    }
 
+    @Test
+    @WithMockUser
+    void testStartGameInvalidState() throws Exception {
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(turnService.startGame(GAME_ID, testUser)).thenThrow(new IllegalStateException("Too few players"));
+        mockMvc.perform(patch(BASE_URL + "/{id}/start", GAME_ID).with(csrf()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Too few players"));
+        verifyNoInteractions(messagingTemplate);
+    }
+
+    @Test
+    @WithMockUser
+    void testStartGameNonLeader() throws Exception {
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(turnService.startGame(GAME_ID, testUser)).thenThrow(
+            new es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException("Only the leader can start the game"));
+        mockMvc.perform(patch(BASE_URL + "/{id}/start", GAME_ID).with(csrf()))
+            .andExpect(status().isForbidden());
+        verifyNoInteractions(messagingTemplate);
+    }
 
     @Test
     @WithMockUser

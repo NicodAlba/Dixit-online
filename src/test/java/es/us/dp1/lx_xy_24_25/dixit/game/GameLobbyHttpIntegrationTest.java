@@ -1,6 +1,10 @@
 package es.us.dp1.lx_xy_24_25.dixit.game;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import es.us.dp1.lx_xy_24_25.dixit.card.CardService;
+import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -15,13 +19,19 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
 
 // No test transaction: every HTTP operation commits or rolls back independently.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = {"spring.jpa.show-sql=false", "spring.jpa.properties.hibernate.format_sql=false"})
+    properties = {"spring.datasource.url=jdbc:h2:mem:lobby-http-${random.uuid}",
+        "spring.jpa.show-sql=false", "spring.jpa.properties.hibernate.format_sql=false"})
 class GameLobbyHttpIntegrationTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private JdbcTemplate jdbc;
+    @SpyBean private CardService cardService;
+    @SpyBean private GameRepository gameRepository;
+    @SpyBean private SimpMessagingTemplate messagingTemplate;
 
     record Account(int id, String token) {}
 
@@ -107,6 +117,195 @@ class GameLobbyHttpIntegrationTest {
         assertStatus(404, accept(missing, invitee));
         assertTrue(hasInvitation(missing, invitee));
         assertEquals(1, count("select count(*) from players where user_id = ?", invitee.id()));
+    }
+
+    @Test
+    void onlyHostCanStartWithThreeOrFourPlayersAndCannotStartTwice() {
+        Account host = account(), second = account(), third = account(), fourth = account(), outsider = account();
+        int id = lobby(null, host);
+        assertStatus(400, start(id, host));
+        assertUnstarted(id, host);
+        join(id, null, second);
+        assertStatus(400, start(id, host));
+        assertUnstarted(id, host);
+        join(id, null, third);
+        assertStatus(403, start(id, second));
+        assertStatus(403, start(id, outsider));
+        assertUnstarted(id, host);
+        assertStatus(200, start(id, host));
+        JsonNode started = assertStarted(id, host, 3);
+        assertStatus(400, start(id, host));
+        assertEquals(started.path("startDate"), read(id, host).path("startDate"));
+        assertStarted(id, host, 3);
+        int four = lobby(null, host, second, third, fourth);
+        assertStatus(200, start(four, host));
+        assertStarted(four, host, 4);
+    }
+
+    @Test
+    void startedAndFinishedGamesRejectBothEntryPathsAndRestart() {
+        Account host = account(), second = account(), third = account(), outsider = account();
+        int id = lobby(null, host, second, third);
+        int invitation = invite(id, host, outsider);
+        assertStatus(200, start(id, host));
+        assertStatus(409, request(HttpMethod.PATCH, "/games/" + id + "/join", outsider, Map.of()));
+        assertStatus(409, accept(invitation, outsider));
+        assertTrue(hasInvitation(invitation, outsider));
+        finishGame(id, host, second, third);
+        JsonNode finished = read(id, host);
+        assertFalse(finished.path("endDate").isNull());
+        assertEquals(6, finished.path("turns").size());
+        assertStatus(409, request(HttpMethod.PATCH, "/games/" + id + "/join", outsider, Map.of()));
+        assertStatus(409, accept(invitation, outsider));
+        assertTrue(hasInvitation(invitation, outsider));
+        assertStatus(400, start(id, host));
+        assertEquals(finished.path("endDate"), read(id, host).path("endDate"));
+        assertEquals(6, count("select count(*) from turns where game_id = ?", id));
+        assertEquals(3, count("select count(*) from players where game_id = ?", id));
+        assertEquals(1, count("select count(*) from players where user_id = ?", outsider.id()));
+    }
+
+    @Test
+    void concurrentStartsInitializeExactlyOnce() throws Exception {
+        Account host = account();
+        int id = lobby(null, host, account(), account());
+        assertEquals(List.of(200, 400), race(
+            () -> start(id, host).getStatusCode().value(),
+            () -> start(id, host).getStatusCode().value()).stream().sorted().toList());
+        assertStarted(id, host, 3);
+    }
+
+    @Test
+    void admissionRacingWithStartLeavesEveryParticipantWithSixCards() throws Exception {
+        Account host = account(), fourth = account();
+        int id = lobby(null, host, account(), account());
+        List<Integer> statuses = race(
+            () -> start(id, host).getStatusCode().value(),
+            () -> request(HttpMethod.PATCH, "/games/" + id + "/join", fourth, Map.of()).getStatusCode().value());
+        assertEquals(200, statuses.get(0));
+        assertTrue(statuses.get(1) == 200 || statuses.get(1) == 409);
+        assertStarted(id, host, statuses.get(1) == 200 ? 4 : 3);
+    }
+
+    @Test
+    void concurrentAcceptanceConsumesInvitationOnlyOnce() throws Exception {
+        Account host = account(), invitee = account();
+        int id = lobby(null, host);
+        int invitation = invite(id, host, invitee);
+        assertEquals(List.of(200, 404), race(
+            () -> accept(invitation, invitee).getStatusCode().value(),
+            () -> accept(invitation, invitee).getStatusCode().value()).stream().sorted().toList());
+        assertEquals(2, read(id, host).path("players").size());
+        assertEquals(1, count("select count(*) from players where game_id = ? and user_id = ?", id, invitee.id()));
+    }
+
+    @Test
+    void initializationFailureRollsBackDateCardsAndTurnAndPublishesNothing() {
+        Account host = account();
+        int id = lobby(null, host, account(), account());
+        clearInvocations(messagingTemplate);
+        doAnswer(invocation -> {
+            invocation.callRealMethod();
+            throw new IllegalArgumentException("Injected failure after saving the deck");
+        }).when(cardService).initializeDeck(any(Game.class));
+        assertStatus(500, start(id, host));
+        assertUnstarted(id, host);
+        verify(messagingTemplate, never()).convertAndSend(eq("/topic/game/" + id), any(Game.class));
+    }
+
+    @Test
+    void insufficientInitialDeckDoesNotLeaveAPartlyStartedGame() {
+        Account host = account();
+        int id = lobby(null, host, account(), account());
+        doReturn(new ArrayList<>()).when(cardService).initializeDeck(any(Game.class));
+        assertStatus(400, start(id, host));
+        assertUnstarted(id, host);
+    }
+
+    @Test
+    void creationFailureDoesNotLeaveAnOrphanHostParticipation() {
+        Account host = account();
+        doThrow(new IllegalArgumentException("Injected failure saving game"))
+            .when(gameRepository).save(any(Game.class));
+        assertStatus(500, request(HttpMethod.POST, "/games", host, Map.of()));
+        assertEquals(1, count("select count(*) from players where user_id = ?", host.id()));
+        assertEquals(0, count("select count(*) from games where leader_id = ?", host.id()));
+    }
+
+    @Test
+    void admissionAndStartNotificationsArePublishedAfterCommit() {
+        Account host = account(), third = account();
+        int id = lobby(null, host, account());
+        clearInvocations(messagingTemplate);
+        doAnswer(invocation -> {
+            assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
+            return invocation.callRealMethod();
+        }).when(messagingTemplate).convertAndSend(eq("/topic/game/" + id), any(Game.class));
+        join(id, null, third);
+        assertStatus(200, start(id, host));
+        verify(messagingTemplate, times(2)).convertAndSend(eq("/topic/game/" + id), any(Game.class));
+    }
+
+    private ResponseEntity<JsonNode> start(int id, Account host) {
+        return request(HttpMethod.PATCH, "/games/" + id + "/start", host, null);
+    }
+
+    private void assertUnstarted(int id, Account host) {
+        JsonNode game = read(id, host);
+        assertTrue(game.path("startDate").isNull());
+        assertEquals(0, count("select count(*) from turns where game_id = ?", id));
+        assertEquals(0, count("select count(*) from cards where game_id = ?", id));
+        for (JsonNode player : game.path("players")) assertEquals(0, player.path("cards").size());
+    }
+
+    private JsonNode assertStarted(int id, Account host, int participants) {
+        JsonNode game = read(id, host);
+        assertEquals(participants, game.path("players").size());
+        assertFalse(game.path("startDate").isNull());
+        assertTrue(game.path("endDate").isNull());
+        assertEquals(1, count("select count(*) from turns where game_id = ?", id));
+        assertEquals(36, count("select count(*) from cards where game_id = ?", id));
+        assertEquals(1, game.path("turns").size());
+        JsonNode turn = game.path("turns").get(0);
+        assertEquals("WAITING_STORYTELLER_CARD", turn.path("state").asText());
+        int storyteller = turn.path("storyteller").path("id").asInt();
+        Set<Integer> players = new HashSet<>();
+        for (JsonNode player : game.path("players")) {
+            players.add(player.path("id").asInt());
+            assertEquals(6, player.path("cards").size());
+        }
+        assertTrue(players.contains(storyteller));
+        return game;
+    }
+
+    private void finishGame(int id, Account host, Account... others) {
+        Map<Integer, Account> accounts = new HashMap<>();
+        List<Account> users = new ArrayList<>(List.of(others));
+        users.add(host);
+        for (Account user : users) {
+            accounts.put(jdbc.queryForObject("select id from players where game_id = ? and user_id = ?",
+                Integer.class, id, user.id()), user);
+        }
+        for (int round = 0; round < 6; round++) {
+            JsonNode game = read(id, host);
+            JsonNode turn = game.path("turns").get(game.path("turns").size() - 1);
+            int turnId = turn.path("id").asInt(), storyteller = turn.path("storyteller").path("id").asInt();
+            Map<Integer, Integer> cards = new LinkedHashMap<>();
+            for (JsonNode player : game.path("players")) {
+                cards.put(player.path("id").asInt(), player.path("cards").get(0).path("id").asInt());
+            }
+            int answer = cards.get(storyteller);
+            assertStatus(200, request(HttpMethod.PUT, "/turns/" + turnId + "/answer/" + answer, accounts.get(storyteller), null));
+            assertStatus(200, request(HttpMethod.PUT, "/turns/" + turnId + "/clue", accounts.get(storyteller), "clue " + round));
+            for (int player : cards.keySet()) if (player != storyteller) {
+                assertStatus(200, request(HttpMethod.POST, "/turns/" + turnId + "/play-card/" + cards.get(player) + "/" + player,
+                    accounts.get(player), null));
+            }
+            for (int player : cards.keySet()) if (player != storyteller) {
+                assertStatus(200, request(HttpMethod.POST, "/turns/" + turnId + "/vote/" + player + "/" + answer,
+                    accounts.get(player), null));
+            }
+        }
     }
 
     private Account account() {
