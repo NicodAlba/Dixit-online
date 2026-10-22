@@ -1,4 +1,6 @@
-# Registro de desarrollo
+# Registro de desarrollo y razonamiento técnico
+
+Este es el único registro técnico del proyecto desde DEV-006, por indicación del propietario. Cada intervención debe explicar problema y evidencia, comportamiento esperado, causa, solución y alternativas relevantes, archivos, justificación, impacto, verificaciones reales, límites, estado y referencias de Git/PR. No basta con enumerar archivos o responder en el chat. Se preservan las entradas históricas; el documento externo de arquitectura queda integrado y retirado.
 
 ## 2026-10-22 — DEV-001 — Versión inicial local
 
@@ -23,6 +25,24 @@
 - **Limitaciones y trabajo pendiente:** no se ha probado la interfaz React ni la recepción STOMP en varios navegadores; no se ha ejecutado la suite completa ni medido cobertura actual. La primera ejecución de tests dentro del sandbox no pudo inicializar el agente de Mockito; fuera de esa restricción se reprodujo el error y se ejecutaron las 17 pruebas correctamente, sin modificar herramientas. Queda pendiente revisar por separado el cómputo de `checkPlayAchievements` (participaciones nulas o no finalizadas), reparto de cuatro jugadores y permisos descritos por el arquitecto.
 - **Estado final:** corregido y verificado; commit original local `9e42f03`, equivalente público sin contratos `c83057d`. Versión inicial local previa: `92fad38`.
 
+### Detalle de reproducción y causa de DEV-002, recuperado del documento externo
+
+
+1. Compilar el backend con Java 21: `mvn -o -DskipTests compile`; resultado `BUILD SUCCESS`.
+2. Arrancar una instancia aislada del backend, accesible solo en `127.0.0.1:18080`, con una base H2 en memoria propia (`jdbc:h2:mem:dixit-dev-repro`). No se usaron datos de otra aplicación ni se modificó la configuración versionada para esta prueba.
+3. Crear tres cuentas PLAYER mediante `POST /api/v1/auth/signup` e iniciar sesión mediante `POST /api/v1/auth/signin`.
+4. Crear una partida con `POST /api/v1/games`, unir a los otros dos usuarios con `PATCH /api/v1/games/{id}/join` e iniciarla con `PATCH /api/v1/games/{id}/start`.
+5. Jugar los seis turnos: carta del narrador (`PUT /api/v1/turns/{turnId}/answer/{cardId}`), pista (`PUT /api/v1/turns/{turnId}/clue`), cartas de los otros participantes (`POST /api/v1/turns/{turnId}/play-card/{cardId}/{playerId}`) y votos (`POST /api/v1/turns/{turnId}/vote/{playerId}/{cardId}`). Se usaron identidades de Player, distintas de las de User. El narrador no votó y no hubo votos propios.
+6. Las primeras cinco rondas se completaron. El último voto de la sexta devolvió HTTP 500. Un GET posterior confirmó que no se habían persistido ese voto ni la finalización: `endDate=null`, cero ganadores, sexto turno en `SHOWING_CARDS` y un solo voto.
+
+### Causa y cambio exacto
+
+`AuthService.createUser` crea un Player sin partida al registrar un PLAYER. Las participaciones reales se crean aparte. Al llegar el último voto, `TurnService` puntúa y llama a la finalización y declaración de ganadores de `GameService`; esta última calcula logros en la misma transacción. `AchievementService.checkTrickAchievements` recorría todas las participaciones y llamaba a `g.getTurns()` también cuando `g` era null. La excepción revertía la transacción de cierre.
+
+Se añadió únicamente `.filter(Objects::nonNull)` después de `.map(Player::getGame)` en `checkTrickAchievements`. Ya existía el mismo criterio en `checkWinAchievements`. No se quitó el Player del registro ni se alteró el cálculo de puntos o el modelo de datos.
+
+La instancia HTTP de prueba se detuvo al terminar. La automatización HTTP y sus logs se guardaron temporalmente fuera del repositorio; no se añadieron herramientas o dependencias. La evidencia reproducible versionada de ese cambio es la prueba de integración, junto con estos pasos y los resultados históricos consignados arriba.
+
 ## 2026-10-22 — DEV-003 — Preparación de GitHub personal
 
 - **Problema y evidencia:** el usuario solicita publicar el proyecto en su GitHub personal como `Dixit-online`, con ramas `main` y `develop`. La instantánea local incluía dos contratos académicos personales; añadirlos a `.gitignore` no los elimina de commits anteriores.
@@ -34,7 +54,23 @@
 - **Limitaciones y trabajo pendiente:** publicación de código de portfolio en desarrollo; no acredita que el juego esté listo para desplegar. La revisión de permisos y privacidad del juego requiere especificación y aprobación aparte. Se conservan informes históricos y recursos académicos por petición original.
 - **Estado final:** publicado en https://github.com/NicodAlba/Dixit-online, repositorio público de NicodAlba con `main` como rama por defecto y ramas `develop` y `codex/fix-registered-game-finish`. Los commits originales permanecen en `local/received-baseline` y `local/prepublication-history`, sin publicarlos; `push.default=simple` y un destino de push inexistente en esas dos ramas evitan su publicación con un push normal. Ambos contratos siguen en disco y están ignorados. Directorio de trabajo conectado únicamente al remoto personal `origin`; no existe remoto universitario. No se ha desplegado ningún servicio.
 
+### Referencias históricas de DEV-003 y DEV-004
+
+No se reinicializó ni se borró `.git` del proyecto. La copia recibida se conserva en `local/received-baseline` (`92fad38`); el historial anterior al saneamiento se conserva hasta `937de50` en `local/prepublication-history`. Ninguna de esas ramas se publicó. Los contratos y dependencias se conservaron en disco, fuera del seguimiento público.
+
+| Commit público | Contenido |
+| --- | --- |
+| `a51879e` | Base recibida, sin contratos en el árbol público |
+| `c83057d` | Arreglo del cierre y regresión, equivalente al original local `9e42f03` |
+| `ea91767` | Exclusiones de publicación y su justificación |
+| `35550d9` | Resultado verificado y publicación de GitHub |
+| `6568416` | Antigua instrucción de mantener el registro externo, sustituida por DEV-006 |
+
+Al cerrar DEV-004, `main` y `develop` estaban sincronizadas en `6568416` y el directorio de trabajo estaba limpio. Es un estado histórico; DEV-005 y siguientes describen la evolución posterior. El proyecto conserva Spring Boot 3.5.5/Java 21, React 18, JPA, JWT, REST y STOMP/SockJS; no se ha reconstruido ni desplegado. El cierre corregido respetó la arquitectura por capas y el modelo existente.
+
 ## 2026-10-22 — DEV-004 — Registro externo obligatorio
+
+> Entrada histórica. El propietario sustituye esta obligación por el registro único en este fichero mediante DEV-006; ya no debe mantenerse un documento externo paralelo.
 
 - **Problema y evidencia:** el propietario pide mantener siempre las explicaciones en el fichero externo `../# DIXIT — Software Architecture & SDD Sp.md`. Se localizó fuera del repositorio y contenía únicamente `#`; DEV-001 a DEV-003 estaban documentados aquí y en el chat.
 - **Solución:** completar el documento externo con las intervenciones ejecutadas, pasos de reproducción, causa, cambio, archivos, resultados, Git, publicación y límites; añadir `AGENTS.md` para recordar la actualización obligatoria de ambos registros en futuros trabajos del proyecto.
@@ -58,3 +94,15 @@
 - **Riesgos y limitaciones:** el modelo no distingue una cancelación de una finalización si ambas usaran `endDate`. En el código actual, el cierre normal establece esa fecha y abandonar como líder elimina la partida. Se conserva `endDate` como indicador existente y se exige inicio, sin inventar estados ni migrar datos. No se revocan logros ya desbloqueados indebidamente por el comportamiento anterior: corregirlos requeriría una decisión de datos aparte. No se ha repetido la comprobación HTTP de DEV-002 ni probado UI/STOMP en esta intervención; la verificación actual del flujo completo es de integración de servicios/JPA, no una transacción HTTP ni un commit de base de datos fuera del test. No se ejecuta toda la suite ni se mide cobertura.
 - **Rama e integración:** `fix/play-achievements-count`, creada desde `develop` en `6568416`. Se prepara PR hacia `develop` y se conservarán los commits; no se integra en `main`, no se publica versión y no se despliega. Los enlaces y resultados de publicación se añaden al cierre.
 - **Estado final:** corrección acotada implementada y verificada; documentación y revisión del diff listas para el commit de esta unidad.
+
+## 2026-10-22 — DEV-006 — Unificación del registro arquitectónico
+
+- **Problema y evidencia:** `../# DIXIT — Software Architecture & SDD Sp.md` repetía gran parte de DEV-001 a DEV-004 y exigía mantener otro fichero fuera de Git. Se leyó y contrastó su contenido con este registro; el propietario autorizó expresamente fusionarlo con el changelog y borrarlo.
+- **Comportamiento esperado:** un único documento versionado que explique tanto lo realizado como sus motivos, sin inventar un nuevo nombre o ubicación ni duplicar registros.
+- **Causa y solución elegida:** dos documentos con obligaciones solapadas. Se conserva el nombre existente `docs/CHANGELOG_DEV.md`, se incorporan los pasos HTTP y la explicación de la causa de DEV-002 que faltaban, las equivalencias de commits y estados históricos de DEV-003/004 y la obligación de registrar razonamiento técnico. No se repiten resultados ya presentes ni se presentan pruebas históricas como ejecuciones nuevas. Se actualiza `AGENTS.md` para exigir solo este registro y se retira el fichero externo exacto, sin crear otro paralelo.
+- **Alternativas descartadas:** mover o copiar íntegramente el documento externo a la raíz mantendría duplicidades; se aplica la unificación solicitada por el propietario. No se requiere ADR porque no cambia la arquitectura de la aplicación.
+- **Archivos modificados:** `AGENTS.md` y `docs/CHANGELOG_DEV.md`; eliminación autorizada del Markdown externo (fuera de Git).
+- **Impacto:** solo documentación y procedimiento. Las instrucciones históricas de conservar dos registros quedan sustituidas. No hay cambios adicionales de código, reglas, datos, API o frontend. Se conservan las atribuciones, D1/D2/D3, contratos privados locales y ramas de recuperación.
+- **Verificación y resultados:** lectura y cotejo de ambos documentos; comprobación de presencia de DEV-001 a DEV-006, pasos de reproducción, causa, resultados, límites e identificadores históricos; revisión de enlaces internos y diff sin errores de espacios. Las 26 pruebas de DEV-005 son la ejecución de código de esta intervención; no se repiten por esta consolidación documental.
+- **Limitaciones y pendientes:** el archivo externo no estaba en Git, por lo que su retirada se comprueba en disco y no figura como una eliminación en el diff del repositorio. Sus datos técnicos relevantes quedan recuperables en este historial versionado. El resto de hallazgos del proyecto sigue pendiente, comenzando por creación, acceso e inicio de partidas; permisos requieren especificación y aprobación.
+- **Rama y estado:** `fix/play-achievements-count`, consolidación documental complementaria solicitada durante DEV-005. Se comprueban retirada del externo y publicación antes del cierre; PR y commit asociados se registran en la entrada de cierre.
