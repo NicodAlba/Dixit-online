@@ -4,6 +4,8 @@ import es.us.dp1.lx_xy_24_25.dixit.card.Card;
 import es.us.dp1.lx_xy_24_25.dixit.card.CardRepository;
 import es.us.dp1.lx_xy_24_25.dixit.card.CardService;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
+import es.us.dp1.lx_xy_24_25.dixit.user.User;
 import es.us.dp1.lx_xy_24_25.dixit.player.Player;
 import es.us.dp1.lx_xy_24_25.dixit.player.PlayerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -97,6 +100,19 @@ public class TurnService {
 
 
     @Transactional
+    public Game startGame(Integer gameId, User user) {
+        Game game = gameService.findByIdForUpdate(gameId);
+        if (game.getLeader() == null || !game.getLeader().getId().equals(user.getId())) {
+            throw new AccessDeniedException("Only the leader can start the game");
+        }
+        gameService.ensureLobbyOpen(game);
+        game.setStartDate(new Date());
+        gameService.addSpectatorsToGame(game);
+        initializeFirstTurn(game);
+        return game;
+    }
+
+    @Transactional
     public void initializeFirstTurn(Game game) {
         Turn turn = new Turn();
         turn.setGame(game);
@@ -108,6 +124,9 @@ public class TurnService {
         List<Card> deck = cardService.initializeDeck(game);
 
         List<Card> dealtCards = game.dealCards(deck, 6);
+        if (dealtCards.size() != game.getPlayers().size() * 6) {
+            throw new IllegalStateException("Not enough cards to deal six to every player");
+        }
         persistDealtCards(dealtCards);
 
         game.getTurns().add(turn);

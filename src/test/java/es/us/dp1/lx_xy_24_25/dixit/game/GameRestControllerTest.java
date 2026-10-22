@@ -163,7 +163,7 @@ public class GameRestControllerTest {
         Map<String, String> body = new HashMap<>();
         body.put("password", PASSWORD);
 
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+        when(gameService.joinGame(GAME_ID, testUser, PASSWORD)).thenReturn(testGame);
         when(userService.findCurrentUser()).thenReturn(testUser);
 
         mockMvc.perform(patch(BASE_URL + "/{id}/join", GAME_ID)
@@ -172,7 +172,7 @@ public class GameRestControllerTest {
                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk());
 
-        verify(gameService).addPlayerToGame(testGame, testUser);
+        verify(gameService).joinGame(GAME_ID, testUser, PASSWORD);
     }
 
     @Test
@@ -181,7 +181,8 @@ public class GameRestControllerTest {
         Map<String, String> body = new HashMap<>();
         body.put("password", "wrong_pass");
 
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(gameService.joinGame(GAME_ID, testUser, "wrong_pass")).thenThrow(new IllegalArgumentException("Incorrect password"));
 
         mockMvc.perform(patch(BASE_URL + "/{id}/join", GAME_ID)
                 .with(csrf())
@@ -205,33 +206,52 @@ public class GameRestControllerTest {
         verify(gameService).deleteGame(testGame);
     }
 
-    @Test @WithMockUser void testStartGameSuccess() throws Exception {
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+    @Test
+    @WithMockUser
+    void testStartGameSuccess() throws Exception {
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(turnService.startGame(GAME_ID, testUser)).thenReturn(testGame);
         mockMvc.perform(patch(BASE_URL + "/{id}/start", GAME_ID)
             .with(csrf())).andExpect(status().isOk());
-        verify(gameService).saveGame(any(Game.class));
-        verify(turnService).initializeFirstTurn(any(Game.class)); }
+        verify(turnService).startGame(GAME_ID, testUser);
+        verify(messagingTemplate).convertAndSend("/topic/game/" + GAME_ID, testGame);
+    }
 
+    @Test
+    @WithMockUser
+    void testStartGameInvalidState() throws Exception {
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(turnService.startGame(GAME_ID, testUser)).thenThrow(new IllegalStateException("Too few players"));
+        mockMvc.perform(patch(BASE_URL + "/{id}/start", GAME_ID).with(csrf()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Too few players"));
+        verifyNoInteractions(messagingTemplate);
+    }
+
+    @Test
+    @WithMockUser
+    void testStartGameNonLeader() throws Exception {
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(turnService.startGame(GAME_ID, testUser)).thenThrow(
+            new es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException("Only the leader can start the game"));
+        mockMvc.perform(patch(BASE_URL + "/{id}/start", GAME_ID).with(csrf()))
+            .andExpect(status().isForbidden());
+        verifyNoInteractions(messagingTemplate);
+    }
 
     @Test
     @WithMockUser
     void testAcceptInvitationSuccess() throws Exception {
         Integer invId = 100;
-        GameInvitation invitation = new GameInvitation();
-        invitation.setId(invId);
-        invitation.setGameId(GAME_ID);
-        invitation.setInvited(testUser);
-
-        when(gameInvitationRepository.findById(invId)).thenReturn(Optional.of(invitation));
         when(userService.findCurrentUser()).thenReturn(testUser);
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+        when(gameInvitationService.acceptInvitation(invId, testUser)).thenReturn(testGame);
 
         mockMvc.perform(patch(BASE_URL + "/invitations/{invitationId}/accept", invId)
                 .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Invitation successfully accepted!"));
 
-        verify(gameService).addPlayerToGame(testGame, testUser);
+        verify(gameInvitationService).acceptInvitation(invId, testUser);
     }
 
     @Test
