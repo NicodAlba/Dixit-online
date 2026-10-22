@@ -1,0 +1,55 @@
+.auth-button {
+  padding: 0.8em 1.6em;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 800;
+  color: var(--parchment);
+  background: linear-gradient(180deg, #b85a33, #9b4126);
+  border: 2px solid rgba(122,92,40,0.9);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
+  outline: none;
+}
+
+.auth-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.45);
+}
+
+.auth-button:active {
+  transform: translateY(-1px);
+}
+
+.auth-button-secondary {
+  padding: 0.7em 1.4em;
+  background: linear-gradient(180deg, #b56a47, #9b5131); 
+  color: var(--parchment);
+  border: 2px solid rgba(58,40,30,0.25);
+  border-radius: 8px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.28);
+}
+
+.auth-button-secondary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.45);
+}
+
+.blue{
+  border: solid 2px var(--main-blue-color) !important;
+}
+
+.blue:hover{
+  background-color: var(--main-blue-color) !important;
+  box-shadow: 0px 15px 20px rgba(46, 92, 229, 0.4);
+}
+
+.danger{
+  border: solid 2px var(--main-red-color) !important;
+}
+.danger:hover{
+  background-color: var(--main-red-color) !important;
+  box-shadow: 0px 15px 20px rgba(229, 46, 46, 0.4);
+}

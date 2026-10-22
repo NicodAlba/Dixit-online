@@ -1,0 +1,206 @@
+/* Stats.css - Ajustes: Títulos Azules y Tabla Naranja */
+
+/* --- LAYOUT PRINCIPAL --- */
+.dashboard-container {
+    padding-top: 130px;
+    padding-bottom: 60px;
+    background-color: #fdfbf7;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.centered-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* --- TEXTOS --- */
+.stats-header {
+    color: #2c3e50 !important;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-bottom: 50px;
+    position: relative;
+    text-shadow: none !important;
+}
+
+.stats-header::after {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 4px;
+    background-color: #d35400;
+    margin: 15px auto 0;
+    border-radius: 4px;
+}
+
+.section-title {
+    color: #34495e !important;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-top: 50px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid #dcdde1;
+    padding-bottom: 10px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* --- TABS (PESTAÑAS) --- */
+.custom-nav {
+    justify-content: center;
+    margin-bottom: 40px;
+    border-bottom: none !important;
+    padding: 10px;
+    background-color: rgba(0,0,0,0.03);
+    border-radius: 50px;
+    display: inline-flex;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.custom-nav-link {
+    border: none !important;
+    background: transparent !important;
+    color: #7f8c8d !important;
+    font-weight: 700;
+    padding: 12px 30px;
+    margin: 0 5px;
+    border-radius: 50px !important;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.custom-nav-link:hover {
+    color: #d35400 !important;
+    background-color: rgba(211, 84, 0, 0.1) !important;
+}
+
+.custom-nav-link.active {
+    background-color: #d35400 !important;
+    color: white !important;
+    box-shadow: 0 4px 10px rgba(211, 84, 0, 0.3);
+    transform: scale(1.02);
+}
+
+/* --- CARTAS (CARDS) --- */
+.stats-card {
+    border: none !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    box-shadow: 0 8px 20px rgba(44, 62, 80, 0.08);
+    transition: all 0.3s ease;
+    height: 100%;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 4px solid transparent !important;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    border-bottom: 4px solid #d35400 !important;
+    box-shadow: 0 15px 30px rgba(211, 84, 0, 0.15);
+}
+
+.stats-card-body {
+    padding: 25px 15px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    min-height: 150px;
+}
+
+/* CAMBIO 1: Títulos en Azul Oscuro (#2c3e50) en lugar de gris */
+.stats-card-title {
+    color: #2c3e50; 
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+}
+
+.stats-card-value {
+    color: #d35400;
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+.stats-unit {
+    font-size: 0.9rem;
+    color: #95a5a6;
+    font-weight: 600;
+    margin-left: 4px;
+    text-transform: lowercase;
+}
+
+/* --- RANKINGS --- */
+.ranking-table {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(44, 62, 80, 0.1);
+    background: white;
+    border: 1px solid #ecf0f1;
+}
+
+/* CAMBIO 2: Texto del encabezado en Naranja (#e67e22) en lugar de Amarillo */
+.ranking-table thead th {
+    background-color: #2c3e50; /* Fondo Azul Noche */
+    color: #e67e22; /* Naranja Dixit (más legible sobre oscuro que el naranja puro #d35400) */
+    border: none;
+    padding: 18px;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.ranking-table tbody td {
+    padding: 16px;
+    vertical-align: middle;
+    text-align: center;
+    border-bottom: 1px solid #ecf0f1;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.ranking-table tbody tr:hover {
+    background-color: #fff9e6;
+}
+
+/* --- IMÁGENES (CORREGIDO) --- */
+.favourite-card-container {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    background-color: #ffffff;
+    /* CAMBIO: De 50% (círculo) a 16px (rectángulo redondeado) */
+    border-radius: 16px; 
+    border: 1px solid #f0f0f0;
+    min-height: 220px; /* Asegura altura suficiente */
+}
+
+.favourite-card-img {
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(44, 62, 80, 0.15);
+    /* Ajuste para que la carta se vea grande y bien */
+    max-height: 200px; 
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.favourite-card-img:hover {
+    transform: scale(1.05) rotate(2deg);
+    box-shadow: 0 12px 24px rgba(211, 84, 0, 0.2);
+}

@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TurnService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">2025-2026-LI-02</a> &gt; <a href="index.source.html" class="el_package">es.us.dp1.lx_xy_24_25.dixit.game</a> &gt; <span class="el_source">TurnService.java</span></div><h1>TurnService.java</h1><pre class="source lang-java linenums">package es.us.dp1.lx_xy_24_25.dixit.game;
+
+import es.us.dp1.lx_xy_24_25.dixit.card.Card;
+import es.us.dp1.lx_xy_24_25.dixit.card.CardRepository;
+import es.us.dp1.lx_xy_24_25.dixit.card.CardService;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
+import es.us.dp1.lx_xy_24_25.dixit.player.Player;
+import es.us.dp1.lx_xy_24_25.dixit.player.PlayerRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+
+@Service
+public class TurnService {
+    private final TurnRepository turnRepository;
+    private final CardRepository cardRepository;
+    private final PlayerRepository playerRepository;
+    private final GameService gameService;
+    private final CardService cardService;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    public TurnService(TurnRepository turnRepository, CardRepository cardRepository, PlayerRepository playerRepository,
+<span class="fc" id="L32">                       GameService gameService, CardService cardService, SimpMessagingTemplate messagingTemplate) {</span>
+<span class="fc" id="L33">        this.turnRepository = turnRepository;</span>
+<span class="fc" id="L34">        this.cardRepository = cardRepository;</span>
+<span class="fc" id="L35">        this.playerRepository = playerRepository;</span>
+<span class="fc" id="L36">        this.gameService = gameService;</span>
+<span class="fc" id="L37">        this.cardService = cardService;</span>
+<span class="fc" id="L38">        this.messagingTemplate = messagingTemplate;</span>
+<span class="fc" id="L39">    }</span>
+    private void notifyGameUpdate(Game game) {
+<span class="fc" id="L41">        messagingTemplate.convertAndSend(</span>
+<span class="fc" id="L42">            &quot;/topic/game/&quot; + game.getId(),</span>
+            game
+        );
+<span class="fc" id="L45">    }</span>
+
+    private void notifyTurnUpdate(Turn turn) {
+<span class="fc" id="L48">        messagingTemplate.convertAndSend(</span>
+<span class="fc" id="L49">            &quot;/topic/turn/&quot; + turn.getId(),</span>
+            turn
+        );
+<span class="fc" id="L52">    }</span>
+    @Transactional(readOnly = true)
+    public Turn findById(Integer id) {
+<span class="nc" id="L55">        return turnRepository.findById(id).orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Turn&quot;, &quot;id&quot;, id));</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Player findPlayerById(Integer playerId) {
+<span class="nc" id="L60">        return playerRepository.findById(playerId)</span>
+<span class="nc" id="L61">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Player&quot;, &quot;id&quot;, playerId));</span>
+    }
+
+    @Transactional
+    public Turn setStorytellerAnswer(Turn turn, Card card) {
+<span class="fc" id="L66">        turn.storytellerSelectsAnswer(card);</span>
+<span class="fc" id="L67">        cardRepository.save(card);</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        if (turn.getStoryteller() != null) {</span>
+<span class="fc" id="L69">            playerRepository.save(turn.getStoryteller());</span>
+        }
+<span class="fc" id="L71">        Turn saved = turnRepository.save(turn);</span>
+
+<span class="fc" id="L73">        notifyTurnUpdate(saved);</span>
+<span class="fc" id="L74">        notifyGameUpdate(turn.getGame());</span>
+
+<span class="fc" id="L76">        return saved;</span>
+    }
+
+    @Transactional
+    public Turn setStorytellerClue(Turn turn, String clue) throws IllegalArgumentException {
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">        if (turn.getClue() != null) {</span>
+<span class="nc" id="L82">            throw new IllegalStateException(&quot;Already set clue&quot;);</span>
+        }
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">        if (clue.isBlank()) {</span>
+<span class="nc" id="L85">            throw new IllegalArgumentException(&quot;Clue can't be empty&quot;);</span>
+        }
+<span class="fc" id="L87">        turn.setClue(clue);</span>
+<span class="fc" id="L88">        turn.setState(TurnState.WAITING_PLAYER_CARDS);</span>
+
+<span class="fc" id="L90">        Turn saved = turnRepository.save(turn);</span>
+
+<span class="fc" id="L92">        notifyTurnUpdate(saved);</span>
+<span class="fc" id="L93">        notifyGameUpdate(turn.getGame());</span>
+
+<span class="fc" id="L95">        return saved;</span>
+    }
+
+
+    @Transactional
+    public void initializeFirstTurn(Game game) {
+<span class="fc" id="L101">        Turn turn = new Turn();</span>
+<span class="fc" id="L102">        turn.setGame(game);</span>
+
+<span class="fc" id="L104">        Player storyteller = selectRandomStoryteller(game.getPlayers());</span>
+<span class="fc" id="L105">        turn.setStoryteller(storyteller);</span>
+<span class="fc" id="L106">        turn.setState(TurnState.WAITING_STORYTELLER_CARD);</span>
+
+<span class="fc" id="L108">        List&lt;Card&gt; deck = cardService.initializeDeck(game);</span>
+
+<span class="fc" id="L110">        List&lt;Card&gt; dealtCards = game.dealCards(deck, 6);</span>
+<span class="fc" id="L111">        persistDealtCards(dealtCards);</span>
+
+<span class="fc" id="L113">        game.getTurns().add(turn);</span>
+<span class="fc" id="L114">        turnRepository.save(turn);</span>
+<span class="fc" id="L115">    }</span>
+
+    @Transactional(rollbackFor = IllegalStateException.class)
+    public Card playerPlayCard(Turn turn, Player player, Card card) {
+<span class="fc" id="L119">        turn.validatePlayerHasntPlayedCard(player);</span>
+<span class="fc" id="L120">        turn.validateCardOwnership(card, player);</span>
+<span class="fc" id="L121">        turn.registerCardPlay(card, player);</span>
+
+<span class="fc" id="L123">        cardRepository.save(card);</span>
+<span class="fc" id="L124">        playerRepository.save(player);</span>
+
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        if (turn.allPlayersChoseCard()) {</span>
+<span class="fc" id="L127">            turn.setState(TurnState.SHOWING_CARDS);</span>
+        }
+<span class="fc" id="L129">        Turn saved = turnRepository.save(turn);</span>
+
+<span class="fc" id="L131">        notifyTurnUpdate(saved);</span>
+<span class="fc" id="L132">        notifyGameUpdate(turn.getGame());</span>
+
+<span class="fc" id="L134">        return card;</span>
+    }
+
+    @Transactional
+    public Card playerVote(Turn turn, Player player, Card card) {
+<span class="fc" id="L139">        turn.validateCardBelongsToTurn(card);</span>
+<span class="fc" id="L140">        turn.validatePlayerHasntVoted(player);</span>
+<span class="fc" id="L141">        boolean readyForScoring = turn.registerVote(player, card);</span>
+<span class="fc" id="L142">        Card saved = cardRepository.save(card);</span>
+<span class="fc" id="L143">        playerRepository.save(player);</span>
+
+<span class="fc bfc" id="L145" title="All 2 branches covered.">        if (readyForScoring) {</span>
+<span class="fc" id="L146">            turn.setState(TurnState.SCORING);</span>
+        }
+<span class="fc" id="L148">        Turn savedTurn = turnRepository.save(turn);</span>
+<span class="fc" id="L149">        notifyTurnUpdate(savedTurn);</span>
+
+<span class="fc bfc" id="L151" title="All 2 branches covered.">        if (turn.getState() == TurnState.SCORING) {</span>
+<span class="fc" id="L152">            scoreTurn(savedTurn);</span>
+        }
+<span class="fc bfc" id="L154" title="All 2 branches covered.">        if (turn.getState() == TurnState.FINISHED) {</span>
+<span class="fc" id="L155">            notifyTurnUpdate(savedTurn);</span>
+<span class="fc" id="L156">            Game game = savedTurn.getGame();</span>
+<span class="pc bpc" id="L157" title="2 of 4 branches missed.">            if (game != null &amp;&amp; !game.hasFinished()) {</span>
+<span class="fc" id="L158">                moveToNextTurn(savedTurn);</span>
+            }
+<span class="fc" id="L160">            notifyGameUpdate(game);</span>
+        }
+
+
+<span class="fc" id="L164">        return saved;</span>
+    }
+
+    //Scoring method
+    @Transactional
+    public void scoreTurn(Turn turn) {
+<span class="fc" id="L170">        Map&lt;Player, Integer&gt; pointAdjustments = turn.calculateScoreAdjustments();</span>
+<span class="fc" id="L171">        pointAdjustments.forEach((player, delta) -&gt; {</span>
+<span class="fc" id="L172">            player.addPoints(delta);</span>
+<span class="fc" id="L173">            playerRepository.save(player);</span>
+<span class="fc" id="L174">        });</span>
+
+<span class="fc" id="L176">        turn.getPlayedCards().forEach(card -&gt; {</span>
+<span class="fc" id="L177">            card.setUser(card.getOwner().getUser());</span>
+<span class="fc" id="L178">            card.setOwner(null);</span>
+<span class="fc" id="L179">        });</span>
+
+<span class="fc" id="L181">        turn.finish();</span>
+<span class="fc" id="L182">        Turn saved = turnRepository.save(turn);</span>
+
+<span class="fc" id="L184">        notifyTurnUpdate(saved);</span>
+
+<span class="fc" id="L186">        notifyGameUpdate(turn.getGame());</span>
+
+<span class="fc" id="L188">        Game game = turn.getGame();</span>
+<span class="pc bpc" id="L189" title="1 of 2 branches missed.">        if (game != null) {</span>
+<span class="fc" id="L190">            gameService.endGameIfNeeded(game, turn);</span>
+<span class="pc bpc" id="L191" title="1 of 2 branches missed.">            if (game.getEndDate() != null) {</span>
+<span class="nc" id="L192">                gameService.declareWinners(game);</span>
+            }
+        }
+
+<span class="fc" id="L196">    }</span>
+
+    private Player selectRandomStoryteller(List&lt;Player&gt; players) {
+<span class="pc bpc" id="L199" title="2 of 4 branches missed.">        if (players == null || players.isEmpty()) {</span>
+<span class="nc" id="L200">            throw new IllegalStateException(&quot;Cannot start a turn without players&quot;);</span>
+        }
+<span class="fc" id="L202">        int randomIndex = ThreadLocalRandom.current().nextInt(players.size());</span>
+<span class="fc" id="L203">        return players.get(randomIndex);</span>
+    }
+
+    private void persistDealtCards(List&lt;Card&gt; dealtCards) {
+<span class="pc bpc" id="L207" title="2 of 4 branches missed.">        if (dealtCards == null || dealtCards.isEmpty()) {</span>
+<span class="nc" id="L208">            return;</span>
+        }
+<span class="fc" id="L210">        cardRepository.saveAll(dealtCards);</span>
+<span class="fc" id="L211">        Set&lt;Player&gt; updatedPlayers = dealtCards.stream()</span>
+<span class="fc" id="L212">            .map(Card::getOwner)</span>
+<span class="fc" id="L213">            .filter(Objects::nonNull)</span>
+<span class="fc" id="L214">            .collect(Collectors.toSet());</span>
+<span class="pc bpc" id="L215" title="1 of 2 branches missed.">        if (!updatedPlayers.isEmpty()) {</span>
+<span class="fc" id="L216">            playerRepository.saveAll(updatedPlayers);</span>
+        }
+<span class="fc" id="L218">    }</span>
+
+    @Transactional
+    public void moveToNextTurn(Turn currentTurn) {
+<span class="fc" id="L222">        Game game = currentTurn.getGame();</span>
+<span class="pc bpc" id="L223" title="1 of 2 branches missed.">        if (game == null) {</span>
+<span class="nc" id="L224">            throw new IllegalStateException(&quot;Game not found for the current turn&quot;);</span>
+        }
+<span class="pc bpc" id="L226" title="1 of 2 branches missed.">        if (game.hasFinished()) {</span>
+<span class="nc" id="L227">            throw new IllegalStateException(&quot;Cannot start a new turn because the game has already finished&quot;);</span>
+        }
+<span class="fc" id="L229">        Turn newTurn = new Turn();</span>
+<span class="fc" id="L230">        newTurn.setGame(game);</span>
+<span class="fc" id="L231">        Player nextStoryteller = game.nextStoryteller(currentTurn.getStoryteller());</span>
+<span class="fc" id="L232">        newTurn.setStoryteller(nextStoryteller);</span>
+<span class="fc" id="L233">        newTurn.setState(TurnState.WAITING_STORYTELLER_CARD);</span>
+        // Deal one card to each player if possible
+<span class="fc bfc" id="L235" title="All 2 branches covered.">        if (cardsEnoughToDeal(game)) {</span>
+<span class="fc" id="L236">            List&lt;Card&gt; availableCards = cardRepository.findByOwnerIsNullAndTurnIsNullAndGameId(game.getId());</span>
+<span class="fc" id="L237">            List&lt;Card&gt; dealtCards = game.dealCards(availableCards, 1);</span>
+<span class="fc" id="L238">            persistDealtCards(dealtCards);</span>
+        }
+<span class="fc" id="L240">        game.getTurns().add(newTurn);</span>
+<span class="fc" id="L241">        turnRepository.save(newTurn);</span>
+<span class="fc" id="L242">    }</span>
+
+    @Transactional(readOnly = true)
+    public Boolean cardsEnoughToDeal(Game game) {
+<span class="fc" id="L246">        int cardsNeeded = game.getPlayers().size();</span>
+<span class="fc" id="L247">        int availableCards = cardRepository.countByGameAndOwnerIsNull(game);</span>
+<span class="fc bfc" id="L248" title="All 2 branches covered.">        return availableCards &gt;= cardsNeeded;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Card findCardById(Integer cardId) {
+<span class="nc" id="L253">        return cardRepository.findById(cardId)</span>
+<span class="nc" id="L254">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Card&quot;, &quot;id&quot;, cardId));</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

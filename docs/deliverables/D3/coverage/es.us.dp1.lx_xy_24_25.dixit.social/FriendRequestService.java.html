@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FriendRequestService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">2025-2026-LI-02</a> &gt; <a href="index.source.html" class="el_package">es.us.dp1.lx_xy_24_25.dixit.social</a> &gt; <span class="el_source">FriendRequestService.java</span></div><h1>FriendRequestService.java</h1><pre class="source lang-java linenums">package es.us.dp1.lx_xy_24_25.dixit.social;
+
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
+import es.us.dp1.lx_xy_24_25.dixit.user.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+
+@Service
+public class FriendRequestService {
+
+    private final FriendRequestRepository friendRequestRepository;
+
+    @Autowired
+<span class="fc" id="L18">    public FriendRequestService(FriendRequestRepository friendRequestRepository) {</span>
+<span class="fc" id="L19">        this.friendRequestRepository = friendRequestRepository;</span>
+<span class="fc" id="L20">    }</span>
+
+    @Transactional
+    public FriendRequest findById(Integer id) {
+<span class="pc" id="L24">        return friendRequestRepository.findById(id)</span>
+<span class="pc" id="L25">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Friend request&quot;, &quot;id&quot;, id));</span>
+    }
+
+    @Transactional
+    public FriendRequest save(FriendRequest friendRequest) {
+<span class="fc" id="L30">        return friendRequestRepository.save(friendRequest);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;User&gt; getFriends(User user) {
+<span class="fc" id="L35">        List&lt;User&gt; friends = new java.util.ArrayList&lt;&gt;(friendRequestRepository.findByReceiverAndDateAcceptedNotNull(user)</span>
+<span class="fc" id="L36">            .stream().map(FriendRequest::getSender).toList());</span>
+<span class="fc" id="L37">        friends.addAll(friendRequestRepository.findBySenderAndDateAcceptedNotNull(user)</span>
+<span class="fc" id="L38">            .stream().map(FriendRequest::getReceiver).toList());</span>
+<span class="fc" id="L39">        return friends;</span>
+    }
+
+    @Transactional
+    public void sendFriendRequest(User sender, User receiver) {
+<span class="fc bfc" id="L44" title="All 2 branches covered.">        if (getFriends(sender).contains(receiver)) {</span>
+<span class="fc" id="L45">            throw new IllegalStateException(&quot;You are already friends&quot;);</span>
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        } else if (sender.equals(receiver)) {</span>
+<span class="fc" id="L47">            throw new IllegalArgumentException(&quot;Sender and receiver can't be the same&quot;);</span>
+        }
+<span class="fc" id="L49">        FriendRequest friendRequest = new FriendRequest();</span>
+<span class="fc" id="L50">        friendRequest.setSender(sender);</span>
+<span class="fc" id="L51">        friendRequest.setReceiver(receiver);</span>
+<span class="fc" id="L52">        friendRequestRepository.save(friendRequest);</span>
+<span class="fc" id="L53">    }</span>
+
+    @Transactional
+    public void acceptFriendRequest(User receiver, FriendRequest request) {
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        if (request.getDateAccepted() != null) {</span>
+<span class="fc" id="L58">            throw new IllegalStateException(&quot;You are already friends&quot;);</span>
+        }
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        if (!request.getReceiver().equals(receiver)) {</span>
+<span class="fc" id="L61">            throw new AccessDeniedException(&quot;You are not allowed to accept this request&quot;);</span>
+        }
+<span class="fc" id="L63">        request.setDateAccepted(new Date());</span>
+<span class="fc" id="L64">        friendRequestRepository.save(request);</span>
+<span class="fc" id="L65">    }</span>
+
+    @Transactional
+    public void deleteFriendRequest(User user, FriendRequest request) {
+<span class="pc bpc" id="L69" title="1 of 2 branches missed.">        if (request.getDateAccepted() != null) {</span>
+<span class="nc" id="L70">            throw new IllegalStateException(&quot;You are already friends&quot;);</span>
+        }
+<span class="pc bpc" id="L72" title="1 of 4 branches missed.">        if (request.getSender().equals(user) || request.getReceiver().equals(user)) {</span>
+<span class="fc" id="L73">            friendRequestRepository.delete(request);</span>
+        } else  {
+<span class="fc" id="L75">            throw new AccessDeniedException(&quot;You are not allowed to delete this request&quot;);</span>
+        }
+<span class="fc" id="L77">    }</span>
+
+    @Transactional
+    public void removeFriend(User user, FriendRequest request) {
+<span class="fc" id="L81">        User sender = request.getSender();</span>
+<span class="fc" id="L82">        User receiver = request.getReceiver();</span>
+
+<span class="fc bfc" id="L84" title="All 4 branches covered.">        if (user.equals(sender) || user.equals(receiver)) {</span>
+<span class="fc" id="L85">            friendRequestRepository.delete(request);</span>
+        } else  {
+<span class="fc" id="L87">            throw new AccessDeniedException(&quot;You are not allowed to remove this request&quot;);</span>
+        }
+<span class="fc" id="L89">    }</span>
+
+    @Transactional
+    public void removeAllRequests(User user) {
+<span class="fc" id="L93">        Set&lt;FriendRequest&gt; requests = new HashSet&lt;&gt;(friendRequestRepository.findByReceiver(user));</span>
+<span class="fc" id="L94">        requests.addAll(</span>
+<span class="fc" id="L95">            friendRequestRepository.findBySender(user)</span>
+        );
+<span class="fc" id="L97">        friendRequestRepository.deleteAll(requests);</span>
+<span class="fc" id="L98">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;FriendRequest&gt; findPendingRequests(User receiver) {
+<span class="fc" id="L102">        return friendRequestRepository.findByReceiverAndDateAcceptedNull(receiver);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public FriendRequest findRequestByUsers(User u1,  User u2) {
+<span class="fc" id="L107">        Optional&lt;FriendRequest&gt; fr1 = friendRequestRepository.findBySenderAndReceiver(u1, u2);</span>
+<span class="fc" id="L108">        Optional&lt;FriendRequest&gt; fr2 = friendRequestRepository.findBySenderAndReceiver(u2, u1);</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">        if (fr1.isPresent()) {</span>
+<span class="fc" id="L110">            return fr1.get();</span>
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        } else if (fr2.isPresent()) {</span>
+<span class="nc" id="L112">            return fr2.get();</span>
+        } else {
+<span class="fc" id="L114">            throw new ResourceNotFoundException(&quot;Friend request not found&quot;);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

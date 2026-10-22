@@ -1,0 +1,218 @@
+.game-page-container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    --card-width: clamp(32px, 4.5vw, 46px);
+    --card-height: calc(var(--card-width) * 1.45);
+    --opponent-card-width: clamp(24px, 3vw, 34px);
+    --opponent-card-height: calc(var(--opponent-card-width) * 1.45);
+
+    background-image: url('../../images/GameBackground.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 11px;
+    color: #e0e0e0;
+}
+
+/* Base Glass Style */
+.owned-cards-container,
+.right-player-container,
+.left-player-container,
+.top-player-container,
+.center-container {
+    background-color: rgba(20, 20, 30, 0.75);
+    /* Dark blue-black tint */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    /* Safari support */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    padding: 0.5rem 0.6rem;
+    transition: all 0.3s ease;
+}
+
+.owned-cards-container {
+    position: absolute;
+    display: flex;
+    bottom: 20px;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.right-player-container {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.left-player-container {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.center-container {
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 2rem;
+    min-width: 300px;
+    min-height: 200px;
+}
+
+.player-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.25rem;
+}
+
+.opponent-info {
+    text-align: center;
+    font-weight: 600;
+    color: #ffd700;
+    /* Gold for names */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    margin-bottom: 4px;
+}
+
+.opponent-name {
+    display: block;
+    font-size: 1em;
+    letter-spacing: 0.5px;
+}
+
+.opponent-points {
+    font-size: 0.8em;
+    color: #ccc;
+    font-weight: 400;
+}
+
+.opponent-card-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.28rem;
+    padding: 0.2rem;
+}
+
+.opponent-card-slot {
+    display: flex;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    rotate: 90deg;
+}
+.top-card-slot {
+    display: flex;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    rotate: 180deg;
+}
+
+.opponent-card-slot img.card,
+.top-player-cards img.card {
+    width: var(--opponent-card-width);
+    height: var(--opponent-card-height);
+}
+
+.top-player-container {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.top-player-cards {
+    display: flex;
+    gap: 0.28rem;
+}
+
+/* Clue style */
+.clue {
+    display: inline-block;
+    margin: 0.25rem auto;
+    padding: 0.4rem 0.8rem;
+    text-align: center;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
+    color: #f5f5f5;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.card{
+    width: 50px;
+}
+
+.card-button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.25));
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
+}
+
+.card-button .card {
+    pointer-events: none;
+}
+
+.card-clickable {
+    cursor: pointer;
+}
+
+.card-clickable:hover {
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+    filter: brightness(1.05);
+}
+
+.card-disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    filter: grayscale(80%);
+    box-shadow: none;
+}
+
+.card-own {
+    filter: grayscale(90%) brightness(0.7);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.hand-locked {
+    opacity: 0.9;
+    filter: grayscale(40%);
+}
+
+.leave-game{
+    background-color: rgba(255, 0, 0, 0.3) !important;
+}

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Game.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">2025-2026-LI-02</a> &gt; <a href="index.source.html" class="el_package">es.us.dp1.lx_xy_24_25.dixit.game</a> &gt; <span class="el_source">Game.java</span></div><h1>Game.java</h1><pre class="source lang-java linenums">package es.us.dp1.lx_xy_24_25.dixit.game;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import es.us.dp1.lx_xy_24_25.dixit.card.Card;
+import es.us.dp1.lx_xy_24_25.dixit.message.Message;
+import es.us.dp1.lx_xy_24_25.dixit.model.BaseEntity;
+import es.us.dp1.lx_xy_24_25.dixit.player.Player;
+import es.us.dp1.lx_xy_24_25.dixit.user.User;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+@Entity
+@Getter
+@Setter
+@Table(name = &quot;games&quot;)
+<span class="fc" id="L24">public class Game extends BaseEntity {</span>
+
+    @Column(name = &quot;password&quot;)
+    private String password;
+
+    @Column
+    private Date startDate; // null = Lobby.js / not null = Game.js
+
+    @Column
+    private Date endDate;
+
+    //@NotNull was eliminated so the game could be deleted
+    @ManyToOne
+    @JoinColumn(name = &quot;leader_id&quot;)
+    private User leader;
+
+<span class="fc" id="L40">    @ManyToMany</span>
+    @JoinTable(
+        name = &quot;game_winners&quot;,
+        joinColumns = @JoinColumn(name = &quot;game_id&quot;),
+        inverseJoinColumns = @JoinColumn(name = &quot;player_id&quot;)
+    )
+    private List&lt;Player&gt; winners = new ArrayList&lt;&gt;();
+
+<span class="fc" id="L48">    @OneToMany(mappedBy = &quot;game&quot;, cascade = CascadeType.ALL, orphanRemoval = true)</span>
+    @JsonManagedReference(&quot;game-turns&quot;) //prevents infinite looping during serialization
+    private List&lt;Turn&gt; turns = new ArrayList&lt;&gt;();
+
+<span class="fc" id="L52">    @OneToMany(mappedBy = &quot;game&quot;, cascade = CascadeType.ALL, orphanRemoval = true)</span>
+    @JsonManagedReference(&quot;game-players&quot;) //prevents infinite looping during serialization
+    private List&lt;Player&gt; players = new ArrayList&lt;&gt;();
+
+<span class="fc" id="L56">    @OneToMany(mappedBy = &quot;game&quot;, cascade = CascadeType.ALL, orphanRemoval = true)</span>
+    @JsonIgnore
+    private List&lt;Message&gt; messages = new ArrayList&lt;&gt;();
+
+<span class="fc" id="L60">    @OneToMany(mappedBy = &quot;game&quot;, cascade = CascadeType.ALL, orphanRemoval = true)</span>
+    @JsonManagedReference(&quot;game-cards&quot;) //prevents infinite looping during serialization
+    private List&lt;Card&gt; deck = new ArrayList&lt;&gt;();
+
+<span class="fc" id="L64">    @ManyToMany</span>
+    @JoinTable(
+        name = &quot;game_spectators&quot;,
+        joinColumns = @JoinColumn(name = &quot;game_id&quot;),
+        inverseJoinColumns = @JoinColumn(name = &quot;user_id&quot;)
+    )
+    private List&lt;User&gt; spectators = new ArrayList&lt;&gt;();
+
+    public void setEndDate(Date endDate) throws IllegalStateException{
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        if (startDate == null) {</span>
+<span class="fc" id="L74">            throw new IllegalStateException(&quot;The game hasn't started yet&quot;);</span>
+        }
+<span class="fc" id="L76">        this.endDate = endDate;</span>
+<span class="fc" id="L77">    }</span>
+
+    public void setStartDate(Date startDate) throws IllegalStateException {
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        if (players.size() &lt; 3) {</span>
+<span class="fc" id="L81">            throw new IllegalStateException(&quot;Too few players&quot;);</span>
+        }
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">        if (players.size() &gt; 4) {</span>
+<span class="nc" id="L84">            throw new IllegalStateException(&quot;Too many players&quot;);</span>
+        }
+<span class="fc" id="L86">        this.startDate = startDate;</span>
+<span class="fc" id="L87">    }</span>
+
+    public List&lt;Player&gt; playersExcept(Player storyteller) {
+<span class="pc bpc" id="L90" title="1 of 4 branches missed.">        if (players == null || players.isEmpty()) {</span>
+<span class="fc" id="L91">            return new ArrayList&lt;&gt;();</span>
+        }
+<span class="fc" id="L93">        return players.stream()</span>
+<span class="pc bpc" id="L94" title="1 of 4 branches missed.">            .filter(player -&gt; storyteller == null || !Objects.equals(player.getId(), storyteller.getId()))</span>
+<span class="fc" id="L95">            .collect(Collectors.toList());</span>
+    }
+
+    public Player nextStoryteller(Player currentStoryteller) {
+<span class="pc bpc" id="L99" title="2 of 4 branches missed.">        if (players == null || players.isEmpty()) {</span>
+<span class="nc" id="L100">            throw new IllegalStateException(&quot;Game does not have players&quot;);</span>
+        }
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">        if (currentStoryteller == null) {</span>
+<span class="nc" id="L103">            return players.get(0);</span>
+        }
+<span class="fc" id="L105">        int currentIndex = players.indexOf(currentStoryteller);</span>
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (currentIndex &lt; 0) {</span>
+<span class="nc" id="L107">            throw new IllegalStateException(&quot;Storyteller is not part of this game&quot;);</span>
+        }
+<span class="fc" id="L109">        int nextIndex = (currentIndex + 1) % players.size();</span>
+<span class="fc" id="L110">        return players.get(nextIndex);</span>
+    }
+
+    public boolean hasFinished() {
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">        return endDate != null;</span>
+    }
+
+    public List&lt;Card&gt; dealCards(List&lt;Card&gt; deck, int cardsPerPlayer) {
+<span class="fc" id="L118">        List&lt;Card&gt; dealtCards = new ArrayList&lt;&gt;();</span>
+<span class="pc bpc" id="L119" title="3 of 6 branches missed.">        if (deck == null || deck.isEmpty() || cardsPerPlayer &lt;= 0) {</span>
+<span class="nc" id="L120">            return dealtCards;</span>
+        }
+<span class="fc bfc" id="L122" title="All 2 branches covered.">        for (Player player : players) {</span>
+<span class="pc bpc" id="L123" title="1 of 4 branches missed.">            for (int i = 0; i &lt; cardsPerPlayer &amp;&amp; !deck.isEmpty(); i++) {</span>
+<span class="fc" id="L124">                Card card = deck.removeFirst();</span>
+<span class="fc" id="L125">                player.receiveCard(card);</span>
+<span class="fc" id="L126">                dealtCards.add(card);</span>
+            }
+<span class="fc" id="L128">        }</span>
+<span class="fc" id="L129">        return dealtCards;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

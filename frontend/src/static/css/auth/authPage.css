@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap');
+
+.auth-page-container {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  background: radial-gradient(circle at center, #241612 8%, #1e120e 100%); /* very dark brown */
+}
+
+.auth-form-container{
+    max-height: 800px;
+    max-width: 450px;
+    height: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+
+.login-card {
+    background: #FDF5E6; 
+    padding: 40px;
+    border-radius: 12px;
+    border: 1px solid #B8860B;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+    --main-button-hover-dark-color: #8b5e3c;
+    --color-input: #2C1E14;
+    --color-label: #2C1E14;
+    --main-button-background-color: transparent;
+}
+
+
+.auth-page-container .auth-form-container:not(.login-card) {
+  background: transparent;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+.auth-form-container h2 {
+  color: #ffffff !important;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.auth-page-container h1 {
+  color: #f7ecd6; 
+  text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  font-family: 'Merriweather', Georgia, serif;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  line-height: 1.05;
+  font-size: 2.2rem;
+  margin: 0 0 1rem 0;
+}
+
+.options-row {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  width: 100%;
+  margin-top: 30px;
+}
+
+@media screen and (max-width: 768px) {
+  .options-row {
+    flex-direction: column;
+    margin-top: 0;
+  }
+
+  .options-row button{
+    margin: 10px 0;
+  }
+}

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AchievementService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">2025-2026-LI-02</a> &gt; <a href="index.source.html" class="el_package">es.us.dp1.lx_xy_24_25.dixit.achievement</a> &gt; <span class="el_source">AchievementService.java</span></div><h1>AchievementService.java</h1><pre class="source lang-java linenums">package es.us.dp1.lx_xy_24_25.dixit.achievement;
+
+import es.us.dp1.lx_xy_24_25.dixit.game.Game;
+import es.us.dp1.lx_xy_24_25.dixit.game.Turn;
+import es.us.dp1.lx_xy_24_25.dixit.player.Player;
+import es.us.dp1.lx_xy_24_25.dixit.user.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+@Service
+public class AchievementService {
+
+    private AchievementRepository achievementRepository;
+    private BadgeImageRepository badgeImageRepository;
+
+    @Autowired
+<span class="fc" id="L23">    public AchievementService(AchievementRepository achievementRepository, BadgeImageRepository badgeImageRepository){</span>
+<span class="fc" id="L24">        this.achievementRepository = achievementRepository;</span>
+<span class="fc" id="L25">        this.badgeImageRepository = badgeImageRepository;</span>
+<span class="fc" id="L26">    }</span>
+
+
+
+    @Transactional
+    public List&lt;Achievement&gt; findAllAchievementsByUserId(Integer id){
+<span class="fc" id="L32">        return achievementRepository.findAllAchievementsByUserId(id);</span>
+    }
+
+    @Transactional
+    public Achievement saveAchievement(Achievement achievement) throws DataAccessException{
+<span class="fc" id="L37">        return achievementRepository.save(achievement);</span>
+    }
+
+    @Transactional
+    public List&lt;Achievement&gt; initializeWinAchievements(User user) {
+<span class="fc" id="L42">        List&lt;BadgeImage&gt; images = badgeImageRepository.findByType(AchievementType.WIN);</span>
+<span class="fc" id="L43">        List&lt;Achievement&gt; achievements = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L44">        List&lt;Integer&gt; thresholds = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L45">        thresholds.add(1); thresholds.add(5); thresholds.add(10); thresholds.add(50);</span>
+<span class="fc" id="L46">        List&lt;String&gt; names = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L47">        names.add(&quot;The sweet taste of victory&quot;); names.add(&quot;You're actually good in this&quot;); names.add(&quot;Master storyteller&quot;); names.add(&quot;God-like&quot;);</span>
+<span class="fc bfc" id="L48" title="All 2 branches covered.">        for (int i = 0; i&lt;images.size(); i++) {</span>
+<span class="fc" id="L49">            Achievement achievement = new WinAchievement();</span>
+<span class="fc" id="L50">            achievement.setUser(user);</span>
+<span class="fc" id="L51">            achievement.setBadgeImage(images.get(i));</span>
+<span class="fc" id="L52">            achievement.setThreshold(thresholds.get(i));</span>
+<span class="fc" id="L53">            achievement.setName(names.get(i));</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">            if (i == 0) {</span>
+<span class="fc" id="L55">                achievement.setDescription(&quot;Win &quot; + achievement.getThreshold() + &quot; game&quot;);</span>
+            } else {
+<span class="fc" id="L57">                 achievement.setDescription(&quot;Win &quot; + achievement.getThreshold() + &quot; games&quot;);</span>
+            }
+<span class="fc" id="L59">            achievementRepository.save(achievement);</span>
+<span class="fc" id="L60">            achievements.add(achievement);</span>
+        }
+<span class="fc" id="L62">        return achievements;</span>
+    }
+    @Transactional
+    public List&lt;Achievement&gt; initializePlayAchievements(User user) {
+<span class="fc" id="L66">        List&lt;BadgeImage&gt; images = badgeImageRepository.findByType(AchievementType.PLAY);</span>
+<span class="fc" id="L67">        List&lt;Achievement&gt; achievements = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L68">        List&lt;Integer&gt; thresholds = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L69">        thresholds.add(1);</span>
+<span class="fc" id="L70">        thresholds.add(5);</span>
+<span class="fc" id="L71">        thresholds.add(10);</span>
+<span class="fc" id="L72">        thresholds.add(50);</span>
+<span class="fc" id="L73">        List&lt;String&gt; names = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L74">        names.add(&quot;Funny, isn't it?&quot;); names.add(&quot;Getting expertise&quot;); names.add(&quot;Improving skills&quot;); names.add(&quot;Tainted&quot;);</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        for (int i = 0; i&lt;images.size(); i++) {</span>
+<span class="fc" id="L76">            Achievement achievement = new PlayAchievement();</span>
+<span class="fc" id="L77">            achievement.setUser(user);</span>
+<span class="fc" id="L78">            achievement.setBadgeImage(images.get(i));</span>
+<span class="fc" id="L79">            achievement.setThreshold(thresholds.get(i));</span>
+<span class="fc" id="L80">            achievement.setName(names.get(i));</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">            if (i == 0) {</span>
+<span class="fc" id="L82">                achievement.setDescription(&quot;Play &quot; + achievement.getThreshold() + &quot; game&quot;);</span>
+            } else {
+<span class="fc" id="L84">                 achievement.setDescription(&quot;Play &quot; + achievement.getThreshold() + &quot; games&quot;);</span>
+            }
+<span class="fc" id="L86">            achievementRepository.save(achievement);</span>
+<span class="fc" id="L87">            achievements.add(achievement);</span>
+        }
+<span class="fc" id="L89">        return achievements;</span>
+    }
+
+    @Transactional
+    public List&lt;Achievement&gt; initializeTrickAchievements(User user) {
+<span class="fc" id="L94">        List&lt;BadgeImage&gt; images = badgeImageRepository.findByType(AchievementType.TRICK);</span>
+<span class="fc" id="L95">        List&lt;Achievement&gt; achievements = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L96">        List&lt;Integer&gt; thresholds = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L97">        thresholds.add(5); thresholds.add(20); thresholds.add(50); thresholds.add(100);</span>
+<span class="fc" id="L98">        List&lt;String&gt; names = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L99">        names.add(&quot;Initiating tricking skills&quot;); names.add(&quot;Playing the imposter&quot;); names.add(&quot;Loki would be proud&quot;); names.add(&quot;The Trickster god&quot;);</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        for (int i = 0; i&lt;images.size(); i++) {</span>
+<span class="fc" id="L101">            Achievement achievement = new TrickAchievement();</span>
+<span class="fc" id="L102">            achievement.setUser(user);</span>
+<span class="fc" id="L103">            achievement.setBadgeImage(images.get(i));</span>
+<span class="fc" id="L104">            achievement.setThreshold(thresholds.get(i));</span>
+<span class="fc" id="L105">            achievement.setName(names.get(i));</span>
+<span class="fc" id="L106">            achievement.setDescription(&quot;Without being the Storyteller, achieve that at least &quot; + achievement.getThreshold() + &quot; players vote your card&quot;);</span>
+<span class="fc" id="L107">            achievementRepository.save(achievement);</span>
+<span class="fc" id="L108">            achievements.add(achievement);</span>
+        }
+<span class="fc" id="L110">        return achievements;</span>
+    }
+
+    @Transactional
+    public void checkWinAchievements(User user) {
+<span class="fc" id="L115">        List&lt;Achievement&gt; winAchievements = achievementRepository.findByUserAndType(user, WinAchievement.class);</span>
+<span class="fc" id="L116">        List&lt;Game&gt; games = user.getPlayers().stream().map(Player::getGame).filter(Objects::nonNull).toList();</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">        Integer winned = games.stream().filter(g -&gt; g.getWinners().stream().filter(w -&gt; w.getUser().getId().equals(user.getId())).count() == 1).toList().size();</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">       for (Achievement a : winAchievements) {</span>
+<span class="fc" id="L119">            ((WinAchievement) a).unlockWinAchievements(winned);</span>
+<span class="fc" id="L120">       }</span>
+<span class="fc" id="L121">    }</span>
+
+    @Transactional
+    public void checkPlayAchievements(User user) {
+<span class="fc" id="L125">        List&lt;Game&gt; games = user.getPlayers().stream().map(Player::getGame).toList();</span>
+<span class="fc" id="L126">        Integer played = games.size();</span>
+<span class="fc" id="L127">        List&lt;Achievement&gt; playAchievements = achievementRepository.findByUserAndType(user, PlayAchievement.class);</span>
+<span class="fc bfc" id="L128" title="All 2 branches covered.">        for (Achievement a : playAchievements) {</span>
+<span class="fc" id="L129">            ((PlayAchievement) a).unlockPlayAchievements(played);</span>
+<span class="fc" id="L130">        }</span>
+<span class="fc" id="L131">    }</span>
+
+    @Transactional
+    public void checkTrickAchievements(User user) {
+<span class="fc" id="L135">        List&lt;Game&gt; games = user.getPlayers().stream().map(Player::getGame).toList();</span>
+<span class="fc" id="L136">        List&lt;Turn&gt; turns = games.stream().flatMap(g -&gt; g.getTurns().stream()).toList();</span>
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">        List&lt;Turn&gt; noStorytellerTurns = turns.stream().filter(t -&gt; !(t.getStoryteller().getUser().getId().equals(user.getId()))).toList();</span>
+<span class="fc" id="L138">        Integer votes = noStorytellerTurns.stream().flatMap(t -&gt; t.getPlayedCards().stream()).filter(c -&gt; c.getUser().getId().equals(user.getId()))</span>
+<span class="fc" id="L139">                        .mapToInt(c -&gt; c.getVotes().size()).sum();</span>
+<span class="fc" id="L140">        List&lt;Achievement&gt; trickAchievements = achievementRepository.findByUserAndType(user, TrickAchievement.class);</span>
+<span class="fc bfc" id="L141" title="All 2 branches covered.">        for (Achievement a : trickAchievements){</span>
+<span class="fc" id="L142">            ((TrickAchievement) a).unlockTrickAchievements(votes);</span>
+<span class="fc" id="L143">        }</span>
+<span class="fc" id="L144">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

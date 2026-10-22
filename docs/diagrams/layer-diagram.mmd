@@ -1,0 +1,129 @@
+classDiagram
+    direction TB
+    namespace Presentation_layer {
+        class PlayerController
+        class UserController
+        class AuthController
+        class GameController
+        class TurnController
+        class MessageController
+        class FriendController
+        class StatisticsController
+    }
+    namespace Business_Logic_Layer {
+        class StatisticsService
+        class UserService
+        class AuthService
+        class AchievementService
+        class GameService
+        class FriendRequestService
+        class PlayerService
+        class AuthoritiesService
+        class GameInvitationService
+        class MessageService
+        class TurnService
+        class CardService
+    }
+    namespace Resources_Layer {
+        class GameRepository {
+            Optional~Game~ findByPassword(String password)
+            List~Game~ findGamesByPlayerUsername(String username)
+            List~Game~ findByWinnerUsername(String username)
+            List~Game~ findByEndDateIsNull()
+            List~Game~ findByEndDateGreaterThan(Date date)
+            List~Game~ findByStartDateNotNullAndEndDateIsNull()
+            List~Game~ findByEndDateNotNull()
+        }
+        class AchievementRepository {
+            List~Achievement~ findByUserAndType(User user, Class type)
+            List~Achievement~ findAllAchievementsByUserId(Integer id)
+        }
+        class AuthoritiesRepository {
+            Optional~Authorities~ findByName(String auth)
+        }
+        class CardRepository {
+            List~Card~ findByOwnerIsNullAndGameId(Integer gameId)
+            int countByGameAndOwnerIsNull(Game game)
+        }
+        class PlayerRepository {
+            Optional~Player~ findByUser_Username(String username)
+        }
+        class MessageRepository {
+            List~Message~ findByPlayer(Player player)
+            List~Message~ findByGame(Game game)
+        }
+        class UserRepository {
+            Optional~User~ findByUsername(String username)
+            Boolean existsByUsername(String username)
+            Optional~User~ findById(Integer id)
+            Iterable~User~ findAllByAuthority(String auth)
+            Page~User~ findPlayersByUsernameLike(String username, int currentId, Pageable pageable)
+        }
+        class BadgeImageRepository
+        class ImageRepository
+        class TurnRepository {
+            Player findTurnStorytellerById(Integer id)
+            List~Card~ findPlayedCardsById(Integer id)
+        }
+        class FriendRequestRepository {
+            List~FriendRequest~ findByReceiver(User receiver)
+            List~FriendRequest~ findBySender(User sender)
+            List~FriendRequest~ findByReceiverAndDateAcceptedNotNull(User receiver)
+            List~FriendRequest~ findBySenderAndDateAcceptedNotNull(User sender)
+            List~FriendRequest~ findBySenderAndDateAcceptedNull(User sender)
+            List~FriendRequest~ findByReceiverAndDateAcceptedNull(User receiver)
+        }
+        class GameInvitationRepository {
+            List~GameInvitation~ findAllByInvited(User user)
+        }
+        class StatisticsRepository
+    }
+    AchievementService ..> AchievementRepository
+    AchievementService ..> BadgeImageRepository
+    AuthController ..> AchievementService
+    AuthController ..> AuthService
+    AuthController ..> UserService
+    AuthService ..> AuthoritiesService
+    AuthService ..> PlayerService
+    AuthService ..> UserService
+    AuthoritiesService ..> AuthoritiesRepository
+    AuthoritiesService ..> UserService
+    CardService ..> CardRepository
+    CardService ..> ImageRepository
+    FriendController ..> FriendRequestService
+    FriendController ..> UserService
+    FriendRequestService ..> FriendRequestRepository
+    GameController ..> GameInvitationRepository
+    GameController ..> GameInvitationService
+    GameController ..> GameService
+    GameController ..> TurnService
+    GameController ..> UserService
+    GameInvitationService ..> GameInvitationRepository
+    GameService ..> AchievementService
+    GameService ..> FriendRequestService
+    GameService ..> GameRepository
+    GameService ..> PlayerService
+    GameService ..> TurnRepository
+    GameService ..> UserService
+    MessageController ..> GameService
+    MessageController ..> MessageService
+    MessageController ..> UserService
+    MessageService ..> GameRepository
+    MessageService ..> MessageRepository
+    MessageService ..> PlayerRepository
+    PlayerController ..> PlayerService
+    PlayerController ..> UserService
+    PlayerService ..> PlayerRepository
+    StatisticsController ..> StatisticsService
+    StatisticsService ..> StatisticsRepository
+    TurnController ..> TurnService
+    TurnService ..> CardRepository
+    TurnService ..> CardService
+    TurnService ..> GameService
+    TurnService ..> PlayerRepository
+    TurnService ..> TurnRepository
+    UserController ..> AchievementService
+    UserController ..> AuthoritiesService
+    UserController ..> UserService
+    UserService ..> FriendRequestService
+    UserService ..> UserRepository

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Turn.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">2025-2026-LI-02</a> &gt; <a href="index.source.html" class="el_package">es.us.dp1.lx_xy_24_25.dixit.game</a> &gt; <span class="el_source">Turn.java</span></div><h1>Turn.java</h1><pre class="source lang-java linenums">package es.us.dp1.lx_xy_24_25.dixit.game;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
+import es.us.dp1.lx_xy_24_25.dixit.card.Card;
+import es.us.dp1.lx_xy_24_25.dixit.model.BaseEntity;
+import es.us.dp1.lx_xy_24_25.dixit.player.Player;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Entity
+@Getter
+@Setter
+@Table(name = &quot;turns&quot;)
+<span class="fc" id="L21">public class Turn extends BaseEntity {</span>
+
+    @ManyToOne
+    @JoinColumn(name = &quot;answer_id&quot;)
+    private Card answer;
+
+    @Column(name = &quot;state&quot;)
+    @Enumerated(EnumType.STRING)
+    private TurnState state;
+
+    @Column(name = &quot;clue&quot;)
+    private String clue;
+
+    @ManyToOne
+    @JoinColumn(name = &quot;storyteller_id&quot;)
+    private Player storyteller;
+
+    @ManyToOne
+    @NotNull
+    @JoinColumn(name = &quot;game_id&quot;)
+    @JsonBackReference(&quot;game-turns&quot;)
+    private Game game;
+
+<span class="fc" id="L44">    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)</span>
+    @JoinColumn(name = &quot;turn_id&quot;)
+    @JsonManagedReference(&quot;turn-cards&quot;) 
+    private List&lt;Card&gt; playedCards = new ArrayList&lt;&gt;();
+
+    public void storytellerSelectsAnswer(Card card) {
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">        if (card == null) {</span>
+<span class="nc" id="L51">            throw new IllegalArgumentException(&quot;Storyteller card must not be null&quot;);</span>
+        }
+<span class="fc bfc" id="L53" title="All 4 branches covered.">        if (storyteller != null &amp;&amp; !storyteller.owns(card)) {</span>
+<span class="fc" id="L54">            throw new IllegalArgumentException(&quot;Storyteller must play one of their cards&quot;);</span>
+        }
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">        if (answer != null) {</span>
+<span class="nc" id="L57">            throw new IllegalStateException(&quot;Storyteller can not play more than one card&quot;);</span>
+        }
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        if (storyteller != null) {</span>
+<span class="fc" id="L60">            storyteller.getCards().remove(card);</span>
+        }
+<span class="fc" id="L62">        card.setTurn(this);</span>
+<span class="fc" id="L63">        this.answer = card;</span>
+<span class="fc" id="L64">        this.playedCards.add(card);</span>
+<span class="fc" id="L65">        this.state = TurnState.WAITING_STORYTELLER_CLUE;</span>
+
+<span class="fc" id="L67">    }</span>
+
+    public void storytellerProvidesClue(String clue) {
+<span class="fc" id="L70">        this.clue = clue;</span>
+<span class="fc" id="L71">        this.state = TurnState.WAITING_PLAYER_CARDS;</span>
+<span class="fc" id="L72">    }</span>
+
+    public void registerCardPlay(Card card, Player player) {
+<span class="fc" id="L75">        validatePlayerAndCardNotNull(player, card);</span>
+<span class="fc" id="L76">        validateCardOwnership(card, player);</span>
+<span class="fc" id="L77">        validatePlayerHasntPlayedCard(player);</span>
+<span class="fc" id="L78">        card.setTurn(this);</span>
+<span class="fc" id="L79">        playedCards.add(card);</span>
+<span class="fc" id="L80">        player.getCards().remove(card);</span>
+<span class="fc" id="L81">    }</span>
+
+    public boolean registerVote(Player player, Card card) {
+<span class="fc" id="L84">        validatePlayerAndCardNotNull(player, card);</span>
+<span class="fc" id="L85">        validateCardBelongsToTurn(card);</span>
+<span class="fc" id="L86">        validatePlayerHasntVoted(player);</span>
+<span class="fc" id="L87">        card.vote(player);</span>
+<span class="fc" id="L88">        return hasAllVotesFromPlayers();</span>
+    }
+
+    public List&lt;Player&gt; getNonStorytellers() {
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        if (game == null) {</span>
+<span class="fc" id="L93">            return Collections.emptyList();</span>
+        }
+<span class="fc" id="L95">        return game.playersExcept(storyteller);</span>
+    }
+
+    public boolean allPlayersChoseCard() {
+<span class="fc" id="L99">        long playersWhoPlayed =</span>
+<span class="fc" id="L100">            playedCards.stream()</span>
+<span class="fc" id="L101">                .map(Card::getOwner)</span>
+<span class="fc" id="L102">                .filter(Objects::nonNull)</span>
+<span class="fc" id="L103">                .map(Player::getId)</span>
+<span class="fc" id="L104">                .distinct()</span>
+<span class="fc" id="L105">                .count();</span>
+
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        return playersWhoPlayed == game.getPlayers().size();</span>
+    }
+
+    public boolean hasAllVotesFromPlayers() {
+<span class="fc" id="L111">        int expectedVotes = getNonStorytellers().size();</span>
+<span class="fc" id="L112">        int votes = playedCards.stream().mapToInt(c -&gt; c.getVotes().size()).sum();</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        return votes == expectedVotes;</span>
+    }
+
+    public void validateCardBelongsToTurn(Card card) {
+<span class="fc" id="L117">        if (playedCards.stream()</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">            .noneMatch((played -&gt; Objects.equals(played.getId(), card.getId())))) {</span>
+<span class="fc" id="L119">            throw new IllegalArgumentException(&quot;Card with id &quot; + card.getId() + &quot; does is not an option for this turn&quot;);</span>
+            }
+<span class="fc" id="L121">    }</span>
+
+    public Map&lt;Player, Integer&gt; calculateScoreAdjustments() {
+<span class="pc bpc" id="L124" title="1 of 2 branches missed.">        if (answer == null) {</span>
+<span class="nc" id="L125">            throw new IllegalStateException(&quot;Storyteller card must be set before scoring&quot;);</span>
+        }
+<span class="fc" id="L127">        List&lt;Player&gt; playersNotStoryteller = getNonStorytellers();</span>
+<span class="fc" id="L128">        Map&lt;Card, Integer&gt; votesPerCard = countVotes();</span>
+<span class="fc" id="L129">        Integer votesForStorytellerCard = votesPerCard.get(answer);</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">        boolean everyoneGuessed = votesForStorytellerCard == playersNotStoryteller.size();</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">        boolean noOneGuessed = votesForStorytellerCard == 0;</span>
+
+<span class="fc" id="L133">        Map&lt;Player, Integer&gt; pointAdjustments = new HashMap&lt;&gt;();</span>
+
+<span class="fc bfc" id="L135" title="All 4 branches covered.">        if (everyoneGuessed || noOneGuessed) {</span>
+<span class="fc" id="L136">            playersNotStoryteller.forEach(player -&gt; pointAdjustments.merge(player, 2, Integer::sum));</span>
+        } else {
+<span class="fc" id="L138">            pointAdjustments.merge(storyteller, 3, Integer::sum);</span>
+<span class="fc" id="L139">            playedCards.stream()</span>
+<span class="fc" id="L140">                .filter(card -&gt; {</span>
+<span class="fc" id="L141">                    List&lt;Player&gt; whoVoted = card.getVotes();</span>
+<span class="fc bfc" id="L142" title="All 4 branches covered.">                    return !whoVoted.isEmpty() &amp;&amp; Objects.equals(card.getId(), answer.getId());</span>
+<span class="fc" id="L143">                }).flatMap(card -&gt; card.getVotes().stream())</span>
+<span class="fc" id="L144">                .forEach(player -&gt; pointAdjustments.merge(player, 3, Integer::sum));</span>
+        }
+
+<span class="fc" id="L147">        votesPerCard.forEach((card, voteCount) -&gt; {</span>
+<span class="pc bpc" id="L148" title="1 of 4 branches missed.">            if (card == null || Objects.equals(card.getId(), answer.getId())) {</span>
+<span class="fc" id="L149">                return;</span>
+            }
+<span class="fc" id="L151">            Player cardOwner = card.getOwner();</span>
+<span class="pc bpc" id="L152" title="3 of 6 branches missed.">            if (cardOwner != null &amp;&amp; (storyteller == null || !Objects.equals(cardOwner.getId(), storyteller.getId()))) {</span>
+<span class="fc" id="L153">                pointAdjustments.merge(cardOwner, voteCount, Integer::sum);</span>
+            }
+<span class="fc" id="L155">        });</span>
+
+<span class="fc" id="L157">        return pointAdjustments;</span>
+    }
+
+    public void finish() {
+<span class="fc" id="L161">        this.state = TurnState.FINISHED;</span>
+<span class="fc" id="L162">    }</span>
+
+    private Map&lt;Card, Integer&gt; countVotes() {
+<span class="fc" id="L165">        Map&lt;Card, Integer&gt; votes = playedCards.stream().collect(Collectors.toMap(c-&gt;c, c-&gt; c.getVotes().size()));</span>
+<span class="fc" id="L166">        votes.put(answer, answer.getVotes().size());</span>
+<span class="fc" id="L167">        return votes;</span>
+    }
+
+    void validateCardOwnership(Card card, Player player) {
+<span class="pc bpc" id="L171" title="1 of 4 branches missed.">        if (player == null || !player.owns(card)) {</span>
+<span class="fc" id="L172">            throw new IllegalArgumentException(&quot;Card does not belong to the player&quot;);</span>
+        }
+<span class="fc" id="L174">    }</span>
+    void validatePlayerAndCardNotNull(Player player, Card card) {
+<span class="pc bpc" id="L176" title="2 of 4 branches missed.">        if (player == null || card == null) {</span>
+<span class="nc" id="L177">            throw new IllegalArgumentException(&quot;Player and card must not be null&quot;);</span>
+        }
+<span class="fc" id="L179">    }</span>
+
+    void validatePlayerHasntPlayedCard(Player player) {
+<span class="pc bpc" id="L182" title="1 of 2 branches missed.">        if (this.getPlayedCards().stream().anyMatch(c -&gt; c.getOwner().equals(player))) {</span>
+<span class="nc" id="L183">            throw new IllegalStateException(&quot;You have already played a card&quot;);</span>
+        }
+<span class="fc" id="L185">    }</span>
+
+    void validatePlayerHasntVoted(Player player) {
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">        if (this.getPlayedCards().stream().anyMatch(c -&gt; c.getVotes().stream().anyMatch(p -&gt; p.equals(player)))) {</span>
+<span class="nc" id="L189">            throw new IllegalStateException(&quot;You have already voted a card&quot;);</span>
+        }
+<span class="fc" id="L191">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

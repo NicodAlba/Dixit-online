@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TurnRestController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">2025-2026-LI-02</a> &gt; <a href="index.source.html" class="el_package">es.us.dp1.lx_xy_24_25.dixit.game</a> &gt; <span class="el_source">TurnRestController.java</span></div><h1>TurnRestController.java</h1><pre class="source lang-java linenums">package es.us.dp1.lx_xy_24_25.dixit.game;
+
+import es.us.dp1.lx_xy_24_25.dixit.auth.payload.response.MessageResponse;
+import es.us.dp1.lx_xy_24_25.dixit.card.Card;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
+import es.us.dp1.lx_xy_24_25.dixit.player.Player;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api/v1/turns&quot;)
+@Tag(name = &quot;Turns&quot;)
+@SecurityRequirement(name = &quot;bearerAuth&quot;)
+public class TurnRestController {
+    private final TurnService turnService;
+
+    @Autowired
+<span class="fc" id="L25">    public TurnRestController(TurnService turnService) {</span>
+<span class="fc" id="L26">        this.turnService = turnService;</span>
+<span class="fc" id="L27">    }</span>
+
+    @GetMapping(&quot;/{id}&quot;)
+    @Operation(summary = &quot;Gets a turn if the user is a player of the turn's game&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;403&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+    })
+    public Turn getTurn(@PathVariable(&quot;id&quot;) Integer id) {
+<span class="fc" id="L37">        return turnService.findById(id);</span>
+    }
+
+    @PutMapping(&quot;/{turnId}/answer/{cardId}&quot;)
+    @Operation(summary = &quot;Sets the card chosen by the storyteller as answer of the turn&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;400&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+    })
+    public ResponseEntity&lt;?&gt; setStorytellerAnswer(
+        @PathVariable Integer turnId,
+        @PathVariable Integer cardId
+    ) {
+        Turn turn;
+        Card card;
+        Turn updatedTurn;
+        try {
+<span class="fc" id="L55">            turn = turnService.findById(turnId);</span>
+<span class="fc" id="L56">            card = turnService.findCardById(cardId);</span>
+<span class="fc" id="L57">            updatedTurn = turnService.setStorytellerAnswer(turn, card);</span>
+<span class="fc" id="L58">        } catch (Exception e) {</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">            if (e instanceof ResourceNotFoundException) {</span>
+<span class="fc" id="L60">                return new ResponseEntity&lt;&gt;(new MessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);</span>
+            } else {
+<span class="fc" id="L62">                return new ResponseEntity&lt;&gt;(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);</span>
+            }
+<span class="fc" id="L64">        }</span>
+<span class="fc" id="L65">        return ResponseEntity.ok(updatedTurn);</span>
+    }
+
+    @PutMapping(&quot;/{turnId}/clue&quot;)
+    @Operation(summary = &quot;Sets the clue chosen by the storyteller&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;400&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+    })
+    public ResponseEntity&lt;?&gt; setStorytellerClue(
+        @PathVariable Integer turnId,
+        @RequestBody String clue
+    ) {
+        Turn turn;
+        Turn updatedTurn;
+        try {
+<span class="fc" id="L82">            turn = turnService.findById(turnId);</span>
+
+<span class="fc" id="L84">            updatedTurn = turnService.setStorytellerClue(turn, clue);</span>
+<span class="fc" id="L85">        } catch (Exception e) {</span>
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">            if (e instanceof ResourceNotFoundException) {</span>
+<span class="fc" id="L87">                return new ResponseEntity&lt;&gt;(new MessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);</span>
+            } else  {
+<span class="nc" id="L89">                return new ResponseEntity&lt;&gt;(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);</span>
+            }
+<span class="fc" id="L91">        }</span>
+<span class="fc" id="L92">        return ResponseEntity.ok(updatedTurn);</span>
+    }
+
+    @PostMapping(&quot;/{turnId}/play-card/{cardId}/{playerId}&quot;)
+    @Operation(summary = &quot;Sets the given card as the one played by the given player&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;400&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+    })
+    public ResponseEntity&lt;?&gt; playerPlayCard(
+        @PathVariable Integer turnId,
+        @PathVariable Integer cardId,
+        @PathVariable Integer playerId
+    ) {
+        Turn turn;
+        Player player;
+        Card card;
+        Card playedCard;
+        try {
+<span class="fc" id="L112">            turn = turnService.findById(turnId);</span>
+<span class="fc" id="L113">            player = turnService.findPlayerById(playerId);</span>
+<span class="fc" id="L114">            card = turnService.findCardById(cardId);</span>
+
+<span class="fc" id="L116">            playedCard = turnService.playerPlayCard(turn, player, card);</span>
+<span class="fc" id="L117">        } catch (Exception e) {</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">            if (e instanceof ResourceNotFoundException) {</span>
+<span class="fc" id="L119">                return new ResponseEntity&lt;&gt;(new MessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);</span>
+            } else   {
+<span class="fc" id="L121">                return new ResponseEntity&lt;&gt;(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);</span>
+            }
+<span class="fc" id="L123">        }</span>
+<span class="fc" id="L124">        return ResponseEntity.ok(playedCard);</span>
+    }
+
+    @PostMapping(&quot;/{turnId}/vote/{playerId}/{cardId}&quot;)
+    @Operation(summary = &quot;Sets the given card as the one voted by the given player&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;400&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+    })
+    public ResponseEntity&lt;Card&gt; playerVote(
+        @PathVariable Integer turnId,
+        @PathVariable Integer playerId,
+        @PathVariable Integer cardId
+    ) {
+<span class="fc" id="L139">        Turn turn = turnService.findById(turnId);</span>
+<span class="fc" id="L140">        Player player = turnService.findPlayerById(playerId);</span>
+<span class="fc" id="L141">        Card card = turnService.findCardById(cardId);</span>
+
+<span class="fc" id="L143">        Card updatedCard = turnService.playerVote(turn, player, card);</span>
+
+<span class="fc" id="L145">        return ResponseEntity.ok(updatedCard);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

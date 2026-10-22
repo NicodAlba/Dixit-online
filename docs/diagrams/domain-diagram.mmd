@@ -1,0 +1,73 @@
+classDiagram
+    direction TB
+    class Game {
+        startDate
+        endDate
+        password
+    }
+    class Message {
+        datetime
+        text
+    }
+    class Turn {
+        number
+        hint
+    }
+    class Player {
+        points
+    }
+    class Card
+    class Image {
+        url
+    }
+    class User {
+        username
+        password
+    }
+    class GameInvitation {
+        inviter
+        password
+        gameId
+    }
+    class FriendRequest {
+        dateAccepted
+    }
+    class Admin
+    class Achievement {
+        description
+        threshold
+        dateObtained
+    }
+    class BadgeImage {
+        url
+        type
+    }
+    class WinAchievement
+    class PlayAchievement
+    class TrickAchievement
+
+    Game *-- "0..N" Message
+    Player "1..1" o-- "0..N" Message
+    User "1..1" --> "0..N" Game : leads
+    Player "0..N" --> "0..1" Game : wins
+    Game *-- "0..N" Turn
+    Game "0..1" *-- "1..4" Player : plays
+    Player "0..1" --> "0..2" Turn : isStoryteller
+    User "1..1" *-- "0..N" Player
+    Player "0..1" --> "0..6" Card : owns
+    Player "0..N" --> "0..N" Card : hasVoted
+    User "1..1" --> "0..N" Card : hasPlayed
+    Card "1..1" --> "0..1" Turn : isAnswer
+    Card "0..N" -- "1..1" Image
+    User "0..N" -- "0..N" GameInvitation
+    User --> User : receives
+    User --> User : sends
+    User .. "0..N" FriendRequest
+    User *-- "0..N" Achievement
+    Achievement "0..N" -- "1..1" BadgeImage
+    User <|-- Admin
+    Achievement <|-- WinAchievement
+    Achievement <|-- PlayAchievement
+    Achievement <|-- TrickAchievement
+    %% FriendRequest is the association class of the User sends/receives relationship.
+    %% Its 0..N multiplicity is displayed in the source image.

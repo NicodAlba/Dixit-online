@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TurnController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">2025-2026-LI-02</a> &gt; <a href="index.source.html" class="el_package">es.us.dp1.lx_xy_24_25.dixit.game</a> &gt; <span class="el_source">TurnController.java</span></div><h1>TurnController.java</h1><pre class="source lang-java linenums">package es.us.dp1.lx_xy_24_25.dixit.game;
+
+import es.us.dp1.lx_xy_24_25.dixit.card.Card;
+import es.us.dp1.lx_xy_24_25.dixit.player.Player;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+
+@RestController
+@RequestMapping(&quot;/api/v1/turns&quot;)
+public class TurnController {
+    private final TurnService turnService;
+
+    @Autowired
+<span class="fc" id="L15">    public TurnController(TurnService turnService) {</span>
+<span class="fc" id="L16">        this.turnService = turnService;</span>
+<span class="fc" id="L17">    }</span>
+
+    @PutMapping(&quot;/{turnId}/answer/{cardId}&quot;)
+    public ResponseEntity&lt;Turn&gt; setStorytellerAnswer(
+        @PathVariable Integer turnId,
+        @PathVariable Integer cardId
+    ) {
+<span class="nc" id="L24">        Turn turn = turnService.findById(turnId);</span>
+<span class="nc" id="L25">        Card card = turnService.findCardById(cardId);</span>
+<span class="nc" id="L26">        Turn updatedTurn = turnService.setStorytellerAnswer(turn, card);</span>
+<span class="nc" id="L27">        return ResponseEntity.ok(updatedTurn);</span>
+    }
+
+    @PutMapping(&quot;/{turnId}/clue&quot;)
+    public ResponseEntity&lt;Turn&gt; setStorytellerClue(
+        @PathVariable Integer turnId,
+        @RequestBody String clue
+    ) {
+<span class="nc" id="L35">        Turn turn = turnService.findById(turnId);</span>
+<span class="nc" id="L36">        Turn updatedTurn = turnService.setStorytellerClue(turn, clue);</span>
+<span class="nc" id="L37">        return ResponseEntity.ok(updatedTurn);</span>
+    }
+
+    @PostMapping(&quot;/{turnId}/play-card/{cardId}/{playerId}&quot;)
+    public ResponseEntity&lt;Card&gt; playerPlayCard(
+        @PathVariable Integer turnId,
+        @PathVariable Integer cardId,
+        @PathVariable Integer playerId
+    ) {
+<span class="nc" id="L46">        Turn turn = turnService.findById(turnId);</span>
+<span class="nc" id="L47">        Player player = turnService.findPlayerById(playerId);</span>
+<span class="nc" id="L48">        Card card = turnService.findCardById(cardId);</span>
+<span class="nc" id="L49">        Card playedCard = turnService.playerPlayCard(turn, player, card);</span>
+<span class="nc" id="L50">        return ResponseEntity.ok(playedCard);</span>
+    }
+
+    @PostMapping(&quot;/{turnId}/vote/{playerId}/{cardId}&quot;)
+    public ResponseEntity&lt;Player&gt; playerVote(
+        @PathVariable Integer turnId,
+        @PathVariable Integer playerId,
+        @PathVariable Integer cardId
+    ) {
+<span class="nc" id="L59">        Turn turn = turnService.findById(turnId);</span>
+<span class="nc" id="L60">        Player player = turnService.findPlayerById(playerId);</span>
+<span class="nc" id="L61">        Card card = turnService.findCardById(cardId);</span>
+<span class="nc" id="L62">        Player updatedPlayer = turnService.playerVote(turn, player, card);</span>
+<span class="nc" id="L63">        return ResponseEntity.ok(updatedPlayer);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GameRestController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">2025-2026-LI-02</a> &gt; <a href="index.source.html" class="el_package">es.us.dp1.lx_xy_24_25.dixit.game</a> &gt; <span class="el_source">GameRestController.java</span></div><h1>GameRestController.java</h1><pre class="source lang-java linenums">package es.us.dp1.lx_xy_24_25.dixit.game;
+
+import es.us.dp1.lx_xy_24_25.dixit.auth.payload.response.MessageResponse;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.PlayerAlreadyInGameException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.TooManyPlayersException;
+import es.us.dp1.lx_xy_24_25.dixit.social.GameInvitation;
+import es.us.dp1.lx_xy_24_25.dixit.social.GameInvitationRepository;
+import es.us.dp1.lx_xy_24_25.dixit.social.GameInvitationService;
+import es.us.dp1.lx_xy_24_25.dixit.social.InvitationDetails;
+import es.us.dp1.lx_xy_24_25.dixit.user.User;
+import es.us.dp1.lx_xy_24_25.dixit.user.UserService;
+import es.us.dp1.lx_xy_24_25.dixit.util.RestPreconditions;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/v1/games&quot;)
+@Tag(name = &quot;Games&quot;)
+@SecurityRequirement(name = &quot;bearerAuth&quot;)
+public class GameRestController {
+    private final GameService gameService;
+    private final UserService userService;
+    private final TurnService turnService;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final GameInvitationService gameInvitationService;
+    private final GameInvitationRepository gameInvitationRepository;
+
+
+    @Autowired
+<span class="fc" id="L45">    public GameRestController(GameService gameService, UserService userService, TurnService turnService, SimpMessagingTemplate messagingTemplate, GameInvitationService gameInvitationService, GameInvitationRepository gameInvitationRepository){</span>
+<span class="fc" id="L46">        this.gameService = gameService;</span>
+<span class="fc" id="L47">        this.userService = userService;</span>
+<span class="fc" id="L48">        this.turnService = turnService;</span>
+<span class="fc" id="L49">        this.messagingTemplate = messagingTemplate;</span>
+<span class="fc" id="L50">        this.gameInvitationService = gameInvitationService;</span>
+<span class="fc" id="L51">        this.gameInvitationRepository = gameInvitationRepository;</span>
+<span class="fc" id="L52">    }</span>
+
+    @GetMapping
+    @Operation(summary = &quot;Retrieves games&quot;, description = &quot;Retrieves all games&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;)
+    })
+    public ResponseEntity&lt;Iterable&lt;Game&gt;&gt; findAll() {
+<span class="fc" id="L60">        Iterable&lt;Game&gt; res = gameService.findAll();</span>
+<span class="fc" id="L61">        return new ResponseEntity&lt;&gt;(res, HttpStatus.OK);</span>
+    }
+
+    @GetMapping(value = &quot;{id}&quot;)
+    @Operation(summary = &quot;Gets a game if the user is a player in that game&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;403&quot;, description = &quot;User can't see the game since they're not a player of it&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+    })
+    public ResponseEntity&lt;?&gt; findById(@PathVariable Integer id) {
+<span class="fc" id="L72">        User currentUser = userService.findCurrentUser();</span>
+        Game game;
+        try {
+<span class="fc" id="L75">            game = gameService.findByIdIfUserInGame(id, currentUser);</span>
+<span class="fc" id="L76">        } catch (Exception e) {</span>
+<span class="pc bpc" id="L77" title="2 of 3 branches missed.">            switch (e) {</span>
+<span class="nc" id="L78">                case DataAccessException dataAccessException -&gt; {</span>
+<span class="nc" id="L79">                    return new ResponseEntity&lt;&gt;(new MessageResponse(dataAccessException.getMessage()), HttpStatus.FORBIDDEN);</span>
+                }
+<span class="fc" id="L81">                case ResourceNotFoundException resourceNotFoundException -&gt; {</span>
+<span class="fc" id="L82">                    return new ResponseEntity&lt;&gt;(new MessageResponse(resourceNotFoundException.getMessage()), HttpStatus.NOT_FOUND);</span>
+                }
+                default -&gt; {
+<span class="nc" id="L85">                    return new ResponseEntity&lt;&gt;(new MessageResponse(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);</span>
+                }
+            }
+<span class="fc" id="L88">        }</span>
+
+<span class="fc" id="L90">        return new ResponseEntity&lt;&gt;(game, HttpStatus.OK);</span>
+    }
+
+    @GetMapping(&quot;/inProgress&quot;)
+    @Operation(summary = &quot;Retrieves games in progress&quot;, description = &quot;Retrieves all the games that have a start date and end date is null&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;)
+    })
+    public ResponseEntity&lt;List&lt;Game&gt;&gt; getGamesInProgress() {
+<span class="nc" id="L99">        List&lt;Game&gt; gamesInProgress = gameService.findPlaying();</span>
+
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if(gamesInProgress.isEmpty()){</span>
+<span class="nc" id="L102">            return new ResponseEntity&lt;&gt;(HttpStatus.NO_CONTENT);</span>
+        }
+<span class="nc" id="L104">        return new ResponseEntity&lt;&gt;(gamesInProgress, HttpStatus.OK);</span>
+    }
+
+    @GetMapping(&quot;/pastGames&quot;)
+    @Operation(summary = &quot;Retrieves finished games&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;)
+    })
+    public ResponseEntity&lt;List&lt;Game&gt;&gt; getGamesPastGames() {
+<span class="nc" id="L113">        List&lt;Game&gt; gamesInProgress = gameService.findPast();</span>
+<span class="nc" id="L114">        return new ResponseEntity&lt;&gt;(gamesInProgress, HttpStatus.OK);</span>
+    }
+
+
+    @GetMapping(&quot;/my&quot;)
+    @Operation(summary = &quot;Gets the games where the given user has participated&quot;, description = &quot;Retrieves all the games where the user with the given username has participated if the request comes from said user or from an ADMIN user&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;)
+    })
+    public ResponseEntity&lt;List&lt;Game&gt;&gt; findMyGames() {
+<span class="nc" id="L124">        User currentUser = userService.findCurrentUser();</span>
+<span class="nc" id="L125">        List&lt;Game&gt; myGames = gameService.findGamesByPlayerUsername(currentUser.getUsername());</span>
+
+<span class="nc" id="L127">        return new ResponseEntity&lt;&gt;(myGames, HttpStatus.OK);</span>
+    }
+
+    @GetMapping(&quot;/games/{username}&quot;)
+    @Operation(summary = &quot;Gets the games where the given user has participated&quot;, description = &quot;Retrieves all the games where the user with the given username has participated if the request comes from said user or from an ADMIN user&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;403&quot;, description = &quot;User can't see the games of the given user because they're not an ADMIN&quot;)
+    })
+    public ResponseEntity&lt;?&gt; findGamesByPlayerUsername(@PathVariable String username) {
+<span class="nc" id="L137">        List&lt;Game&gt; games = gameService.findGamesByPlayerUsername(username);</span>
+
+<span class="nc" id="L139">        return new ResponseEntity&lt;&gt;(games, HttpStatus.OK);</span>
+    }
+
+    @PostMapping
+    @Operation(summary = &quot;Creates a new game&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;204&quot;)
+    })
+    public ResponseEntity&lt;Game&gt; create(@RequestBody HashMap&lt;String,String&gt; body) {
+<span class="fc" id="L148">        String password = body.get(&quot;password&quot;);</span>
+<span class="fc" id="L149">        User currentUser = userService.findCurrentUser();</span>
+<span class="fc" id="L150">        Game game = gameService.createGame(password, currentUser);</span>
+<span class="fc" id="L151">        return new ResponseEntity&lt;&gt;(game, HttpStatus.CREATED);</span>
+    }
+
+    @PatchMapping(&quot;/{id}/join&quot;)
+    @Operation(summary = &quot;Allows a user to join a game&quot;, description = &quot;Allows to join the lobby of a game if the id and the password are correct, there is room for them and they're not already in that game&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;),
+        @ApiResponse(responseCode = &quot;409&quot;, description = &quot;Number of players already reached its limit&quot;),
+        @ApiResponse(responseCode = &quot;409&quot;, description = &quot;Player is already in the game&quot;)
+    })
+    public ResponseEntity&lt;?&gt; joinGame(@PathVariable Integer id, @RequestBody HashMap&lt;String, String&gt; body) throws TooManyPlayersException, PlayerAlreadyInGameException {
+<span class="fc" id="L163">        Game game = gameService.findById(id);</span>
+
+<span class="fc" id="L165">        User currentUser = userService.findCurrentUser();</span>
+
+<span class="fc" id="L167">        String inputPassword = body.get(&quot;password&quot;);</span>
+<span class="fc" id="L168">        String realPassword = game.getPassword();</span>
+
+<span class="pc bpc" id="L170" title="2 of 4 branches missed.">        if (realPassword != null &amp;&amp; !realPassword.isBlank()) {</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">            if (!realPassword.equals(inputPassword)) {</span>
+<span class="fc" id="L172">                return new ResponseEntity&lt;&gt;(new MessageResponse(&quot;Incorrect password&quot;), HttpStatus.UNAUTHORIZED);</span>
+            }
+        }
+
+<span class="fc" id="L176">        gameService.addPlayerToGame(game, currentUser);</span>
+
+<span class="fc" id="L178">        messagingTemplate.convertAndSend(&quot;/topic/game/&quot; + id, game);</span>
+
+<span class="fc" id="L180">        return new ResponseEntity&lt;&gt;(game, HttpStatus.OK);</span>
+    }
+
+    @PutMapping(value = &quot;{id}&quot;)
+    @Operation(summary = &quot;Updates a game by the given id&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+    })
+    public ResponseEntity&lt;Game&gt; update(@PathVariable Integer id, @RequestBody @Valid Game game) {
+<span class="nc" id="L190">        RestPreconditions.checkNotNull(gameService.findById(id), &quot;Game&quot;, &quot;ID&quot;, id);</span>
+<span class="nc" id="L191">        Game updatedGame = gameService.updateGame(game, id);</span>
+<span class="nc" id="L192">        return new ResponseEntity&lt;&gt;(updatedGame, HttpStatus.OK);</span>
+    }
+
+    @PatchMapping(&quot;/{id}/leave&quot;)
+    @Operation(summary = &quot;Allows players to leave the lobby of a game&quot;, description = &quot;Allows a player to leave the lobby of a game. In the case the owner of the game leaves, the game is deleted&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+    })
+    public ResponseEntity&lt;?&gt; leaveGame(@PathVariable Integer id) {
+<span class="fc" id="L202">        Game game = gameService.findById(id);</span>
+<span class="fc" id="L203">        User currentUser = userService.findCurrentUser();</span>
+
+<span class="fc" id="L205">        boolean isLeader = game.getLeader().equals(currentUser);</span>
+
+<span class="pc bpc" id="L207" title="1 of 2 branches missed.">        if (isLeader) {</span>
+<span class="fc" id="L208">            gameService.deleteGame(game);</span>
+<span class="fc" id="L209">            messagingTemplate.convertAndSend(&quot;/topic/game/&quot; + id, &quot;DELETED&quot;);</span>
+<span class="fc" id="L210">            return new ResponseEntity&lt;&gt;(new MessageResponse(&quot;Game deleted successfully.&quot;), HttpStatus.OK);</span>
+        } else {
+<span class="nc" id="L212">            gameService.removePlayerFromGame(game, currentUser);</span>
+
+<span class="nc" id="L214">            messagingTemplate.convertAndSend(&quot;/topic/game/&quot; + id, game);</span>
+<span class="nc" id="L215">            return new ResponseEntity&lt;&gt;(new MessageResponse(&quot;Left game successfully.&quot;), HttpStatus.OK);</span>
+        }
+    }
+
+    @PatchMapping(&quot;/{id}/start&quot;)
+    @Operation(summary = &quot;Starts a game&quot;, description = &quot;Allows the leader of a game to start the game if the minimum number of players is reached&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;400&quot;),
+        @ApiResponse(responseCode = &quot;403&quot;, description = &quot;User can't start the game because they're not the leader&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+
+    })
+    public ResponseEntity&lt;?&gt; startGame(@PathVariable Integer id) {
+<span class="fc" id="L229">        Game game = gameService.findById(id);</span>
+<span class="fc" id="L230">        game.setStartDate(new Date());</span>
+<span class="fc" id="L231">        gameService.addSpectatorsToGame(game);</span>
+<span class="fc" id="L232">        gameService.saveGame(game);</span>
+<span class="fc" id="L233">        turnService.initializeFirstTurn(game);</span>
+<span class="fc" id="L234">        messagingTemplate.convertAndSend(&quot;/topic/game/&quot; + id, game);</span>
+
+<span class="fc" id="L236">        return new ResponseEntity&lt;&gt;(game, HttpStatus.OK);</span>
+    }
+
+    @DeleteMapping(value = &quot;{id}&quot;)
+    @Operation(summary = &quot;Deletes a game&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;400&quot;),
+        @ApiResponse(responseCode = &quot;403&quot;, description = &quot;User can't delete the game because they're not the leader nor an ADMIN&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+    })
+    public ResponseEntity&lt;MessageResponse&gt; delete(@PathVariable Integer id) {
+<span class="nc" id="L248">        RestPreconditions.checkNotNull(gameService.findById(id), &quot;Game&quot;, &quot;ID&quot;, id);</span>
+<span class="nc bnc" id="L249" title="All 2 branches missed.">        if (!userService.findCurrentUser().hasAuthority(&quot;ADMIN&quot;)) {</span>
+<span class="nc" id="L250">            return new ResponseEntity&lt;&gt;(new MessageResponse(&quot;Only admins can delete&quot;), HttpStatus.FORBIDDEN);</span>
+        }
+<span class="nc" id="L252">        Game game =  gameService.findById(id);</span>
+<span class="nc" id="L253">        gameService.deleteGame(game);</span>
+<span class="nc" id="L254">        return new ResponseEntity&lt;&gt;(new MessageResponse(&quot;Game deleted!&quot;), HttpStatus.NO_CONTENT);</span>
+    }
+
+    @PostMapping(value = &quot;{gameId}/invite&quot;)
+    @Operation(summary = &quot;Sends an invitation to the player in the body of the request&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;)
+    })
+    public ResponseEntity&lt;MessageResponse&gt; sendInvitation(@PathVariable Integer gameId, @RequestBody @Valid InvitationDetails invitation) {
+<span class="fc" id="L264">        RestPreconditions.checkNotNull(gameService.findById(gameId), &quot;Game&quot;, &quot;ID&quot;, gameId);</span>
+<span class="fc" id="L265">        User invitedUser = userService.findById(Integer.valueOf(invitation.getInvited()));</span>
+<span class="fc" id="L266">        User currentUser = userService.findCurrentUser();</span>
+<span class="fc" id="L267">        gameInvitationService.sendInvitation(currentUser.getUsername(), invitedUser, gameId, invitation.getPassword());</span>
+<span class="fc" id="L268">        return new ResponseEntity&lt;&gt;(new MessageResponse(&quot;Invitation sent!&quot;), HttpStatus.OK);</span>
+    }
+
+    @GetMapping(value = &quot;/invitations&quot;)
+    @Operation(summary = &quot;Retrieves all the invitations that the current user received&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;400&quot;)
+    })
+    public ResponseEntity&lt;?&gt; findAllByUser() {
+<span class="nc" id="L278">        User user = userService.findCurrentUser();</span>
+<span class="nc" id="L279">        return new ResponseEntity&lt;&gt;(gameInvitationService.findAllByUser(user), HttpStatus.OK);</span>
+    }
+
+    @PatchMapping(value = &quot;/invitations/{invitationId}/accept&quot;)
+    @Operation(summary = &quot;Allows the user to accept the given invitation and join the game&quot;, description = &quot;Allows to join the lobby of a game through the invitation if the id and the password are correct, there is room for them and they're not already in that game&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;),
+        @ApiResponse(responseCode = &quot;409&quot;, description = &quot;Number of players already reached its limit&quot;),
+        @ApiResponse(responseCode = &quot;409&quot;, description = &quot;Player is already in the game&quot;)
+    })
+    public ResponseEntity&lt;MessageResponse&gt; acceptInvitation(@PathVariable Integer invitationId) throws TooManyPlayersException, PlayerAlreadyInGameException {
+<span class="fc" id="L291">        GameInvitation invitation = gameInvitationRepository.findById(invitationId)</span>
+<span class="pc" id="L292">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Invitation not found&quot;));</span>
+<span class="fc" id="L293">        User currentUser = userService.findCurrentUser();</span>
+<span class="fc" id="L294">        Game game = gameService.findById(invitation.getGameId());</span>
+<span class="pc bpc" id="L295" title="1 of 2 branches missed.">        if (invitation.getInvited().equals(currentUser)) {</span>
+<span class="fc" id="L296">            gameInvitationRepository.delete(invitation);</span>
+<span class="fc" id="L297">            gameService.addPlayerToGame(game, currentUser);</span>
+<span class="fc" id="L298">            messagingTemplate.convertAndSend(&quot;/topic/game/&quot; + invitation.getGameId(), game);</span>
+<span class="fc" id="L299">            return new ResponseEntity&lt;&gt;(new MessageResponse(&quot;Invitation successfully accepted!&quot;), HttpStatus.OK);</span>
+        } else {
+<span class="nc" id="L301">            return new ResponseEntity&lt;&gt;(new MessageResponse(&quot;You are not invited to this game&quot;), HttpStatus.FORBIDDEN);</span>
+        }
+    }
+
+    @PatchMapping(&quot;/{id}/spectate/{playerId}&quot;)
+    @Operation(summary = &quot;Allows a user to spectate a game&quot;, description = &quot;Allows to join the game as an spectator if teh user is friend of all the players in the game.&quot;)
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = &quot;200&quot;),
+        @ApiResponse(responseCode = &quot;404&quot;),
+        @ApiResponse(responseCode = &quot;409&quot;, description = &quot;You are not friend of all players&quot;),
+    })
+    public ResponseEntity&lt;?&gt; spectateGame(@PathVariable Integer id, @PathVariable Integer playerId) {
+<span class="fc" id="L313">        Game game = gameService.findById(id);</span>
+<span class="fc" id="L314">        User currentUser = userService.findCurrentUser();</span>
+
+<span class="fc bfc" id="L316" title="All 2 branches covered.">        if (!game.getSpectators().contains(currentUser)) {</span>
+<span class="fc" id="L317">            return new ResponseEntity&lt;&gt;(new MessageResponse(&quot;You are not a friend of all players in the game&quot;), HttpStatus.UNAUTHORIZED);</span>
+        }
+
+<span class="fc" id="L320">        messagingTemplate.convertAndSend(&quot;/topic/game/&quot; + id, game);</span>
+
+<span class="fc" id="L322">        return new ResponseEntity&lt;&gt;(game, HttpStatus.OK);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

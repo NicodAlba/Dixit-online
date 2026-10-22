@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GameService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">2025-2026-LI-02</a> &gt; <a href="index.source.html" class="el_package">es.us.dp1.lx_xy_24_25.dixit.game</a> &gt; <span class="el_source">GameService.java</span></div><h1>GameService.java</h1><pre class="source lang-java linenums">package es.us.dp1.lx_xy_24_25.dixit.game;
+
+import es.us.dp1.lx_xy_24_25.dixit.achievement.AchievementService;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.PlayerAlreadyInGameException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.TooManyPlayersException;
+import es.us.dp1.lx_xy_24_25.dixit.player.Player;
+import es.us.dp1.lx_xy_24_25.dixit.player.PlayerService;
+import es.us.dp1.lx_xy_24_25.dixit.social.FriendRequestService;
+import es.us.dp1.lx_xy_24_25.dixit.user.User;
+import es.us.dp1.lx_xy_24_25.dixit.user.UserService;
+import jakarta.validation.Valid;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class GameService {
+    private final GameRepository gameRepository;
+    private final PlayerService playerService;
+    private final UserService userService;
+    private final AchievementService achievementService;
+    private final FriendRequestService friendRequestService;
+
+    @Autowired
+<span class="fc" id="L34">    public GameService(GameRepository gameRepository, PlayerService playerService, UserService userService, AchievementService achievementService, FriendRequestService friendRequestService) {</span>
+<span class="fc" id="L35">        this.gameRepository = gameRepository;</span>
+<span class="fc" id="L36">        this.playerService = playerService;</span>
+<span class="fc" id="L37">        this.userService = userService;</span>
+<span class="fc" id="L38">        this.achievementService = achievementService;</span>
+<span class="fc" id="L39">        this.friendRequestService = friendRequestService;</span>
+<span class="fc" id="L40">    }</span>
+    //CRUD
+    @Transactional(readOnly = true)
+    public Iterable&lt;Game&gt; findAll() {
+<span class="nc" id="L44">        return gameRepository.findAll();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Game findById(Integer id){
+<span class="fc" id="L49">        return gameRepository.findById(id)</span>
+<span class="pc" id="L50">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Game&quot;, &quot;id&quot;, id));</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Game findByIdIfUserInGame(Integer gameId, User user) {
+<span class="fc" id="L55">        Game game = gameRepository.findById(gameId)</span>
+<span class="fc" id="L56">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Game&quot;, &quot;id&quot;, gameId));</span>
+<span class="pc bpc" id="L57" title="1 of 4 branches missed.">        if (playerInGame(game, user) || playerSpectating(game, user)) {</span>
+<span class="fc" id="L58">            return game;</span>
+        } else {
+<span class="fc" id="L60">            throw new AccessDeniedException(&quot;You are not part of this game&quot;);</span>
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;Game&gt; findFinished(){
+<span class="fc" id="L66">        return gameRepository.findByEndDateNotNull();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;Game&gt; findPlaying() {
+<span class="fc" id="L71">        return gameRepository.findByStartDateNotNullAndEndDateIsNull();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;Game&gt; findPast() {
+<span class="nc" id="L76">        return gameRepository.findByEndDateIsNotNull();</span>
+    }
+
+    @Transactional
+    public void saveGame(Game game) throws DataAccessException {
+<span class="fc" id="L81">        gameRepository.save(game);</span>
+<span class="fc" id="L82">    }</span>
+
+    @Transactional
+    public Game updateGame(@Valid Game game, Integer idToUpdate) {
+<span class="nc" id="L86">        Game toUpdate = findById(idToUpdate);</span>
+<span class="nc" id="L87">        BeanUtils.copyProperties(game, toUpdate, &quot;id&quot;);</span>
+<span class="nc" id="L88">        gameRepository.save(toUpdate);</span>
+
+<span class="nc" id="L90">        return toUpdate;</span>
+    }
+
+    @Transactional
+    public void deleteGame(Game toDelete) {
+<span class="nc" id="L95">        gameRepository.delete(toDelete);</span>
+<span class="nc" id="L96">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;Game&gt; findGamesByPlayerUsername(String username) {
+<span class="nc" id="L100">        User currentUser = userService.findCurrentUser();</span>
+
+<span class="nc bnc" id="L102" title="All 4 branches missed.">        if (!currentUser.hasAuthority(&quot;ADMIN&quot;) &amp;&amp; !currentUser.getUsername().equals(username)) {</span>
+<span class="nc" id="L103">            throw new IllegalStateException(&quot;You cannot see other players' games&quot;);</span>
+        }
+
+<span class="nc" id="L106">        return gameRepository.findGamesByPlayerUsername(username);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;Game&gt; findGamesByWinnerUsername(String username) {
+<span class="fc" id="L111">        return gameRepository.findGamesByWinnerUsername(username);</span>
+    }
+
+    @Transactional
+    public Game createGame(String password, User user) {
+<span class="fc" id="L116">        Game game = new Game();</span>
+<span class="pc bpc" id="L117" title="2 of 4 branches missed.">        game.setPassword((password != null &amp;&amp; !password.isBlank()) ? password : null);</span>
+<span class="fc" id="L118">        game.setLeader(user);</span>
+<span class="fc" id="L119">        Player player = new Player();</span>
+<span class="fc" id="L120">        player.setUser(user);</span>
+<span class="fc" id="L121">        player.setGame(game);</span>
+<span class="fc" id="L122">        playerService.savePlayer(player);</span>
+<span class="fc" id="L123">        game.getPlayers().add(player);</span>
+<span class="fc" id="L124">        user.getPlayers().add(player);</span>
+<span class="fc" id="L125">        return gameRepository.save(game);</span>
+    }
+
+    @Transactional(rollbackFor = {PlayerAlreadyInGameException.class, TooManyPlayersException.class})
+    public void addPlayerToGame(Game game, User user) throws PlayerAlreadyInGameException, TooManyPlayersException {
+<span class="fc" id="L130">        Player player = new Player();</span>
+<span class="fc" id="L131">        player.setGame(game);</span>
+<span class="fc" id="L132">        player.setUser(user);</span>
+<span class="fc" id="L133">        playerService.savePlayer(player);</span>
+<span class="fc" id="L134">        user.getPlayers().add(player);</span>
+
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">        if (playerInGame(game, user)) {</span>
+<span class="nc" id="L137">            throw new PlayerAlreadyInGameException();</span>
+        }
+<span class="fc bfc" id="L139" title="All 2 branches covered.">        if (game.getPlayers().size() &gt;= 4) {</span>
+<span class="fc" id="L140">            throw new TooManyPlayersException();</span>
+        }
+
+<span class="fc" id="L143">        game.getPlayers().add(player);</span>
+<span class="fc" id="L144">        gameRepository.save(game);</span>
+<span class="fc" id="L145">    }</span>
+
+    @Transactional
+    public void removePlayerFromGame(Game game, User user) {
+<span class="nc" id="L149">        Player playerToRemove = game.getPlayers().stream()</span>
+<span class="nc" id="L150">            .filter(p -&gt; p.getUser().getId().equals(user.getId()))</span>
+<span class="nc" id="L151">            .findFirst()</span>
+<span class="nc" id="L152">            .orElseThrow();</span>
+
+<span class="nc" id="L154">        game.getPlayers().remove(playerToRemove);</span>
+<span class="nc" id="L155">    }</span>
+
+    @Transactional(readOnly = true)
+    public boolean playerInGame(Game game, User user) {
+<span class="fc" id="L159">        return game.getPlayers().stream()</span>
+<span class="fc" id="L160">            .anyMatch(p -&gt; p.getUser().getId().equals(user.getId()));</span>
+    }
+
+    @Transactional(readOnly = true)
+    public boolean playerSpectating(Game game, User user) {
+<span class="fc" id="L165">        return game.getSpectators().stream()</span>
+<span class="pc" id="L166">            .anyMatch(u -&gt; u.getId().equals(user.getId()));</span>
+    }
+
+    @Transactional
+    public void endGameIfNeeded(Game game, Turn turn) {
+<span class="pc bpc" id="L171" title="1 of 2 branches missed.">        if (game.getEndDate() != null) {</span>
+<span class="nc" id="L172">            return;</span>
+        }
+
+<span class="fc" id="L175">        int maxTurns = game.getPlayers().size() * 2;</span>
+<span class="fc" id="L176">        int totalTurnsPlayed = game.getTurns().size();</span>
+
+<span class="fc" id="L178">        int expectedVotes = game.getPlayers().size() - 1;</span>
+<span class="fc" id="L179">        int votesThisTurn = turn.getPlayedCards().stream()</span>
+<span class="fc" id="L180">            .mapToInt(c -&gt; c.getVotes().size())</span>
+<span class="fc" id="L181">            .sum();</span>
+
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        boolean maxTurnsReached = totalTurnsPlayed &gt;= maxTurns;</span>
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">        boolean allVotesIn = votesThisTurn == expectedVotes;</span>
+
+<span class="pc bpc" id="L186" title="1 of 4 branches missed.">        if (maxTurnsReached &amp;&amp; allVotesIn) {</span>
+<span class="fc" id="L187">            game.setEndDate(new Date());</span>
+<span class="fc" id="L188">            gameRepository.save(game);</span>
+        }
+<span class="fc" id="L190">    }</span>
+
+    @Transactional
+    public void declareWinners(Game game) {
+<span class="fc" id="L194">        List&lt;Player&gt; players = game.getPlayers();</span>
+        //get player(s) with max points
+<span class="fc" id="L196">        int maxPoints = players.stream()</span>
+<span class="fc" id="L197">            .mapToInt(Player::getPoints)</span>
+<span class="fc" id="L198">            .max()</span>
+<span class="fc" id="L199">            .orElse(0);</span>
+<span class="fc" id="L200">        List&lt;Player&gt; winners = players.stream()</span>
+<span class="fc bfc" id="L201" title="All 2 branches covered.">            .filter(p -&gt; p.getPoints() == maxPoints)</span>
+<span class="fc" id="L202">            .collect(Collectors.toList());</span>
+<span class="fc" id="L203">        game.setWinners(winners);</span>
+<span class="fc" id="L204">        game.setSpectators(new ArrayList&lt;&gt;());</span>
+<span class="fc" id="L205">        gameRepository.save(game);</span>
+<span class="fc" id="L206">        game.getWinners().stream().map(Player::getUser).forEach(achievementService::checkWinAchievements);</span>
+<span class="fc" id="L207">        game.getPlayers().stream().map(Player::getUser).forEach(u -&gt; {</span>
+<span class="fc" id="L208">            achievementService.checkPlayAchievements(u);</span>
+<span class="fc" id="L209">            achievementService.checkTrickAchievements(u);</span>
+<span class="fc" id="L210">        });</span>
+<span class="fc" id="L211">    }</span>
+
+    @Transactional
+    public void addSpectatorsToGame(Game game) {
+<span class="fc" id="L215">        List&lt;User&gt; usersInGame = game.getPlayers().stream().map(Player::getUser).toList();</span>
+<span class="fc" id="L216">        List&lt;User&gt; friendsOfAllPlayers = usersInGame.stream().map(friendRequestService::getFriends).reduce((list1, list2) -&gt;</span>
+<span class="fc" id="L217">        {List&lt;User&gt; intersection = new ArrayList&lt;&gt;(list1);intersection.retainAll(list2);</span>
+<span class="fc" id="L218">            return intersection;</span>
+<span class="fc" id="L219">        }).orElse(new ArrayList&lt;&gt;());</span>
+<span class="fc" id="L220">        game.setSpectators(friendsOfAllPlayers);</span>
+<span class="fc" id="L221">        gameRepository.save(game);</span>
+<span class="fc" id="L222">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

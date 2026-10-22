@@ -1,0 +1,33 @@
+.list-achievements {
+    height: 100%;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+}
+
+.completed {
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+    border-radius: 10px;
+}
+
+.completed td {
+    background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.background {
+    background-image: url("../../images/Achievements/AchievementsBackground.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.head {
+    background-color: transparent !important;
+    text-align: center;
+    font-size: 30px;
+}
