@@ -2,6 +2,8 @@
 
 package es.us.dp1.lx_xy_24_25.dixit.game;
 
+import es.us.dp1.lx_xy_24_25.dixit.auth.AuthService;
+import es.us.dp1.lx_xy_24_25.dixit.auth.payload.request.SignupRequest;
 import es.us.dp1.lx_xy_24_25.dixit.card.Card;
 import es.us.dp1.lx_xy_24_25.dixit.card.CardRepository;
 import es.us.dp1.lx_xy_24_25.dixit.player.Player;
@@ -10,6 +12,7 @@ import es.us.dp1.lx_xy_24_25.dixit.user.Authorities;
 import es.us.dp1.lx_xy_24_25.dixit.user.AuthoritiesRepository;
 import es.us.dp1.lx_xy_24_25.dixit.user.User;
 import es.us.dp1.lx_xy_24_25.dixit.user.UserRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -49,6 +52,80 @@ public class TurnServiceIntegrationTest {
 
     @Autowired
     private GameService gameService;
+
+    @Autowired
+    private AuthService authService;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @Test
+    void registeredPlayersCanFinishGameOnLastVote() throws Exception {
+        List<User> users = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            SignupRequest request = new SignupRequest();
+            request.setUsername("finish-registered-" + i);
+            request.setPassword("password");
+            request.setAuthority("PLAYER");
+            authService.createUser(request);
+            users.add(userRepository.findByUsername(request.getUsername()).orElseThrow());
+        }
+        // Reload the association created by signup, including its player without a game.
+        entityManager.flush();
+        entityManager.clear();
+        users = users.stream().map(u -> userRepository.findById(u.getId()).orElseThrow()).toList();
+        for (User user : users) {
+            assertEquals(1, user.getPlayers().size());
+            assertNull(user.getPlayers().getFirst().getGame());
+        }
+
+        Game game = gameService.createGame(null, users.getFirst());
+        gameService.addPlayerToGame(game, users.get(1));
+        gameService.addPlayerToGame(game, users.get(2));
+        game.setStartDate(new java.util.Date());
+        turnService.initializeFirstTurn(game);
+        Map<Integer, Integer> expectedPoints = new HashMap<>();
+        for (Player player : game.getPlayers()) {
+            expectedPoints.put(player.getId(), 0);
+        }
+
+        for (int i = 0; i < 6; i++) {
+            Turn turn = game.getTurns().getLast();
+            Player storyteller = turn.getStoryteller();
+            List<Player> voters = turn.getNonStorytellers();
+            Card answer = storyteller.getCards().getFirst();
+            Card playerCard = voters.getFirst().getCards().getFirst();
+            turnService.setStorytellerAnswer(turn, answer);
+            turnService.setStorytellerClue(turn, "clue " + i);
+            turnService.playerPlayCard(turn, voters.getFirst(), playerCard);
+            turnService.playerPlayCard(turn, voters.get(1), voters.get(1).getCards().getFirst());
+            turnService.playerVote(turn, voters.getFirst(), answer);
+            assertNull(game.getEndDate(), "The game must not finish before the last vote");
+            turnService.playerVote(turn, voters.get(1), answer);
+            expectedPoints.merge(voters.getFirst().getId(), 2, Integer::sum);
+            expectedPoints.merge(voters.get(1).getId(), 2, Integer::sum);
+            assertEquals(TurnState.FINISHED, turn.getState());
+        }
+
+        Integer gameId = game.getId();
+        entityManager.flush();
+        entityManager.clear();
+        Game finished = gameRepository.findById(gameId).orElseThrow();
+        assertNotNull(finished.getEndDate());
+        assertEquals(6, finished.getTurns().size());
+        assertEquals(2, finished.getTurns().getLast().getPlayedCards().stream()
+            .mapToInt(c -> c.getVotes().size()).sum());
+        assertEquals(3, finished.getWinners().size(), "Equal scores must preserve tied winners");
+        for (Player player : finished.getPlayers()) {
+            assertEquals(expectedPoints.get(player.getId()), player.getPoints());
+        }
+        for (Turn turn : finished.getTurns()) {
+            for (Card card : turn.getPlayedCards()) {
+                assertNull(card.getOwner());
+                assertNotNull(card.getUser(), "Scored cards must preserve who played them");
+            }
+        }
+    }
 
     private int userSequence = 0;
 

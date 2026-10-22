@@ -132,7 +132,7 @@ public class AchievementService {
 
     @Transactional
     public void checkTrickAchievements(User user) {
-        List<Game> games = user.getPlayers().stream().map(Player::getGame).toList();
+        List<Game> games = user.getPlayers().stream().map(Player::getGame).filter(Objects::nonNull).toList();
         List<Turn> turns = games.stream().flatMap(g -> g.getTurns().stream()).toList();
         List<Turn> noStorytellerTurns = turns.stream().filter(t -> !(t.getStoryteller().getUser().getId().equals(user.getId()))).toList();
         Integer votes = noStorytellerTurns.stream().flatMap(t -> t.getPlayedCards().stream()).filter(c -> c.getUser().getId().equals(user.getId()))
