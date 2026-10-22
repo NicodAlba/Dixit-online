@@ -40,6 +40,9 @@ class GameLobbyHttpIntegrationTest {
     @Autowired private TestRestTemplate rest;
     @LocalServerPort private int port;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private TurnService turnService;
+    @Autowired private javax.sql.DataSource dataSource;
+    @Autowired private es.us.dp1.lx_xy_24_25.dixit.statistics.StatisticsRepository statistics;
     @SpyBean private CardService cardService;
     @SpyBean private GameRepository gameRepository;
     @SpyBean private SimpMessagingTemplate messagingTemplate;
@@ -396,6 +399,216 @@ class GameLobbyHttpIntegrationTest {
                     accounts.get(player), null));
             }
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {3, 4})
+    void completeGamesPreserveHandsHistoryScoresAndImagePriority(int n) {
+        List<Account> users = new ArrayList<>();
+        for (int i = 0; i < n; i++) users.add(account());
+        int id = lobby(null, users.toArray(Account[]::new));
+        Account host = users.getFirst();
+        ResponseEntity<JsonNode> started = start(id, host);
+        assertStatus(200, started);
+        assertEquals(36, started.getBody().path("deck").size());
+        Map<Integer, Integer> points = new HashMap<>();
+        List<Map<String, Object>> history = List.of();
+        Set<Integer> initial = new HashSet<>(jdbc.queryForList("select id from cards where game_id = ?", Integer.class, id));
+        boolean reused = false;
+        for (int round = 1; round <= n * 2; round++) {
+            JsonNode before = read(id, host);
+            assertEquals(round, before.path("turns").size());
+            for (JsonNode p : before.path("players")) assertEquals(6, p.path("cards").size());
+            assertActiveImagesUnique(id, n * 6);
+            VotingRound voting = prepareVotingRound(id, users);
+            Set<Integer> unused = cardIds(id, "player_id is null and turn_id is null");
+            Set<Integer> oldHands = cardIds(id, "player_id is not null and turn_id is null");
+            assertActiveImagesUnique(id, n * 6);
+            List<Integer> voters = new ArrayList<>(voting.voters().keySet());
+            Map<Integer, Integer> targets = new HashMap<>();
+            for (int i = 0; i < voters.size(); i++) {
+                int target = round % 3 == 0 ? voting.cards().get(voters.get((i + 1) % voters.size()))
+                    : round % 3 == 1 || i == 0 ? voting.cards().get(voting.storyteller()) : voting.cards().get(voters.getFirst());
+                targets.put(voters.get(i), target);
+                assertStatus(200, vote(voting, voters.get(i), target));
+            }
+            long correct = targets.values().stream().filter(c -> c.equals(voting.cards().get(voting.storyteller()))).count();
+            for (int player : voting.cards().keySet()) {
+                int delta = correct == 0 || correct == voters.size() ? (player == voting.storyteller() ? 0 : 2)
+                    : (player == voting.storyteller() || targets.get(player).equals(voting.cards().get(voting.storyteller())) ? 3 : 0);
+                if (player != voting.storyteller()) delta += (int) targets.values().stream().filter(c -> c.equals(voting.cards().get(player))).count();
+                points.merge(player, delta, Integer::sum);
+                assertEquals(points.get(player), jdbc.queryForObject("select points from players where id = ?", Integer.class, player));
+            }
+            List<Map<String, Object>> reloaded = playedHistory(id);
+            assertEquals(history, reloaded.stream().filter(row -> ((Number) row.get("TURN_ID")).intValue() != voting.turnId()).toList());
+            history = reloaded;
+            assertEquals(round * n, count("select count(*) from cards where game_id = ? and turn_id is not null and user_id is not null and player_id is null", id));
+            assertEquals(round * (n - 1), count("select count(*) from player_votes v join cards c on c.id = v.card_id where c.game_id = ?", id));
+            JsonNode after = read(id, host);
+            if (round < n * 2) {
+                assertEquals(round + 1, after.path("turns").size());
+                Set<Integer> dealt = cardIds(id, "player_id is not null and turn_id is null");
+                dealt.removeAll(oldHands);
+                assertEquals(n, dealt.size());
+                assertEquals(Math.min(unused.size(), n), dealt.stream().filter(unused::contains).count());
+                for (Integer card : dealt) if (!initial.contains(card)) {
+                    reused = true;
+                    assertEquals(1, count("select count(*) from cards c where c.id = ? and c.turn_id is null and c.user_id is null and exists (select 1 from cards h where h.game_id = c.game_id and h.image_id = c.image_id and h.turn_id is not null and h.id <> c.id)", card));
+                    assertEquals(0, count("select count(*) from player_votes where card_id = ?", card));
+                }
+                for (JsonNode p : after.path("players")) assertEquals(6, p.path("cards").size());
+            } else {
+                assertFalse(after.path("endDate").isNull()); assertFalse(after.path("winners").isEmpty());
+                for (JsonNode p : after.path("players")) assertEquals(5, p.path("cards").size());
+            }
+            assertEquals(n == 4 ? 36 + 4 * Math.max(0, Math.min(round, 7) - 3) : 36, count("select count(*) from cards where game_id = ?", id));
+        }
+        assertEquals(n == 4, reused);
+        assertEquals(history, playedHistory(id));
+        for (Account user : users) {
+            assertNotNull(statistics.findMostPlayedCardByUserId(user.id()));
+            assertEquals(points.get(jdbc.queryForObject("select id from players where game_id = ? and user_id = ?", Integer.class, id, user.id())).longValue(), statistics.totalPointsByUserId(user.id()));
+            assertEquals(1, count("select count(*) from achievements where user_id = ? and threshold = 1 and dtype = 'PlayAchievement' and date_obtained is not null", user.id()));
+            int trickVotes = count("select count(*) from player_votes v join cards c on c.id = v.card_id join turns t on t.id = c.turn_id join players s on s.id = t.storyteller_id where c.game_id = ? and c.user_id = ? and s.user_id <> c.user_id", id, user.id());
+            for (Map<String, Object> a : jdbc.queryForList("select threshold, date_obtained from achievements where user_id = ? and dtype = 'TrickAchievement'", user.id()))
+                assertEquals(trickVotes >= ((Number) a.get("THRESHOLD")).intValue(), a.get("DATE_OBTAINED") != null);
+        }
+    }
+
+    @Test
+    void replenishmentRollbackDoesNotPublishOrLeavePartialHistoryAndRetryIsSafe() {
+        List<Account> users = List.of(account(), account(), account(), account());
+        int id = lobby(null, users.toArray(Account[]::new));
+        assertStatus(200, start(id, users.getFirst()));
+        for (int i = 0; i < 3; i++) finishVoting(prepareVotingRound(id, users));
+        VotingRound voting = prepareVotingRound(id, users);
+        List<Integer> voters = new ArrayList<>(voting.voters().keySet());
+        for (int i = 0; i < voters.size() - 1; i++) assertStatus(200, vote(voting, voters.get(i), voting.cards().get(voting.storyteller())));
+        List<Map<String, Object>> before = databaseState(id);
+        clearInvocations(messagingTemplate);
+        doAnswer(inv -> { inv.callRealMethod(); throw new IllegalStateException("Injected after replenishment"); }).when(cardService).replenishHands(any(Game.class));
+        int last = voters.getLast();
+        assertStatus(500, vote(voting, last, voting.cards().get(voting.storyteller())));
+        assertEquals(before, databaseState(id));
+        verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
+        doCallRealMethod().when(cardService).replenishHands(any(Game.class));
+        assertStatus(200, vote(voting, last, voting.cards().get(voting.storyteller())));
+        assertEquals(40, count("select count(*) from cards where game_id = ?", id));
+        List<Map<String, Object>> committed = databaseState(id);
+        turnService.moveToNextTurn(turnService.findById(voting.turnId()));
+        turnService.moveToNextTurn(turnService.findById(voting.turnId()));
+        assertEquals(committed, databaseState(id));
+        assertFalse(vote(voting, last, voting.cards().get(voting.storyteller())).getStatusCode().is2xxSuccessful());
+        assertEquals(committed, databaseState(id));
+    }
+
+    @Test
+    void concurrentFinalVotesReplenishOnlyOnce() throws Exception {
+        List<Account> users = List.of(account(), account(), account(), account());
+        int id = lobby(null, users.toArray(Account[]::new));
+        assertStatus(200, start(id, users.getFirst()));
+        for (int i = 0; i < 3; i++) finishVoting(prepareVotingRound(id, users));
+        VotingRound voting = prepareVotingRound(id, users);
+        List<Integer> voters = new ArrayList<>(voting.voters().keySet());
+        int answer = voting.cards().get(voting.storyteller());
+        assertStatus(200, vote(voting, voters.getFirst(), answer));
+        assertEquals(List.of(200, 200), race(() -> vote(voting, voters.get(1), answer).getStatusCode().value(), () -> vote(voting, voters.get(2), answer).getStatusCode().value()));
+        assertEquals(5, count("select count(*) from turns where game_id = ?", id));
+        assertEquals(40, count("select count(*) from cards where game_id = ?", id));
+        assertEquals(3, count("select count(*) from player_votes v join cards c on c.id = v.card_id where c.turn_id = ?", voting.turnId()));
+        assertActiveImagesUnique(id, 24);
+        for (JsonNode p : read(id, users.getFirst()).path("players")) assertEquals(6, p.path("cards").size());
+    }
+
+    @Test
+    void realStompReceivesReplenishedHandsOnlyAfterDatabaseCommit() throws Exception {
+        List<Account> users = List.of(account(), account(), account(), account());
+        int id = lobby(null, users.toArray(Account[]::new));
+        assertStatus(200, start(id, users.getFirst()));
+        for (int i = 0; i < 3; i++) finishVoting(prepareVotingRound(id, users));
+        VotingRound voting = prepareVotingRound(id, users);
+        String destination = "/topic/game/" + id;
+        WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+        container.setDefaultMaxTextMessageBufferSize(512 * 1024);
+        WebSocketStompClient stomp = new WebSocketStompClient(new SockJsClient(List.of(new WebSocketTransport(new StandardWebSocketClient(container)))));
+        stomp.setInboundMessageSizeLimit(512 * 1024);
+        stomp.setMessageConverter(new MappingJackson2MessageConverter());
+        stomp.start();
+        StompSession session = null;
+        try {
+            session = stomp.connectAsync("http://127.0.0.1:" + port + "/ws", new StompSessionHandlerAdapter() {}).get(5, TimeUnit.SECONDS);
+            BlockingQueue<JsonNode> messages = new LinkedBlockingQueue<>();
+            session.subscribe(destination, frames(messages));
+            session.send(destination, Map.of("probe", "ready"));
+            JsonNode probe = messages.poll(5, TimeUnit.SECONDS);
+            assertNotNull(probe); assertEquals("ready", probe.path("probe").asText());
+            doAnswer(inv -> {
+                try (java.sql.Connection connection = dataSource.getConnection();
+                     java.sql.PreparedStatement statement = connection.prepareStatement("select count(*) from turns where game_id = ?")) {
+                    statement.setInt(1, id);
+                    try (java.sql.ResultSet result = statement.executeQuery()) { assertTrue(result.next()); assertEquals(5, result.getInt(1)); }
+                }
+                return inv.callRealMethod();
+            }).when(messagingTemplate).convertAndSend(eq(destination), any(JsonNode.class));
+            finishVoting(voting);
+            JsonNode event = messages.poll(5, TimeUnit.SECONDS);
+            assertNotNull(event); assertEquals(5, event.path("turns").size()); assertEquals(40, event.path("deck").size());
+            for (JsonNode p : event.path("players")) assertEquals(6, p.path("cards").size());
+            assertEquals(read(id, users.getFirst()), event, "Event must represent durable REST state");
+        } finally {
+            if (session != null && session.isConnected()) session.disconnect();
+            stomp.stop();
+        }
+    }
+
+    private record VotingRound(int gameId, int turnId, int storyteller, Map<Integer, Integer> cards, LinkedHashMap<Integer, Account> voters) {}
+
+    private VotingRound prepareVotingRound(int id, List<Account> users) {
+        JsonNode game = read(id, users.getFirst());
+        JsonNode turn = game.path("turns").get(game.path("turns").size() - 1);
+        int tid = turn.path("id").asInt(), storyteller = turn.path("storyteller").path("id").asInt();
+        Map<Integer, Integer> cards = new LinkedHashMap<>();
+        LinkedHashMap<Integer, Account> voters = new LinkedHashMap<>();
+        Map<Integer, Account> accounts = new HashMap<>();
+        for (Account u : users) accounts.put(jdbc.queryForObject("select id from players where game_id = ? and user_id = ?", Integer.class, id, u.id()), u);
+        for (JsonNode p : game.path("players")) {
+            int pid = p.path("id").asInt(); cards.put(pid, p.path("cards").get(0).path("id").asInt());
+            if (pid != storyteller) voters.put(pid, accounts.get(pid));
+        }
+        assertStatus(200, request(HttpMethod.PUT, "/turns/" + tid + "/answer/" + cards.get(storyteller), accounts.get(storyteller), null));
+        assertStatus(200, request(HttpMethod.PUT, "/turns/" + tid + "/clue", accounts.get(storyteller), "replenishment clue"));
+        for (int pid : voters.keySet()) assertStatus(200, request(HttpMethod.POST, "/turns/" + tid + "/play-card/" + cards.get(pid) + "/" + pid, accounts.get(pid), null));
+        return new VotingRound(id, tid, storyteller, cards, voters);
+    }
+
+    private ResponseEntity<JsonNode> vote(VotingRound r, int voter, int card) {
+        return request(HttpMethod.POST, "/turns/" + r.turnId() + "/vote/" + voter + "/" + card, r.voters().get(voter), null);
+    }
+
+    private void finishVoting(VotingRound r) {
+        for (int voter : r.voters().keySet()) assertStatus(200, vote(r, voter, r.cards().get(r.storyteller())));
+    }
+
+    private Set<Integer> cardIds(int id, String predicate) {
+        return new HashSet<>(jdbc.queryForList("select id from cards where game_id = ? and " + predicate, Integer.class, id));
+    }
+
+    private void assertActiveImagesUnique(int id, int expected) {
+        String predicate = " from cards c where c.game_id = ? and (c.player_id is not null or exists (select 1 from turns t where t.id = c.turn_id and t.state <> 'FINISHED'))";
+        assertEquals(expected, count("select count(*)" + predicate, id)); assertEquals(expected, count("select count(distinct image_id)" + predicate, id));
+    }
+
+    private List<Map<String, Object>> playedHistory(int id) {
+        return jdbc.queryForList("select c.id, c.image_id, c.turn_id, c.user_id, c.player_id, v.player_id as voter_id from cards c left join player_votes v on v.card_id = c.id where c.game_id = ? and c.turn_id is not null order by c.id, v.player_id", id);
+    }
+
+    private List<Map<String, Object>> databaseState(int id) {
+        List<Map<String, Object>> state = new ArrayList<>(jdbc.queryForList("select * from cards where game_id = ? order by id", id));
+        state.addAll(jdbc.queryForList("select * from turns where game_id = ? order by id", id));
+        state.addAll(jdbc.queryForList("select id, points from players where game_id = ? order by id", id));
+        state.addAll(jdbc.queryForList("select v.* from player_votes v join cards c on c.id = v.card_id where c.game_id = ? order by card_id, v.player_id", id));
+        return state;
     }
 
     private Account account() {

@@ -59,6 +59,7 @@ public class Game extends BaseEntity {
 
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference("game-cards") //prevents infinite looping during serialization
+    // All card occurrences, including history; CardService calculates drawable images.
     private List<Card> deck = new ArrayList<>();
 
     @ManyToMany

@@ -136,11 +136,7 @@ public class TurnRestController {
         @PathVariable Integer playerId,
         @PathVariable Integer cardId
     ) {
-        Turn turn = turnService.findById(turnId);
-        Player player = turnService.findPlayerById(playerId);
-        Card card = turnService.findCardById(cardId);
-
-        Card updatedCard = turnService.playerVote(turn, player, card);
+        Card updatedCard = turnService.playerVote(turnId, playerId, cardId);
 
         return ResponseEntity.ok(updatedCard);
     }
