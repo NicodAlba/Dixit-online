@@ -121,3 +121,8 @@ target/
 *~
 /allure-results/
 /allure-report/
+
+# Personal academic contracts (retain local copies, never publish)
+/docs/*[Cc]ontract*
+/docs/*[Cc]ontrato*
+/docs/*[Aa]greement*
