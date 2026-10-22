@@ -11,8 +11,11 @@ El antiguo documento externo `../# DIXIT — Software Architecture & SDD Sp.md` 
 ## Alcance e integración
 
 - Trabaja sobre un problema cada vez y conserva arquitectura, modelo y reglas salvo aprobación expresa.
-- Crea una rama por tarea desde `develop`, con el nombre acordado. Integra trabajo terminado mediante PR hacia `develop`, conservando commits existentes.
-- No integres directamente en `main`, publiques versiones o despliegues sin aprobación. El permiso de push al repositorio propio no autoriza esas acciones.
+- Todo trabajo, incluidos documentación y configuración, se realiza en una rama propia `fix/*` o `feature/*` creada desde `develop`, con el nombre acordado. No hagas cambios ni commits directamente en `develop` o `main`.
+- La entrega de cada tarea termina mediante PR de su rama `fix/*` o `feature/*` hacia `develop`, conservando los commits existentes y verificando la subida e integración. Publica únicamente la rama explícita de la tarea en el repositorio propio autorizado.
+- Indica SIEMPRE este recorrido en los prompts de traspaso, propuestas y cierres: `fix/*` o `feature/*` → PR → `develop`. Identifica la rama concreta cuando se conozca y distingue los pasos pendientes de los completados.
+- El paso de `develop` a `main` lo realiza exclusivamente el propietario. Los agentes no deben hacer merge, commits ni push a `main`, ni crear PR hacia `main` por iniciativa propia.
+- No publiques versiones o despliegues sin aprobación. El permiso de push e integración en `develop` no autoriza esas acciones ni el paso a `main`.
 
 ## Historial público y copias locales
 
