@@ -1,5 +1,9 @@
 package es.us.dp1.lx_xy_24_25.dixit.game;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import es.us.dp1.lx_xy_24_25.dixit.card.Card;
 import es.us.dp1.lx_xy_24_25.dixit.card.CardRepository;
 import es.us.dp1.lx_xy_24_25.dixit.card.CardService;
@@ -29,16 +33,18 @@ public class TurnService {
     private final GameService gameService;
     private final CardService cardService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ObjectMapper objectMapper;
 
     @Autowired
     public TurnService(TurnRepository turnRepository, CardRepository cardRepository, PlayerRepository playerRepository,
-                       GameService gameService, CardService cardService, SimpMessagingTemplate messagingTemplate) {
+                       GameService gameService, CardService cardService, SimpMessagingTemplate messagingTemplate, ObjectMapper objectMapper) {
         this.turnRepository = turnRepository;
         this.cardRepository = cardRepository;
         this.playerRepository = playerRepository;
         this.gameService = gameService;
         this.cardService = cardService;
         this.messagingTemplate = messagingTemplate;
+        this.objectMapper = objectMapper;
     }
     private void notifyGameUpdate(Game game) {
         messagingTemplate.convertAndSend(
@@ -154,38 +160,59 @@ public class TurnService {
     }
 
     @Transactional
-    public Card playerVote(Turn turn, Player player, Card card) {
+    public Card playerVote(Integer turnId, Integer playerId, Integer cardId) {
+        Game game = lockGameForTurn(turnId);
+        Turn turn = findById(turnId);
+        Player player = findPlayerById(playerId);
+        Card card = findCardById(cardId);
+        if (game.hasFinished() || (turn.getState() != TurnState.SHOWING_CARDS && turn.getState() != TurnState.VOTING)) {
+            throw new IllegalStateException("Turn is not accepting votes");
+        }
         turn.validateCardBelongsToTurn(card);
         turn.validatePlayerHasntVoted(player);
         boolean readyForScoring = turn.registerVote(player, card);
         Card saved = cardRepository.save(card);
         playerRepository.save(player);
-
         if (readyForScoring) {
             turn.setState(TurnState.SCORING);
+            scoreTurn(turn);
+            if (!game.hasFinished()) advanceFinishedTurn(turn, game);
         }
-        Turn savedTurn = turnRepository.save(turn);
-        notifyTurnUpdate(savedTurn);
-
-        if (turn.getState() == TurnState.SCORING) {
-            scoreTurn(savedTurn);
-        }
-        if (turn.getState() == TurnState.FINISHED) {
-            notifyTurnUpdate(savedTurn);
-            Game game = savedTurn.getGame();
-            if (game != null && !game.hasFinished()) {
-                moveToNextTurn(savedTurn);
-            }
-            notifyGameUpdate(game);
-        }
-
-
+        turnRepository.save(turn);
+        publishCommittedVote(turn, readyForScoring);
         return saved;
+    }
+
+    @Transactional
+    public Card playerVote(Turn turn, Player player, Card card) {
+        return playerVote(turn.getId(), player.getId(), card.getId());
+    }
+
+    private Game lockGameForTurn(Integer turnId) {
+        // This scalar lookup avoids loading stale entities before acquiring the game lock.
+        Integer gameId = turnRepository.findGameIdById(turnId)
+            .orElseThrow(() -> new ResourceNotFoundException("Turn", "id", turnId));
+        return gameService.findByIdForUpdate(gameId);
+    }
+
+    private void publishCommittedVote(Turn turn, boolean gameChanged) {
+        // Snapshot while associations are attached; publish JSON only after a successful commit.
+        JsonNode turnPayload = objectMapper.valueToTree(turn);
+        JsonNode gamePayload = gameChanged ? objectMapper.valueToTree(turn.getGame()) : null;
+        Integer turnId = turn.getId(), gameId = turn.getGame().getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                messagingTemplate.convertAndSend("/topic/turn/" + turnId, turnPayload);
+                if (gamePayload != null) messagingTemplate.convertAndSend("/topic/game/" + gameId, gamePayload);
+            }
+        });
     }
 
     //Scoring method
     @Transactional
     public void scoreTurn(Turn turn) {
+        if (turn.getState() == TurnState.FINISHED) return;
         Map<Player, Integer> pointAdjustments = turn.calculateScoreAdjustments();
         pointAdjustments.forEach((player, delta) -> {
             player.addPoints(delta);
@@ -193,16 +220,14 @@ public class TurnService {
         });
 
         turn.getPlayedCards().forEach(card -> {
-            card.setUser(card.getOwner().getUser());
+            Player owner = card.getOwner();
+            card.setUser(owner.getUser());
+            owner.getCards().remove(card);
             card.setOwner(null);
         });
 
         turn.finish();
-        Turn saved = turnRepository.save(turn);
-
-        notifyTurnUpdate(saved);
-
-        notifyGameUpdate(turn.getGame());
+        turnRepository.save(turn);
 
         Game game = turn.getGame();
         if (game != null) {
@@ -238,33 +263,26 @@ public class TurnService {
 
     @Transactional
     public void moveToNextTurn(Turn currentTurn) {
-        Game game = currentTurn.getGame();
-        if (game == null) {
-            throw new IllegalStateException("Game not found for the current turn");
-        }
-        if (game.hasFinished()) {
-            throw new IllegalStateException("Cannot start a new turn because the game has already finished");
-        }
+        Game game = lockGameForTurn(currentTurn.getId());
+        advanceFinishedTurn(findById(currentTurn.getId()), game);
+    }
+
+    private void advanceFinishedTurn(Turn currentTurn, Game game) {
+        Turn latest = turnRepository.findFirstByGameIdOrderByIdDesc(game.getId()).orElseThrow();
+        if (!Objects.equals(latest.getId(), currentTurn.getId()) || game.hasFinished()) return;
+        if (currentTurn.getState() != TurnState.FINISHED) throw new IllegalStateException("Only a finished turn can advance");
+        cardService.replenishHands(game);
         Turn newTurn = new Turn();
         newTurn.setGame(game);
-        Player nextStoryteller = game.nextStoryteller(currentTurn.getStoryteller());
-        newTurn.setStoryteller(nextStoryteller);
+        newTurn.setStoryteller(game.nextStoryteller(currentTurn.getStoryteller()));
         newTurn.setState(TurnState.WAITING_STORYTELLER_CARD);
-        // Deal one card to each player if possible
-        if (cardsEnoughToDeal(game)) {
-            List<Card> availableCards = cardRepository.findByOwnerIsNullAndTurnIsNullAndGameId(game.getId());
-            List<Card> dealtCards = game.dealCards(availableCards, 1);
-            persistDealtCards(dealtCards);
-        }
         game.getTurns().add(newTurn);
         turnRepository.save(newTurn);
     }
 
     @Transactional(readOnly = true)
     public Boolean cardsEnoughToDeal(Game game) {
-        int cardsNeeded = game.getPlayers().size();
-        int availableCards = cardRepository.countByGameAndOwnerIsNull(game);
-        return availableCards >= cardsNeeded;
+        return cardService.countAvailableImages(game) >= game.getPlayers().size();
     }
 
     @Transactional(readOnly = true)

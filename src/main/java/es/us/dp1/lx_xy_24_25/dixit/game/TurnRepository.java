@@ -15,6 +15,9 @@ public interface TurnRepository extends CrudRepository<Turn, Integer>{
     @Query("select t.storyteller from Turn t where t.id = :id")
     Player findTurnStorytellerById(@Param("id") Integer id);
     Optional<Turn> findById(Integer id);
+    @Query("select t.game.id from Turn t where t.id = :id")
+    Optional<Integer> findGameIdById(@Param("id") Integer id);
+    Optional<Turn> findFirstByGameIdOrderByIdDesc(Integer gameId);
     List<Card> findPlayedCardsById(Integer id);
     //List<Turn> findAllTurnsByGameId(Integer id);
 }

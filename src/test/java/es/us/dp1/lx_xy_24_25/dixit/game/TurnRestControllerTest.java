@@ -181,19 +181,16 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testPlayerVoteSuccess() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findPlayerById(playerId)).thenReturn(testPlayer);
-        when(turnService.findCardById(cardId)).thenReturn(testCard);
-        when(turnService.playerVote(testTurn, testPlayer, testCard)).thenReturn(testCard);
+        when(turnService.playerVote(turnId, playerId, cardId)).thenReturn(testCard);
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/vote/{playerId}/{cardId}", turnId, playerId, cardId).with(csrf())).andExpect(status().isOk());
-        verify(turnService).playerVote(testTurn, testPlayer, testCard);
+        verify(turnService).playerVote(turnId, playerId, cardId);
     }
 
     @Test
     @WithMockUser("test")
     void testPlayerVoteTurnNotFound() throws Exception {
-        when(turnService.findById(999)).thenThrow(new ResourceNotFoundException("Turn not found"));
+        when(turnService.playerVote(999, playerId, cardId)).thenThrow(new ResourceNotFoundException("Turn not found"));
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/vote/{playerId}/{cardId}", 999, playerId, cardId).with(csrf())).andExpect(status().isNotFound());
     }
@@ -201,8 +198,7 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testPlayerVotePlayerNotFound() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findPlayerById(999)).thenThrow(new ResourceNotFoundException("Player not found"));
+        when(turnService.playerVote(turnId, 999, cardId)).thenThrow(new ResourceNotFoundException("Player not found"));
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/vote/{playerId}/{cardId}", turnId, 999, cardId).with(csrf())).andExpect(status().isNotFound());
     }
@@ -210,9 +206,7 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testPlayerVoteCardNotFound() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findPlayerById(playerId)).thenReturn(testPlayer);
-        when(turnService.findCardById(999)).thenThrow(new ResourceNotFoundException("Card not found"));
+        when(turnService.playerVote(turnId, playerId, 999)).thenThrow(new ResourceNotFoundException("Card not found"));
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/vote/{playerId}/{cardId}", turnId, playerId, 999).with(csrf())).andExpect(status().isNotFound());
     }
