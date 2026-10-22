@@ -122,8 +122,14 @@ public class AchievementService {
 
     @Transactional
     public void checkPlayAchievements(User user) {
-        List<Game> games = user.getPlayers().stream().map(Player::getGame).toList();
-        Integer played = games.size();
+        Integer played = (int) user.getPlayers().stream()
+            .map(Player::getGame)
+            .filter(Objects::nonNull)
+            .filter(game -> game.getStartDate() != null && game.hasFinished())
+            .map(Game::getId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .count();
         List<Achievement> playAchievements = achievementRepository.findByUserAndType(user, PlayAchievement.class);
         for (Achievement a : playAchievements) {
             ((PlayAchievement) a).unlockPlayAchievements(played);
