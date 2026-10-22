@@ -15,7 +15,7 @@ export function GameInvitationList() {
 
     const [invitations, setInvitations] = useFetchState(
         [],
-        "http://localhost:3000/api/v1/games/invitations",
+        "/api/v1/games/invitations",
         jwt,
         setMessage,
         setVisible
@@ -34,9 +34,8 @@ export function GameInvitationList() {
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     if (response.status === 409) {
-                        setMessage("You are already in this game.");
+                        setMessage(data.message || "Unable to join this game.");
                         setVisible(true);
-                        navigate("/");
                     } else if (response.status === 401) {
                         setMessage("Incorrect password.");
                         setVisible(true);
@@ -44,7 +43,7 @@ export function GameInvitationList() {
                         setMessage("Game not found.");
                         setVisible(true);
                     } else if (response.status === 403) {
-                        setMessage("Already 4 players in the game");
+                        setMessage(data.message || "You are not invited to this game.");
                         setVisible(true);
                     } else {
                         setMessage(data.message || "Error joining the game.");
@@ -73,6 +72,7 @@ export function GameInvitationList() {
 
     return (
         <div>
+            {visible && message && <div role="alert">{message}</div>}
             { invitations.length > 0 &&
                 <div className="ls-container">
                     <h3 className="text-center">Invitations</h3>

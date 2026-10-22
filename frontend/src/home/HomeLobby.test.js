@@ -1,0 +1,19 @@
+import React from "react";
+import {fireEvent, render, screen} from "@testing-library/react";
+import Home from "./index";
+const mockNavigate = jest.fn();
+jest.mock("react-router-dom", () => ({useNavigate: () => mockNavigate}));
+jest.mock("../services/token.service", () => ({getLocalAccessToken: () => "token"}));
+jest.mock("jwt-decode", () => () => ({authorities: ["PLAYER"]}));
+jest.mock("./GameInvitationList", () => ({GameInvitationList: () => null}));
+const originalFetch = global.fetch;
+afterEach(() => {global.fetch = originalFetch; jest.clearAllMocks();});
+test.each(["Already 4 players in the game", "The game has already started or finished"])("join displays conflict: %s", async message => {
+    global.fetch = jest.fn().mockResolvedValue({ok: false, status: 409, json: async () => ({message})});
+    render(<Home />); fireEvent.click(screen.getByRole("button", {name: "Play game"}));
+    fireEvent.click(screen.getByRole("button", {name: "Join game"}));
+    fireEvent.change(screen.getByLabelText("Enter the game ID:"), {target: {value: "42"}});
+    fireEvent.click(screen.getByRole("button", {name: "Join game"}));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith("/api/v1/games/42/join", expect.objectContaining({method: "PATCH"}));
+});

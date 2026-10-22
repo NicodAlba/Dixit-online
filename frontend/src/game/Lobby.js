@@ -19,12 +19,15 @@ export default function Lobby() {
 
 
     useEffect(() => {
+        let cancelled = false;
+        let revision = 0;
         if (!gameId) {
             setError("No se encontró el ID de la partida en la URL.");
             setLoading(false);
             return;
         }
         async function fetchGame() {
+            const requestRevision = ++revision;
             try {
                 const response = await fetch(
                     `/api/v1/games/${gameId}`,
@@ -41,6 +44,7 @@ export default function Lobby() {
                 }
 
                 const data = await response.json();
+                if (cancelled || requestRevision !== revision) return;
                 setGameData(data);
 
                 if(data.startDate) {
@@ -49,32 +53,38 @@ export default function Lobby() {
                     return;
                 }
             } catch (error) {
+                if (cancelled || requestRevision !== revision) return;
                 console.error("Error al obtener los datos de la partida:", error);
                 setError(error.message);
             } finally {
-                setLoading(false);
+                if (!cancelled && requestRevision === revision) setLoading(false);
             }
         }
         fetchGame();
 
-        const socket = new SockJS('http://localhost:8080/ws');
         const stompClient = new Client({
-            webSocketFactory: () => socket,
+            webSocketFactory: () => new SockJS("/ws"),
             reconnectDelay: 5000,
             onConnect: () => {
+                if (cancelled) return;
                 stompClient.subscribe(`/topic/game/${gameId}`, (message) => {
+                    if (cancelled) return;
+                    revision++;
                     if (message.body === '"DELETED"') {
                         alert("The leader deleted the game");
                         navigate("/");
                     } else {
                         const updatedGame = JSON.parse(message.body);
                         setGameData(updatedGame);
+                        setLoading(false);
 
                         if(updatedGame.startDate) {
                             navigate(`/games/${gameId}/game`);
                         }
                     }
                 });
+                // Recover changes made between the initial GET and subscription.
+                fetchGame();
             },
             onStompError: (frame) => {
                 console.error('Error en WebSocket:', frame.headers['message']);
@@ -84,10 +94,12 @@ export default function Lobby() {
         stompClient.activate();
 
         return () => {
+            cancelled = true;
+            revision++;
             stompClient.deactivate();
         };
 
-    }, [gameId, jwt]);
+    }, [gameId, jwt, navigate]);
 
     const maxPlayers = 4;
     if (loading) return <div>Cargando partida...</div>;

@@ -1,6 +1,16 @@
 package es.us.dp1.lx_xy_24_25.dixit.game;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.WebSocketContainer;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.simp.stomp.*;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.messaging.WebSocketStompClient;
+import org.springframework.web.socket.sockjs.client.SockJsClient;
+import org.springframework.web.socket.sockjs.client.WebSocketTransport;
+import java.lang.reflect.Type;
 import es.us.dp1.lx_xy_24_25.dixit.card.CardService;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -28,6 +38,7 @@ import static org.mockito.ArgumentMatchers.*;
         "spring.jpa.show-sql=false", "spring.jpa.properties.hibernate.format_sql=false"})
 class GameLobbyHttpIntegrationTest {
     @Autowired private TestRestTemplate rest;
+    @LocalServerPort private int port;
     @Autowired private JdbcTemplate jdbc;
     @SpyBean private CardService cardService;
     @SpyBean private GameRepository gameRepository;
@@ -244,6 +255,85 @@ class GameLobbyHttpIntegrationTest {
         join(id, null, third);
         assertStatus(200, start(id, host));
         verify(messagingTemplate, times(2)).convertAndSend(eq("/topic/game/" + id), any(Game.class));
+    }
+
+    @Test
+    void twoRealSockJsSubscribersReceiveJoinsInvitationsAndCommittedStart() throws Exception {
+        Account host = account(), third = account(), fourth = account();
+        int id = lobby(null, host, account());
+        String destination = "/topic/game/" + id;
+        // Java's default 8 KiB text buffer is smaller than the existing Game JSON.
+        // Browser clients do not have this Java-container limit.
+        WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+        container.setDefaultMaxTextMessageBufferSize(512 * 1024);
+        WebSocketStompClient stomp = new WebSocketStompClient(new SockJsClient(
+            List.of(new WebSocketTransport(new StandardWebSocketClient(container)))));
+        stomp.setInboundMessageSizeLimit(512 * 1024);
+        stomp.setMessageConverter(new MappingJackson2MessageConverter());
+        stomp.start();
+        StompSession first = null, second = null;
+        try {
+            first = stomp.connectAsync("http://127.0.0.1:" + port + "/ws", new StompSessionHandlerAdapter() {})
+                .get(5, TimeUnit.SECONDS);
+            second = stomp.connectAsync("http://127.0.0.1:" + port + "/ws", new StompSessionHandlerAdapter() {})
+                .get(5, TimeUnit.SECONDS);
+            BlockingQueue<JsonNode> firstMessages = new LinkedBlockingQueue<>();
+            BlockingQueue<JsonNode> secondMessages = new LinkedBlockingQueue<>();
+            first.subscribe(destination, frames(firstMessages));
+            second.subscribe(destination, frames(secondMessages));
+            // Broker echo confirms both subscriptions are installed before changing the lobby.
+            String firstProbe = "first-" + UUID.randomUUID();
+            String secondProbe = "second-" + UUID.randomUUID();
+            first.send(destination, Map.of("probe", firstProbe));
+            assertEquals(firstProbe, firstMessages.poll(5, TimeUnit.SECONDS).path("probe").asText());
+            second.send(destination, Map.of("probe", secondProbe));
+            JsonNode message;
+            do { message = secondMessages.poll(5, TimeUnit.SECONDS); assertNotNull(message); }
+            while (!secondProbe.equals(message.path("probe").asText()));
+            do { message = firstMessages.poll(5, TimeUnit.SECONDS); assertNotNull(message); }
+            while (!secondProbe.equals(message.path("probe").asText()));
+            firstMessages.clear();
+            secondMessages.clear();
+
+            join(id, null, third);
+            awaitGame(firstMessages, id, 3, false);
+            awaitGame(secondMessages, id, 3, false);
+            assertEquals(3, read(id, host).path("players").size());
+            int invitation = invite(id, host, fourth);
+            assertStatus(200, accept(invitation, fourth));
+            awaitGame(firstMessages, id, 4, false);
+            awaitGame(secondMessages, id, 4, false);
+            assertStatus(200, start(id, host));
+            JsonNode firstStart = awaitGame(firstMessages, id, 4, true);
+            JsonNode secondStart = awaitGame(secondMessages, id, 4, true);
+            JsonNode persisted = assertStarted(id, host, 4);
+            assertEquals(persisted.path("startDate"), firstStart.path("startDate"));
+            assertEquals(persisted.path("turns").get(0).path("id"), secondStart.path("turns").get(0).path("id"));
+        } finally {
+            if (first != null && first.isConnected()) first.disconnect();
+            if (second != null && second.isConnected()) second.disconnect();
+            stomp.stop();
+        }
+    }
+
+    private StompFrameHandler frames(BlockingQueue<JsonNode> messages) {
+        return new StompFrameHandler() {
+            @Override public Type getPayloadType(StompHeaders headers) { return JsonNode.class; }
+            @Override public void handleFrame(StompHeaders headers, Object payload) { messages.add((JsonNode) payload); }
+        };
+    }
+
+    private JsonNode awaitGame(BlockingQueue<JsonNode> messages, int id, int participants, boolean started) throws Exception {
+        JsonNode game = messages.poll(5, TimeUnit.SECONDS);
+        assertNotNull(game, "Missing lobby notification");
+        assertEquals(id, game.path("id").asInt());
+        assertEquals(participants, game.path("players").size());
+        assertEquals(started, !game.path("startDate").isNull());
+        if (started) {
+            assertEquals(1, game.path("turns").size());
+            for (JsonNode player : game.path("players")) assertEquals(6, player.path("cards").size());
+        }
+        return game;
     }
 
     private ResponseEntity<JsonNode> start(int id, Account host) {
