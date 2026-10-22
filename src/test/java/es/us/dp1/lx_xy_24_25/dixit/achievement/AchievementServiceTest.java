@@ -195,6 +195,22 @@ class AchievementServiceTest {
         user1.setAchievements(playAchievements1);
         userService.saveUser(user1);
         achievementService.checkPlayAchievements(user1);
+        assertNull(playAchievements1.getFirst().getDateObtained());
+
+        User user3 = new User();
+        user3.setUsername("play-third");
+        user3.setPassword("password");
+        user3.setAuthority(authService.findByAuthority("PLAYER"));
+        userService.saveUser(user3);
+        Player player3 = new Player();
+        player3.setUser(user3);
+        player3.setGame(game);
+        playerService.savePlayer(player3);
+        game.getPlayers().addAll(List.of(player1, player2, player3));
+        game.setStartDate(new java.util.Date());
+        game.setEndDate(new java.util.Date());
+        gameService.saveGame(game);
+        achievementService.checkPlayAchievements(user1);
         user2.setAchievements(playAchievements2);
         userService.saveUser(user2);
         achievementService.checkWinAchievements(user2);

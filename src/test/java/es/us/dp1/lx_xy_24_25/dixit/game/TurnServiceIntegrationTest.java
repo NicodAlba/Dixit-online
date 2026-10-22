@@ -2,6 +2,8 @@
 
 package es.us.dp1.lx_xy_24_25.dixit.game;
 
+import es.us.dp1.lx_xy_24_25.dixit.achievement.AchievementService;
+import es.us.dp1.lx_xy_24_25.dixit.achievement.PlayAchievement;
 import es.us.dp1.lx_xy_24_25.dixit.auth.AuthService;
 import es.us.dp1.lx_xy_24_25.dixit.auth.payload.request.SignupRequest;
 import es.us.dp1.lx_xy_24_25.dixit.card.Card;
@@ -59,6 +61,9 @@ public class TurnServiceIntegrationTest {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private AchievementService achievementService;
+
     @Test
     void registeredPlayersCanFinishGameOnLastVote() throws Exception {
         List<User> users = new ArrayList<>();
@@ -77,6 +82,7 @@ public class TurnServiceIntegrationTest {
         for (User user : users) {
             assertEquals(1, user.getPlayers().size());
             assertNull(user.getPlayers().getFirst().getGame());
+            achievementService.initializePlayAchievements(user);
         }
 
         Game game = gameService.createGame(null, users.getFirst());
@@ -101,6 +107,11 @@ public class TurnServiceIntegrationTest {
             turnService.playerPlayCard(turn, voters.get(1), voters.get(1).getCards().getFirst());
             turnService.playerVote(turn, voters.getFirst(), answer);
             assertNull(game.getEndDate(), "The game must not finish before the last vote");
+            for (User user : users) {
+                achievementService.checkPlayAchievements(user);
+                assertTrue(achievementService.findAllAchievementsByUserId(user.getId()).stream()
+                    .allMatch(a -> a.getDateObtained() == null), "An ongoing game must not unlock PLAY achievements");
+            }
             turnService.playerVote(turn, voters.get(1), answer);
             expectedPoints.merge(voters.getFirst().getId(), 2, Integer::sum);
             expectedPoints.merge(voters.get(1).getId(), 2, Integer::sum);
@@ -118,6 +129,16 @@ public class TurnServiceIntegrationTest {
         assertEquals(3, finished.getWinners().size(), "Equal scores must preserve tied winners");
         for (Player player : finished.getPlayers()) {
             assertEquals(expectedPoints.get(player.getId()), player.getPoints());
+            List<PlayAchievement> playAchievements = achievementService.findAllAchievementsByUserId(player.getUser().getId())
+                .stream().filter(PlayAchievement.class::isInstance).map(PlayAchievement.class::cast).toList();
+            assertEquals(4, playAchievements.size());
+            for (PlayAchievement achievement : playAchievements) {
+                if (achievement.getThreshold() == 1) {
+                    assertNotNull(achievement.getDateObtained(), "The last vote must unlock the first completed game");
+                } else {
+                    assertNull(achievement.getDateObtained(), "The signup participation must not count as a game");
+                }
+            }
         }
         for (Turn turn : finished.getTurns()) {
             for (Card card : turn.getPlayedCards()) {
