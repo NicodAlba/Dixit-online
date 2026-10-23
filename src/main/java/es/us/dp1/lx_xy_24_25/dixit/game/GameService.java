@@ -32,6 +32,7 @@ public class GameService {
     private final UserService userService;
     private final AchievementService achievementService;
     private final FriendRequestService friendRequestService;
+    @Autowired private org.springframework.context.ApplicationEventPublisher events;
 
     @Autowired
     public GameService(GameRepository gameRepository, PlayerService playerService, UserService userService, AchievementService achievementService, FriendRequestService friendRequestService) {
@@ -106,6 +107,10 @@ public class GameService {
     public Game leaveLobby(Integer gameId, User user) {
         Game game = findByIdForUpdate(gameId);
         if (!playerInGame(game, user)) throw new AccessDeniedException("You are not a participant in this lobby.");
+        if (game.getStartDate() != null) {
+            if (Objects.equals(game.getLeader().getId(),user.getId())) cancel(game);
+            return game; // Other participants retain their seat, hand and history.
+        }
         ensureLobbyOpen(game);
         if (Objects.equals(game.getLeader().getId(), user.getId())) {
             gameRepository.delete(game);
@@ -160,11 +165,33 @@ public class GameService {
     public Game joinGame(Integer gameId, User user, String password)
         throws PlayerAlreadyInGameException, TooManyPlayersException {
         Game game = findByIdForUpdate(gameId);
+        // An existing participant resumes an active seat; this is not another admission.
+        if (game.getStartDate()!=null && !game.hasFinished() && playerInGame(game,user)) return game;
         if (game.getPassword() != null && !game.getPassword().isBlank() && !game.getPassword().equals(password)) {
             throw new IllegalArgumentException("Incorrect password");
         }
         addPlayerToGame(game, user);
         return game;
+    }
+
+    @Transactional(readOnly=true)
+    public boolean isHost(Integer gameId,String username){return gameRepository.existsByIdAndLeaderUsername(gameId,username);}
+
+    @Transactional(readOnly=true)
+    public boolean isRunning(Integer gameId){return gameRepository.existsByIdAndStartDateNotNullAndEndDateNull(gameId);}
+
+    @Transactional
+    public void cancelForHostDisconnect(Integer gameId){
+        gameRepository.findByIdForUpdate(gameId).ifPresent(this::cancel);
+    }
+
+    private void cancel(Game game){
+        if(game.getStartDate()==null || game.hasFinished())return;
+        game.setCancelled(true);
+        game.setEndDate(new Date());
+        gameRepository.save(game);
+        events.publishEvent(new GameCancelled(game.getId()));
+        // No scoring, refill, winner declaration or achievement checks on cancellation.
     }
 
     public void ensureLobbyOpen(Game game) {

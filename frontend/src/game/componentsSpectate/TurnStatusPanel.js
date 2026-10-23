@@ -53,7 +53,7 @@ export default function TurnStatusPanel({game, turn, currentPlayer, getPlayerNam
                     <h1>Waiting for storyteller</h1>
                 )}
             {turn?.state === "SHOWING_CARDS" && <h1>Waiting for votes</h1>}
-            {game.endDate != null && <div>
+            {game.endDate != null && !game.cancelled && <div>
                 <h1>GAME FINISHED</h1>
                 <h3>Winners: {game?.winners?.map((winner) => {
                     return getPlayerName(winner)

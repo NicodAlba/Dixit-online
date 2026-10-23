@@ -86,7 +86,7 @@ export default function History() {
     const allGamesMap = new Map();
 
     [...playingGames, ...pastGames].forEach((g) => {
-        const status = g.endDate ? "Ended" : "Playing";
+        const status = g.cancelled ? "Cancelled" : g.endDate ? "Ended" : "Playing";
         allGamesMap.set(g.id, { ...g, status });
     });
 
@@ -98,7 +98,7 @@ export default function History() {
 
     const filteredGames = sortedGames.filter((game) => {
         if (filter === "playing") return game.status === "Playing";
-        if (filter === "past") return game.status === "Ended";
+        if (filter === "past") return Boolean(game.endDate);
         return true;
     });
 

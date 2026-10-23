@@ -158,7 +158,10 @@ class GameActionPermissionsTest extends SecurityHttpSupport {
         status(200,request(HttpMethod.PATCH,"/games/"+id+"/join",other.token(),Map.of("password","new-fixture")));
         status(200,request(HttpMethod.PATCH,"/games/"+id+"/leave",other.token(),null));
         Match m=match();Account leader=m.players().values().iterator().next();
-        denied(400,m,HttpMethod.PATCH,"/games/"+m.id()+"/leave",leader,null);
+        status(200,request(HttpMethod.PATCH,"/games/"+m.id()+"/leave",leader.token(),null));
+        assertEquals(1,count("select count(*) from games where id=? and cancelled=true and end_date is not null",m.id()));
+        assertEquals(3,count("select count(*) from players where game_id=?",m.id()));
+        assertEquals(1,count("select count(*) from turns where game_id=?",m.id()));
         denied(403,m,HttpMethod.PATCH,"/games/"+m.id()+"/leave",other,null);
         denied(400,m,HttpMethod.PUT,"/games/"+m.id(),leader,Map.of("password","late"));
     }
