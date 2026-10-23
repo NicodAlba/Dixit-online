@@ -64,13 +64,14 @@ export default function Lobby() {
 
         const stompClient = new Client({
             webSocketFactory: () => new SockJS("/ws"),
+            connectHeaders: {Authorization: `Bearer ${jwt}`},
             reconnectDelay: 5000,
             onConnect: () => {
                 if (cancelled) return;
                 stompClient.subscribe(`/topic/game/${gameId}`, (message) => {
                     if (cancelled) return;
                     revision++;
-                    if (message.body === '"DELETED"') {
+                    if (message.body === '"DELETED"' || message.body === 'DELETED') {
                         alert("The leader deleted the game");
                         navigate("/");
                     } else {

@@ -1,6 +1,9 @@
 package es.us.dp1.lx_xy_24_25.dixit.configuration.jwt;
 
 import java.util.Date;
+import java.util.Base64;
+import java.security.SecureRandom;
+import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,7 +29,7 @@ public class JwtUtils {
 	private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
     private final UserService userService;
 
-    @Value("${dp1.game.app.jwtSecret}")
+    @Value("${dp1.game.app.jwtSecret:}")
 	private String jwtSecret;
 
 	@Value("${dp1.game.app.jwtExpirationMs}")
@@ -34,6 +37,21 @@ public class JwtUtils {
 
     public JwtUtils(UserService userService) {
         this.userService = userService;
+    }
+
+    @PostConstruct
+    void configureSigningKey() {
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            byte[] key = new byte[64];
+            new SecureRandom().nextBytes(key);
+            jwtSecret = Base64.getEncoder().encodeToString(key);
+            logger.info("Using an ephemeral JWT signing key; sessions expire on restart. Configure DIXIT_JWT_SECRET to retain the key.");
+            return;
+        }
+        try {
+            if (Base64.getDecoder().decode(jwtSecret).length >= 64) return;
+        } catch (IllegalArgumentException ignored) { }
+        throw new IllegalStateException("DIXIT_JWT_SECRET must encode at least 64 random bytes in Base64.");
     }
 
     public String generateJwtToken(Authentication authentication) {

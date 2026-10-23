@@ -80,7 +80,6 @@ export default function useGameTurnState({gameId, jwt, setMessage, setVisible}) 
             reconnectDelay: 500,
             heartbeatIncoming: 2000,
             heartbeatOutgoing: 2000,
-            debug: (str) => console.log(str),
         });
 
         client.onConnect = () => {
