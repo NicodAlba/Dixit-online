@@ -10,6 +10,7 @@ import es.us.dp1.lx_xy_24_25.dixit.user.User;
 import es.us.dp1.lx_xy_24_25.dixit.user.UserService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.InvalidRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +35,7 @@ public class AuthService {
 		user.setUsername(request.getUsername());
 		user.setPassword(request.getPassword());
         if (!"PLAYER".equalsIgnoreCase(request.getAuthority())) {
-            throw new IllegalArgumentException("Public registration only accepts PLAYER.");
+            throw new InvalidRequestException("Public registration only accepts PLAYER.");
         }
         user.setAuthority(authoritiesService.findByAuthority("PLAYER"));
         User saved = userService.saveUser(user);

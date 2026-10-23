@@ -17,7 +17,9 @@ package es.us.dp1.lx_xy_24_25.dixit.user;
 
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
 import es.us.dp1.lx_xy_24_25.dixit.social.FriendRequestService;
+import es.us.dp1.lx_xy_24_25.dixit.social.GameInvitationRepository;
 import jakarta.validation.Valid;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.InvalidRequestException;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,15 +38,17 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final AuthoritiesRepository authoritiesRepository;
+    private final GameInvitationRepository invitationRepository;
 	private final PasswordEncoder passwordEncoder;
     private final FriendRequestService friendRequestService;
 
     @Autowired
-	public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, FriendRequestService friendRequestService, AuthoritiesRepository authoritiesRepository) {
+	public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, FriendRequestService friendRequestService, AuthoritiesRepository authoritiesRepository, GameInvitationRepository invitationRepository) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
         this.friendRequestService = friendRequestService;
         this.authoritiesRepository = authoritiesRepository;
+        this.invitationRepository = invitationRepository;
     }
 
      @Transactional
@@ -92,10 +96,10 @@ public class UserService {
     @Transactional
     public User createAccount(User input) {
         if (!findCurrentUser().hasAuthority("ADMIN")) throw new AccessDeniedException();
-        if (input.getId() != null) throw new IllegalArgumentException("A new account cannot have an id.");
+        if (input.getId() != null) throw new InvalidRequestException("A new account cannot have an id.");
         if (input.getUsername() == null || input.getUsername().isBlank()
                 || input.getPassword() == null || input.getPassword().isBlank()) {
-            throw new IllegalArgumentException("Username and password are required.");
+            throw new InvalidRequestException("Username and password are required.");
         }
         User account = new User();
         account.setUsername(input.getUsername());
@@ -106,10 +110,10 @@ public class UserService {
 
     private Authorities resolveAuthority(Authorities authority) {
         if (authority == null || authority.getId() == null) {
-            throw new IllegalArgumentException("An existing authority is required.");
+            throw new InvalidRequestException("An existing authority is required.");
         }
         return authoritiesRepository.findById(authority.getId())
-            .orElseThrow(() -> new IllegalArgumentException("Unknown authority."));
+            .orElseThrow(() -> new InvalidRequestException("Unknown authority."));
     }
 
     @Transactional
@@ -127,7 +131,7 @@ public class UserService {
             throw new AccessDeniedException("Only the account holder can change its password.");
         }
         if (input.getUsername() == null || input.getUsername().isBlank()) {
-            throw new IllegalArgumentException("Username is required.");
+            throw new InvalidRequestException("Username is required.");
         }
         target.setUsername(input.getUsername());
         target.setAuthority(authority);
@@ -137,7 +141,14 @@ public class UserService {
 
 	@Transactional
 	public void deleteUser(Integer id) {
-		User toDelete = findById(id);
+        User actor = findCurrentUser();
+        if (!actor.hasAuthority("ADMIN") || Objects.equals(actor.getId(), id)) throw new AccessDeniedException();
+        User toDelete = findById(id);
+        if (toDelete.getPlayers().stream().anyMatch(p -> p.getGame() != null)
+                || !toDelete.getGamesToSpectate().isEmpty()) {
+            throw new AccessDeniedException("Accounts linked to games cannot be deleted; their history must be preserved.");
+        }
+        invitationRepository.deleteAll(invitationRepository.findAllByInvited(toDelete));
         friendRequestService.removeAllRequests(toDelete);
 		this.userRepository.delete(toDelete);
 	}

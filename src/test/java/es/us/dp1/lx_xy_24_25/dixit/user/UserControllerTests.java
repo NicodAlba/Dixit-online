@@ -96,7 +96,7 @@ class UserControllerTests {
 	}
 
 	@Test
-	@WithMockUser("admin")
+	@WithMockUser(username = "admin", authorities = "ADMIN")
 	void shouldFindAll() throws Exception {
 		User sara = new User();
 		sara.setId(2);
@@ -115,7 +115,7 @@ class UserControllerTests {
 	}
 
 	@Test
-	@WithMockUser("admin")
+	@WithMockUser(username = "admin", authorities = "ADMIN")
 	void shouldFindAllWithAuthority() throws Exception {
 		Authorities aux = new Authorities();
 		aux.setId(2);
@@ -139,7 +139,7 @@ class UserControllerTests {
 	}
 
 	@Test
-	@WithMockUser("admin")
+	@WithMockUser(username = "admin", authorities = "ADMIN")
 	void shouldFindAllAuths() throws Exception {
 		Authorities aux = new Authorities();
 		aux.setId(2);
@@ -153,7 +153,7 @@ class UserControllerTests {
 	}
 
 	@Test
-	@WithMockUser("admin")
+	@WithMockUser(username = "admin", authorities = "ADMIN")
 	void shouldReturnUser() throws Exception {
 		when(this.userService.findById(TEST_USER_ID)).thenReturn(user);
 		mockMvc.perform(get(BASE_URL + "/{id}", TEST_USER_ID)).andExpect(status().isOk())
@@ -163,26 +163,27 @@ class UserControllerTests {
 	}
 
 	@Test
-	@WithMockUser("admin")
+	@WithMockUser(username = "admin", authorities = "ADMIN")
 	void shouldReturnNotFoundUser() throws Exception {
 		when(this.userService.findById(TEST_USER_ID)).thenThrow(ResourceNotFoundException.class);
 		mockMvc.perform(get(BASE_URL + "/{id}", TEST_USER_ID)).andExpect(status().isNotFound());
 	}
 
 	@Test
-	@WithMockUser("admin")
+	@WithMockUser(username = "admin", authorities = "ADMIN")
 	void shouldCreateUser() throws Exception {
 		User aux = new User();
 		aux.setUsername("Prueba");
 		aux.setPassword("Prueba");
 		aux.setAuthority(auth);
 
+    when(this.userService.createAccount(any(User.class))).thenReturn(aux);
 	mockMvc.perform(post(BASE_URL).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(aux))).andExpect(status().isCreated());
+				.content(objectMapper.writeValueAsString(java.util.Map.of("username", "Prueba", "password", "Prueba", "authority", java.util.Map.of("id", TEST_AUTH_ID))))).andExpect(status().isCreated());
 	}
 
 	@Test
-	@WithMockUser("admin")
+	@WithMockUser(username = "admin", authorities = "ADMIN")
 	void shouldUpdateUser() throws Exception {
 		user.setUsername("UPDATED");
 		user.setPassword("CHANGED");
@@ -193,11 +194,11 @@ class UserControllerTests {
 
 		mockMvc.perform(put(BASE_URL + "/{id}", TEST_USER_ID).with(csrf()).contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(dto))).andExpect(status().isOk())
-				.andExpect(jsonPath("$.username").value("UPDATED")).andExpect(jsonPath("$.password").value("CHANGED"));
+				.andExpect(jsonPath("$.username").value("UPDATED")).andExpect(jsonPath("$.password").doesNotExist());
 	}
 
 	@Test
-	@WithMockUser("admin")
+	@WithMockUser(username = "admin", authorities = "ADMIN")
 	void shouldReturnNotFoundUpdateUser() throws Exception {
 		user.setUsername("UPDATED");
 		user.setPassword("UPDATED");
@@ -211,7 +212,7 @@ class UserControllerTests {
 	}
 
 	@Test
-	@WithMockUser("admin")
+	@WithMockUser(username = "admin", authorities = "ADMIN")
 	void shouldDeleteOtherUser() throws Exception {
 		logged.setId(2);
 
@@ -223,7 +224,7 @@ class UserControllerTests {
 	}
 
 	@Test
-	@WithMockUser("admin")
+	@WithMockUser(username = "admin", authorities = "ADMIN")
 	void shouldNotDeleteLoggedUser() throws Exception {
 		logged.setId(TEST_USER_ID);
 
