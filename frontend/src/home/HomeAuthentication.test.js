@@ -49,7 +49,7 @@ test("authenticated visitor loads invitations and can accept one", async () => {
     expect(global.fetch).toHaveBeenCalledWith("/api/v1/games/invitations/7/accept", expect.objectContaining({method: "PATCH"}));
 });
 
-test.each([401, 403, 500])("authenticated request retains server error feedback (%s)", async status => {
+test.each([403, 500])("authenticated request retains server error feedback (%s)", async status => {
     session("token");
     global.fetch.mockResolvedValue(response({message: "Server rejected this request"}, status));
     render(home());

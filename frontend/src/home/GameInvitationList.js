@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useCallback, useState} from "react";
 import tokenService from "../services/token.service";
 import {Button, Table} from "reactstrap";
 import useFetchState from "../util/useFetchState";
@@ -17,12 +17,23 @@ function AuthenticatedGameInvitationList({jwt}) {
 
     const navigate = useNavigate()
 
+    const expireSession = useCallback((error, destination = "/") => {
+        if (error.status !== 401) return false;
+        // A delayed rejection of an old token must not remove a newer login.
+        if (tokenService.getLocalAccessToken() !== jwt) return true;
+        tokenService.removeUser();
+        window.location.replace(destination);
+        return true;
+    }, [jwt]);
+
     const [invitations, setInvitations] = useFetchState(
         [],
         "/api/v1/games/invitations",
         jwt,
         setMessage,
-        setVisible
+        setVisible,
+        null,
+        expireSession
     )
 
     function handleAccept(invitation) {
@@ -41,8 +52,7 @@ function AuthenticatedGameInvitationList({jwt}) {
                         setMessage(data.message || "Unable to join this game.");
                         setVisible(true);
                     } else if (response.status === 401) {
-                        setMessage("Incorrect password.");
-                        setVisible(true);
+                        expireSession({status: 401}, "/login");
                     } else if (response.status === 404) {
                         setMessage("Game not found.");
                         setVisible(true);

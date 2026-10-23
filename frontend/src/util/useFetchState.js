@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
  * @param {function|null} setMessage - Function to update the message state based on the server's response. If `null`, alerts will be used instead.
  * @param {function} setVisible - Function to control the visibility of the message or alert.
  * @param {string|null} [id=null] - Optional parameter to control fetch behavior. If `id` is `"new"`, the fetch request is skipped.
+ * @param {function|null} [onError=null] - Optional caller policy; return true when the error has been handled.
  * 
  * @returns {[any, function]} - Returns an array with two elements:
  *   - `data`: The state variable holding the fetched data.
@@ -20,7 +21,7 @@ import { useEffect, useState } from "react";
  * const [data, setData] = useFetchState({}, 'https://api.example.com/data', jwtToken, setMessage, setVisible);
  */
 
-export default function useFetchState(initial, url, jwt, setMessage, setVisible, id = null) {
+export default function useFetchState(initial, url, jwt, setMessage, setVisible, id = null, onError = null) {
     const [data, setData] = useState(initial);
     useEffect(() => {
         if (url) {
@@ -43,7 +44,9 @@ export default function useFetchState(initial, url, jwt, setMessage, setVisible,
 
                         if (!response.ok) {
                             const message = (payload && payload.message) || payload || "Request failed";
-                            throw new Error(typeof message === "string" ? message : "Request failed");
+                            const error = new Error(typeof message === "string" ? message : "Request failed");
+                            error.status = response.status;
+                            throw error;
                         }
 
                         return payload;
@@ -63,6 +66,7 @@ export default function useFetchState(initial, url, jwt, setMessage, setVisible,
                     })
                     .catch((error) => {
                         if (ignore) return;
+                        if (onError && onError(error) === true) return;
                         console.log(error);
                         if (setMessage !== null) {
                             setMessage(error.message || "Failed to fetch data");
@@ -77,6 +81,6 @@ export default function useFetchState(initial, url, jwt, setMessage, setVisible,
             }
 
         }
-    }, [url, id, jwt, setMessage, setVisible]);
+    }, [url, id, jwt, setMessage, setVisible, onError]);
     return [data, setData];
 }

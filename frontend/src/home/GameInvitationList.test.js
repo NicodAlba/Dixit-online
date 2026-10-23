@@ -14,7 +14,7 @@ beforeEach(() => {
 afterEach(() => {global.fetch = originalFetch;});
 test("loads invitations from the current application origin", () => {
     render(<GameInvitationList />);
-    expect(useFetchState).toHaveBeenCalledWith([], "/api/v1/games/invitations", "token", expect.any(Function), expect.any(Function));
+    expect(useFetchState).toHaveBeenCalledWith([], "/api/v1/games/invitations", "token", expect.any(Function), expect.any(Function), null, expect.any(Function));
 });
 test("failed acceptance displays the server reason and retains the invitation", async () => {
     global.fetch = jest.fn().mockResolvedValue({ok: false, status: 409, json: async () => ({message: "Already 4 players in the game"})});
