@@ -87,11 +87,11 @@ public interface StatisticsRepository extends JpaRepository<Game, Integer> {
     @Query("SELECT SUM(p.points) FROM Game g JOIN g.players p WHERE p.user.id = :userId AND g.endDate IS NOT NULL AND g.cancelled = false")
     Long totalPointsByUserId(Integer userId);
 
-    @Query("SELECT COUNT(v) FROM Card c JOIN c.votes v JOIN c.turn t WHERE c.user.id = :userId AND t.storyteller.id != :userId")
+    @Query("SELECT COUNT(v) FROM Card c JOIN c.votes v JOIN c.turn t WHERE c.user.id = :userId AND t.storyteller.user.id != :userId")
     Long totalTrapVotesReceivedByUserId(Integer userId);
 
     //helper for deception rate
-    @Query("SELECT COUNT(c) FROM Turn t JOIN t.playedCards c WHERE c.user.id = :userId AND t.storyteller.id != :userId")
+    @Query("SELECT COUNT(c) FROM Turn t JOIN t.playedCards c WHERE c.user.id = :userId AND t.storyteller.user.id != :userId")
     Long totalTurnsAsNormalPlayerByUserId(Integer userId);
 
     //deception rate computed in service
@@ -107,7 +107,7 @@ public interface StatisticsRepository extends JpaRepository<Game, Integer> {
     @Query("SELECT p.user.username, AVG(p.points) as averagePoints FROM Game g JOIN g.players p WHERE g.endDate IS NOT NULL AND g.cancelled = false GROUP BY p.user.id, p.user.username ORDER BY averagePoints DESC LIMIT 10")
     List<Object []> findTop10ByAveragePointsPerGame();
 
-    @Query("SELECT c.user.username, COUNT(v) as trapVotesReceived FROM Card c JOIN c.votes v JOIN c.turn t WHERE t.storyteller.id != c.user.id GROUP BY c.user.id, c.user.username ORDER BY trapVotesReceived DESC LIMIT 10")
+    @Query("SELECT c.user.username, COUNT(v) as trapVotesReceived FROM Card c JOIN c.votes v JOIN c.turn t WHERE t.storyteller.user.id != c.user.id GROUP BY c.user.id, c.user.username ORDER BY trapVotesReceived DESC LIMIT 10")
     List<Object []> findTop10ByTrapVotesReceived();
 
     //ranking by win rate also done in service
@@ -122,10 +122,10 @@ public interface StatisticsRepository extends JpaRepository<Game, Integer> {
     List<Object []> findAllGamesPlayed();
 
     //helpers for deception rate ranking
-    @Query("SELECT c.user.username, COUNT(v) FROM Card c JOIN c.votes v JOIN c.turn t WHERE t.storyteller.id != c.user.id GROUP BY c.user.id, c.user.username")
+    @Query("SELECT c.user.username, COUNT(v) FROM Card c JOIN c.votes v JOIN c.turn t WHERE t.storyteller.user.id != c.user.id GROUP BY c.user.id, c.user.username")
     List<Object []> findAllTrapVotes();
 
-    @Query("SELECT c.user.username, COUNT(c) FROM Card c JOIN c.turn t WHERE t.storyteller.id != c.user.id GROUP BY c.user.id, c.user.username")
+    @Query("SELECT c.user.username, COUNT(c) FROM Card c JOIN c.turn t WHERE t.storyteller.user.id != c.user.id GROUP BY c.user.id, c.user.username")
     List<Object []> findAllDeceptionOpportunities();
 
 }
