@@ -98,6 +98,7 @@ class UserServiceTests {
 
 	@Test
 	@Transactional
+    @WithMockUser(username = "admin1")
 	void shouldUpdateUser() {
 		int idToUpdate = 1;
 		String newName="Change";
