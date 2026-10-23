@@ -56,9 +56,10 @@ export default function Spectate() {
     return (
         <div className="game-page-container">
             {visible && message && <div role="alert">{message}</div>}
+            {game.cancelled && <div role="alert">Game cancelled. The game history has been preserved.</div>}
             {game.deleted && <div role="alert">This game has been deleted.</div>}
             <Button  className= "leave-game" style={{position: "absolute", top: 10, left:30}} onClick={() => navigate("/")}>Leave game</Button>
-            <TurnStatusPanel game={game} turn={turn} currentPlayer={spectatingPlayer} getPlayerName={getPlayerName}/>
+            <TurnStatusPanel game={game} turn={game.cancelled?{...turn,state:"CANCELLED"}:turn} currentPlayer={spectatingPlayer} getPlayerName={getPlayerName}/>
             <RenderSpectatingPlayer currentPlayer={spectatingPlayer} spectatingUser={spectatingUser} isStoryteller={isStoryteller} getPlayerName={getPlayerName}/>
             <RenderLeftPlayer currentPlayer={spectatingPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller}/>
             <RenderRightPlayer currentPlayer={spectatingPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller}/>

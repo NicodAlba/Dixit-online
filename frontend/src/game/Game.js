@@ -22,12 +22,13 @@ export default function Game() {
     const [pendingPlayedCardIds, setPendingPlayedCardIds] = useState([]);
     const [clueDraft, setClueDraft] = useState("");
     const gameId = getIdFromUrl(2);
-    const { game, turn, turnId, refresh, players, storyteller } = useGameTurnState({
+    const { game, turn: serverTurn, turnId, refresh, players, storyteller } = useGameTurnState({
         gameId,
         jwt,
         setMessage,
         setVisible,
     });
+    const turn=game.cancelled?{...serverTurn,state:"CANCELLED"}:serverTurn;
     const navigate = useNavigate();
 
     const usernamesById = usePlayerNames(players, jwt);
@@ -182,11 +183,19 @@ export default function Game() {
         }
     };
 
+    async function leaveGame(){
+        try{
+            const response=await fetch(`/api/v1/games/${gameId}/leave`,{method:"PATCH",headers:{Authorization:`Bearer ${jwt}`}});
+            if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(error.message||"Unable to leave the game.");}
+            navigate("/");
+        }catch(error){setMessage(error.message);setVisible(true);}
+    }
     return (
         <div className="game-page-container">
             {visible && message && <div role="alert">{message}</div>}
+            {game.cancelled && <div role="alert">Game cancelled. The game history has been preserved.</div>}
             {game.deleted && <div role="alert">This game has been deleted.</div>}
-            <Button  className= "leave-game" style={{position: "absolute", top: 10, left:30}} onClick={() => navigate("/")}>Leave game</Button>
+            <Button  className= "leave-game" style={{position: "absolute", top: 10, left:30}} onClick={leaveGame}>Leave game</Button>
             <TurnStatusPanel
                 game={game}
                 turn={turn?.state === "WAITING_STORYTELLER_CLUE" ? {...turn, clue: clueDraft} : turn}

@@ -47,9 +47,10 @@ public class StompAccess {
     private final UserService accounts;
     private final GameService games;
     private final TurnRepository turns;
+    private final es.us.dp1.lx_xy_24_25.dixit.game.GamePresence presence;
 
-    public StompAccess(JwtUtils jwt, UserDetailsServiceImpl users, UserService accounts, GameService games, TurnRepository turns, ObjectMapper mapper, @Qualifier("clientOutboundChannel") ObjectProvider<MessageChannel> outbound) {
-        this.jwt=jwt;this.users=users;this.accounts=accounts;this.games=games;this.turns=turns;this.mapper=mapper;this.outbound=outbound;
+    public StompAccess(JwtUtils jwt, UserDetailsServiceImpl users, UserService accounts, GameService games, TurnRepository turns, ObjectMapper mapper, @Qualifier("clientOutboundChannel") ObjectProvider<MessageChannel> outbound, es.us.dp1.lx_xy_24_25.dixit.game.GamePresence presence) {
+        this.jwt=jwt;this.users=users;this.accounts=accounts;this.games=games;this.turns=turns;this.mapper=mapper;this.outbound=outbound;this.presence=presence;
     }
     public ChannelInterceptor inbound() {
         return new ExecutorChannelInterceptor() {
@@ -59,6 +60,9 @@ public class StompAccess {
                 try {
                     Session session=authenticated(headers.getSessionId());
                     Integer gameId=authorize(session,headers.getDestination());
+                    if(sessions.get(headers.getSessionId())!=session)return;
+                    presence.subscribed(headers.getSessionId(),headers.getSubscriptionId(),gameId,session.username());
+                    if(sessions.get(headers.getSessionId())!=session){presence.disconnected(headers.getSessionId());return;}
                     var match=TOPIC.matcher(headers.getDestination());
                     if(!match.matches())return;
                     GameEvent event=match.group(1).equals("game")?GameEvent.changed(gameId):GameEvent.turn(gameId,Integer.valueOf(match.group(2)));
@@ -94,7 +98,10 @@ public class StompAccess {
                     authorize(session,headers.getDestination());
                     session.subscriptions().put(headers.getSubscriptionId(),headers.getDestination());
                 }
-                if(headers.getCommand()==StompCommand.UNSUBSCRIBE) session.subscriptions().remove(headers.getSubscriptionId());
+                if(headers.getCommand()==StompCommand.UNSUBSCRIBE) {
+                    session.subscriptions().remove(headers.getSubscriptionId());
+                    presence.unsubscribed(id,headers.getSubscriptionId());
+                }
                 return message;
             }
         };
@@ -160,5 +167,5 @@ public class StompAccess {
         }catch(Exception invalid){return null;}
     }
 
-    @EventListener public void disconnected(SessionDisconnectEvent event) { sessions.remove(event.getSessionId()); }
+    @EventListener public void disconnected(SessionDisconnectEvent event) { sessions.remove(event.getSessionId());presence.disconnected(event.getSessionId()); }
 }

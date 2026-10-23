@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /** Immutable wire views: no entity graph, stock, credentials or rival hands. */
-public record GameView(Integer id, Date startDate, Date endDate, Account leader, boolean hasPassword,
+public record GameView(Integer id, Date startDate, Date endDate, boolean cancelled, Account leader, boolean hasPassword,
                        Integer perspectivePlayerId, List<Participant> players, List<Round> turns, List<Person> winners) {
     public record Account(Integer id,String username) {}
     public record Person(Integer id,Account user,Integer points) {}
@@ -21,7 +21,7 @@ public record GameView(Integer id, Date startDate, Date endDate, Account leader,
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Round(Integer id,TurnState state,String clue,Person storyteller,PlayedCard answer,
                         List<PlayedCard> playedCards,int playedCardCount,boolean hasPlayed,boolean hasVoted) {}
-    public record Catalog(Integer id,Date startDate,Date endDate,Account leader,boolean hasPassword,
+    public record Catalog(Integer id,Date startDate,Date endDate,boolean cancelled,Account leader,boolean hasPassword,
                           List<Person> players,List<Person> winners) {}
 
     static Account account(User user){return user==null?null:new Account(user.getId(),user.getUsername());}
@@ -62,10 +62,10 @@ public record GameView(Integer id, Date startDate, Date endDate, Account leader,
     }
     static GameView of(Game game,Integer perspective){
         Player viewer=game.getPlayers().stream().filter(p->Objects.equals(p.getId(),perspective)).findFirst().orElse(null);
-        return new GameView(game.getId(),game.getStartDate(),game.getEndDate(),account(game.getLeader()),game.getPassword()!=null&&!game.getPassword().isBlank(),
+        return new GameView(game.getId(),game.getStartDate(),game.getEndDate(),game.isCancelled(),account(game.getLeader()),game.getPassword()!=null&&!game.getPassword().isBlank(),
             perspective,game.getPlayers().stream().map(p->participant(p,perspective)).toList(),
             game.getTurns().stream().sorted(Comparator.comparing(Turn::getId)).map(t->round(t,viewer)).toList(),game.getWinners().stream().map(GameView::person).toList());
     }
-    static Catalog catalog(Game game){return new Catalog(game.getId(),game.getStartDate(),game.getEndDate(),account(game.getLeader()),game.getPassword()!=null&&!game.getPassword().isBlank(),
+    static Catalog catalog(Game game){return new Catalog(game.getId(),game.getStartDate(),game.getEndDate(),game.isCancelled(),account(game.getLeader()),game.getPassword()!=null&&!game.getPassword().isBlank(),
         game.getPlayers().stream().map(GameView::person).toList(),game.getWinners().stream().map(GameView::person).toList());}
 }

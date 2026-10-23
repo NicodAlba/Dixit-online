@@ -33,6 +33,9 @@ public class Game extends BaseEntity {
     @Column
     private Date endDate;
 
+    @Column(nullable = false)
+    private boolean cancelled = false;
+
     //@NotNull was eliminated so the game could be deleted
     @ManyToOne
     @JoinColumn(name = "leader_id")
