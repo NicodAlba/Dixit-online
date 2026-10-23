@@ -112,7 +112,7 @@ class UserRestController {
         @ApiResponse(responseCode = "200")
     })
 	public ResponseEntity<User> create(@RequestBody @Valid User user) {
-		User savedUser = userService.saveUser(user);
+		User savedUser = userService.createAccount(user);
 		return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
 	}
 
@@ -126,7 +126,7 @@ class UserRestController {
         try {
             RestPreconditions.checkNotNull(userService.findById(id), "User", "ID", id);
             return new ResponseEntity<>(this.userService.updateUser(user, id), HttpStatus.OK);
-        } catch (Exception e) {
+        } catch (ResourceNotFoundException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }

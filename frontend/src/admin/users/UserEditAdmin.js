@@ -51,7 +51,7 @@ export default function UserEditAdmin() {
       username: user.username,
       authority: user.authority,
     };
-    if (password) payload.password = password;
+    if (password && (!user.id || user.id === tokenService.getUser()?.id)) payload.password = password;
 
     fetch("/api/v1/users" + (user.id ? "/" + user.id : ""), {
       method: user.id ? "PUT" : "POST",
@@ -103,7 +103,7 @@ export default function UserEditAdmin() {
                 className="custom-input"
               />
             </div>
-            <div className="custom-form-input">
+            {(!user.id || user.id === tokenService.getUser()?.id) && <div className="custom-form-input">
               <Label for="password" className="custom-form-input-label">
                 Password
               </Label>
@@ -117,7 +117,7 @@ export default function UserEditAdmin() {
                 className="custom-input"
                 placeholder={user.id ? "Leave blank to keep current password" : ""}
               />
-            </div>
+            </div>}
             <div className="custom-form-input">
               <Label for="authority" className="custom-form-input-label">
                 Authority

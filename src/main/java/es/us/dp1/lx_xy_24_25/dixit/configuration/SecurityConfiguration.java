@@ -49,7 +49,12 @@ public class SecurityConfiguration {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-            .exceptionHandling(ex -> ex.authenticationEntryPoint(unauthorizedHandler))
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(unauthorizedHandler)
+                .accessDeniedHandler((request, response, denied) -> {
+                    response.setStatus(403);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"message\":\"Access denied.\"}");
+                }))
 
             .authorizeHttpRequests(auth -> auth
                 // Recursos estáticos comunes (css, js, images, webjars…) públicos
@@ -74,6 +79,8 @@ public class SecurityConfiguration {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/developers").permitAll()
                 .requestMatchers("/api/v1/plan").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/users").hasAuthority(ADMIN)
+                .requestMatchers(HttpMethod.PUT, "/api/v1/users/{id}").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers("/api/v1/users/**").permitAll()
 
                 // API restringida para administradores
