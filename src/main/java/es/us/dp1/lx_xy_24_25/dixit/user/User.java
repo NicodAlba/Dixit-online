@@ -1,6 +1,8 @@
 package es.us.dp1.lx_xy_24_25.dixit.user;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import es.us.dp1.lx_xy_24_25.dixit.achievement.Achievement;
 import es.us.dp1.lx_xy_24_25.dixit.game.Game;
@@ -33,19 +35,24 @@ public class User extends BaseEntity {
     private String username;
 
     @Column
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @NotNull
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @ManyToOne(optional = false)
     @JoinColumn(name = "authority_id")
     private Authorities authority;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", orphanRemoval = true, cascade = CascadeType.ALL)
     private List<Achievement> achievements;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Player> players =  new ArrayList<>();
 
+    @JsonIgnore
     @ManyToMany(mappedBy = "spectators", cascade = CascadeType.ALL)
     List<Game> gamesToSpectate = new ArrayList<>();
 

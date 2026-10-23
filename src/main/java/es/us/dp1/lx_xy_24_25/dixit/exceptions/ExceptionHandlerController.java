@@ -18,8 +18,8 @@ import org.springframework.web.context.request.WebRequest;
 @RestControllerAdvice
 public class ExceptionHandlerController {
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<MessageResponse> invalidRequest(IllegalArgumentException ex) {
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<MessageResponse> invalidRequest(InvalidRequestException ex) {
         return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage()));
     }
 

@@ -322,7 +322,7 @@ class GameLobbyHttpIntegrationTest {
     private StompFrameHandler frames(BlockingQueue<JsonNode> messages) {
         return new StompFrameHandler() {
             @Override public Type getPayloadType(StompHeaders headers) { return JsonNode.class; }
-            @Override public void handleFrame(StompHeaders headers, Object payload) { messages.add((JsonNode) payload); }
+            @Override public void handleFrame(StompHeaders headers, Object payload) { assertFalse(payload.toString().contains("$2a$") || payload.toString().contains("$2b$") || payload.toString().contains("$2y$"), "STOMP must never contain a BCrypt hash"); messages.add((JsonNode) payload); }
         };
     }
 

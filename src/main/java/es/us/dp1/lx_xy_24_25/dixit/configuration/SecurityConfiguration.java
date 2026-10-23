@@ -81,7 +81,9 @@ public class SecurityConfiguration {
                 .requestMatchers("/api/v1/plan").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/users").hasAuthority(ADMIN)
                 .requestMatchers(HttpMethod.PUT, "/api/v1/users/{id}").hasAnyAuthority(PLAYER, ADMIN)
-                .requestMatchers("/api/v1/users/**").permitAll()
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/users/{id}").hasAuthority(ADMIN)
+                .requestMatchers(HttpMethod.GET, "/api/v1/users", "/api/v1/users/authorities").hasAuthority(ADMIN)
+                .requestMatchers(HttpMethod.GET, "/api/v1/users/**").hasAnyAuthority(PLAYER, ADMIN)
 
                 // API restringida para administradores
                 .requestMatchers(HttpMethod.GET, "/api/v1/games").hasAuthority("ADMIN")
