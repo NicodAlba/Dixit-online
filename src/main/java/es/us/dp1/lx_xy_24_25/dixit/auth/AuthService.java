@@ -10,6 +10,7 @@ import es.us.dp1.lx_xy_24_25.dixit.user.User;
 import es.us.dp1.lx_xy_24_25.dixit.user.UserService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.InvalidRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,23 +34,14 @@ public class AuthService {
 		User user = new User();
 		user.setUsername(request.getUsername());
 		user.setPassword(request.getPassword());
-		String strRoles = request.getAuthority();
-		Authorities role;
-
-		switch (strRoles.toLowerCase()) {
-		case "admin":
-			role = authoritiesService.findByAuthority("ADMIN");
-			user.setAuthority(role);
-			userService.saveUser(user);
-			break;
-		default:
-            role = authoritiesService.findByAuthority("PLAYER");
-            user.setAuthority(role);
-            Player player = new Player();
-            User u = userService.saveUser(user);
-            player.setUser(u);
-            playerService.savePlayer(player);
-		}
+        if (!"PLAYER".equalsIgnoreCase(request.getAuthority())) {
+            throw new InvalidRequestException("Public registration only accepts PLAYER.");
+        }
+        user.setAuthority(authoritiesService.findByAuthority("PLAYER"));
+        User saved = userService.saveUser(user);
+        Player player = new Player();
+        player.setUser(saved);
+        playerService.savePlayer(player);
 	}
 
 }

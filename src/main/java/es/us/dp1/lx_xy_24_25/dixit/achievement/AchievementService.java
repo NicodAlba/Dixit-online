@@ -122,8 +122,14 @@ public class AchievementService {
 
     @Transactional
     public void checkPlayAchievements(User user) {
-        List<Game> games = user.getPlayers().stream().map(Player::getGame).toList();
-        Integer played = games.size();
+        Integer played = (int) user.getPlayers().stream()
+            .map(Player::getGame)
+            .filter(Objects::nonNull)
+            .filter(game -> game.getStartDate() != null && game.hasFinished() && !game.isCancelled())
+            .map(Game::getId)
+            .filter(Objects::nonNull)
+            .distinct()
+            .count();
         List<Achievement> playAchievements = achievementRepository.findByUserAndType(user, PlayAchievement.class);
         for (Achievement a : playAchievements) {
             ((PlayAchievement) a).unlockPlayAchievements(played);
@@ -135,7 +141,7 @@ public class AchievementService {
         List<Game> games = user.getPlayers().stream().map(Player::getGame).filter(Objects::nonNull).toList();
         List<Turn> turns = games.stream().flatMap(g -> g.getTurns().stream()).toList();
         List<Turn> noStorytellerTurns = turns.stream().filter(t -> !(t.getStoryteller().getUser().getId().equals(user.getId()))).toList();
-        Integer votes = noStorytellerTurns.stream().flatMap(t -> t.getPlayedCards().stream()).filter(c -> c.getUser().getId().equals(user.getId()))
+        Integer votes = noStorytellerTurns.stream().flatMap(t -> t.getPlayedCards().stream()).filter(c -> c.getUser() != null && c.getUser().getId().equals(user.getId()))
                         .mapToInt(c -> c.getVotes().size()).sum();
         List<Achievement> trickAchievements = achievementRepository.findByUserAndType(user, TrickAchievement.class);
         for (Achievement a : trickAchievements){

@@ -1,9 +1,15 @@
 package es.us.dp1.lx_xy_24_25.dixit.game;
 
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import es.us.dp1.lx_xy_24_25.dixit.card.Card;
 import es.us.dp1.lx_xy_24_25.dixit.card.CardRepository;
 import es.us.dp1.lx_xy_24_25.dixit.card.CardService;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
+import es.us.dp1.lx_xy_24_25.dixit.user.User;
+import es.us.dp1.lx_xy_24_25.dixit.user.UserService;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.InvalidRequestException;
 import es.us.dp1.lx_xy_24_25.dixit.player.Player;
 import es.us.dp1.lx_xy_24_25.dixit.player.PlayerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,29 +33,18 @@ public class TurnService {
     private final GameService gameService;
     private final CardService cardService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final UserService userService;
 
     @Autowired
     public TurnService(TurnRepository turnRepository, CardRepository cardRepository, PlayerRepository playerRepository,
-                       GameService gameService, CardService cardService, SimpMessagingTemplate messagingTemplate) {
+                       GameService gameService, CardService cardService, SimpMessagingTemplate messagingTemplate, UserService userService) {
         this.turnRepository = turnRepository;
         this.cardRepository = cardRepository;
         this.playerRepository = playerRepository;
         this.gameService = gameService;
         this.cardService = cardService;
         this.messagingTemplate = messagingTemplate;
-    }
-    private void notifyGameUpdate(Game game) {
-        messagingTemplate.convertAndSend(
-            "/topic/game/" + game.getId(),
-            game
-        );
-    }
-
-    private void notifyTurnUpdate(Turn turn) {
-        messagingTemplate.convertAndSend(
-            "/topic/turn/" + turn.getId(),
-            turn
-        );
+        this.userService = userService;
     }
     @Transactional(readOnly = true)
     public Turn findById(Integer id) {
@@ -61,8 +57,78 @@ public class TurnService {
             .orElseThrow(() -> new ResourceNotFoundException("Player", "id", playerId));
     }
 
+    @Transactional(readOnly = true)
+    public Turn findVisibleById(Integer id) {
+        Turn turn = findById(id);
+        gameService.findByIdIfUserInGame(turn.getGame().getId(), userService.findCurrentUser());
+        return turn;
+    }
+
+    private Player currentActor(Game game, Integer requestedPlayerId) {
+        Integer userId = userService.findCurrentUser().getId();
+        Player actor = game.getPlayers().stream().filter(p -> Objects.equals(p.getUser().getId(), userId))
+            .findFirst().orElseThrow(() -> new AccessDeniedException("You are not a participant in this game."));
+        if (requestedPlayerId != null && !Objects.equals(actor.getId(), requestedPlayerId)) {
+            throw new AccessDeniedException("You cannot act as another participant.");
+        }
+        return actor;
+    }
+
+    private void requireCurrentTurn(Game game, Turn turn, TurnState... allowed) {
+        Turn latest = turnRepository.findFirstByGameIdOrderByIdDesc(game.getId()).orElseThrow();
+        if (game.getStartDate() == null || game.hasFinished() || !Objects.equals(latest.getId(), turn.getId())
+                || java.util.Arrays.stream(allowed).noneMatch(state -> state == turn.getState())) {
+            throw new InvalidRequestException("This action is not allowed in the current turn phase.");
+        }
+    }
+
+    private void requireOwnUnplayedCard(Game game, Player player, Card card) {
+        if (card.getGame() == null || !Objects.equals(card.getGame().getId(), game.getId()) || !player.owns(card)) {
+            throw new AccessDeniedException("You must select your own card from this game.");
+        }
+        if (card.getTurn() != null) throw new InvalidRequestException("This card has already been played.");
+    }
+
     @Transactional
-    public Turn setStorytellerAnswer(Turn turn, Card card) {
+    public Turn selectAnswer(Integer turnId, Integer cardId) {
+        Game game = lockGameForTurn(turnId);
+        Turn turn = findById(turnId);
+        Player actor = currentActor(game, null);
+        if (!Objects.equals(actor.getId(), turn.getStoryteller().getId())) throw new AccessDeniedException("Only the storyteller selects the answer.");
+        requireCurrentTurn(game, turn, TurnState.WAITING_STORYTELLER_CARD);
+        Card card = findCardById(cardId);
+        requireOwnUnplayedCard(game, actor, card);
+        return setStorytellerAnswer(turn, card);
+    }
+
+    @Transactional
+    public Turn provideClue(Integer turnId, String clue) {
+        Game game = lockGameForTurn(turnId);
+        Turn turn = findById(turnId);
+        Player actor = currentActor(game, null);
+        if (!Objects.equals(actor.getId(), turn.getStoryteller().getId())) throw new AccessDeniedException("Only the storyteller provides the clue.");
+        requireCurrentTurn(game, turn, TurnState.WAITING_STORYTELLER_CLUE);
+        if (clue == null || clue.isBlank()) throw new InvalidRequestException("Clue cannot be empty.");
+        return setStorytellerClue(turn, clue);
+    }
+
+    @Transactional
+    public Card playCard(Integer turnId, Integer playerId, Integer cardId) {
+        Game game = lockGameForTurn(turnId);
+        Turn turn = findById(turnId);
+        Player actor = currentActor(game, playerId);
+        if (Objects.equals(actor.getId(), turn.getStoryteller().getId())) throw new AccessDeniedException("The storyteller has already selected the answer.");
+        requireCurrentTurn(game, turn, TurnState.WAITING_PLAYER_CARDS);
+        Card card = findCardById(cardId);
+        requireOwnUnplayedCard(game, actor, card);
+        if (turn.getPlayedCards().stream().anyMatch(c -> c.getOwner() != null && Objects.equals(c.getOwner().getId(), actor.getId()))) {
+            throw new InvalidRequestException("You have already played a card.");
+        }
+        return playerPlayCard(turn, actor, card);
+    }
+
+    @Transactional
+    Turn setStorytellerAnswer(Turn turn, Card card) {
         turn.storytellerSelectsAnswer(card);
         cardRepository.save(card);
         if (turn.getStoryteller() != null) {
@@ -70,14 +136,13 @@ public class TurnService {
         }
         Turn saved = turnRepository.save(turn);
 
-        notifyTurnUpdate(saved);
-        notifyGameUpdate(turn.getGame());
+        publishCommittedVote(saved, true);
 
         return saved;
     }
 
     @Transactional
-    public Turn setStorytellerClue(Turn turn, String clue) throws IllegalArgumentException {
+    Turn setStorytellerClue(Turn turn, String clue) throws IllegalArgumentException {
         if (turn.getClue() != null) {
             throw new IllegalStateException("Already set clue");
         }
@@ -89,12 +154,24 @@ public class TurnService {
 
         Turn saved = turnRepository.save(turn);
 
-        notifyTurnUpdate(saved);
-        notifyGameUpdate(turn.getGame());
+        publishCommittedVote(saved, true);
 
         return saved;
     }
 
+
+    @Transactional
+    public Game startGame(Integer gameId, User user) {
+        Game game = gameService.findByIdForUpdate(gameId);
+        if (game.getLeader() == null || !game.getLeader().getId().equals(user.getId())) {
+            throw new AccessDeniedException("Only the leader can start the game");
+        }
+        gameService.ensureLobbyOpen(game);
+        game.setStartDate(new Date());
+        gameService.addSpectatorsToGame(game);
+        initializeFirstTurn(game);
+        return game;
+    }
 
     @Transactional
     public void initializeFirstTurn(Game game) {
@@ -108,6 +185,9 @@ public class TurnService {
         List<Card> deck = cardService.initializeDeck(game);
 
         List<Card> dealtCards = game.dealCards(deck, 6);
+        if (dealtCards.size() != game.getPlayers().size() * 6) {
+            throw new IllegalStateException("Not enough cards to deal six to every player");
+        }
         persistDealtCards(dealtCards);
 
         game.getTurns().add(turn);
@@ -115,7 +195,7 @@ public class TurnService {
     }
 
     @Transactional(rollbackFor = IllegalStateException.class)
-    public Card playerPlayCard(Turn turn, Player player, Card card) {
+    Card playerPlayCard(Turn turn, Player player, Card card) {
         turn.validatePlayerHasntPlayedCard(player);
         turn.validateCardOwnership(card, player);
         turn.registerCardPlay(card, player);
@@ -128,45 +208,69 @@ public class TurnService {
         }
         Turn saved = turnRepository.save(turn);
 
-        notifyTurnUpdate(saved);
-        notifyGameUpdate(turn.getGame());
+        publishCommittedVote(saved, true);
 
         return card;
     }
 
     @Transactional
-    public Card playerVote(Turn turn, Player player, Card card) {
+    public Card playerVote(Integer turnId, Integer playerId, Integer cardId) {
+        Game game = lockGameForTurn(turnId);
+        Player actor = currentActor(game, playerId);
+        return recordVote(game, findById(turnId), actor, findCardById(cardId));
+    }
+
+    // Package-local domain entry for transactional scoring fixtures, never a REST command.
+    @Transactional
+    Card playerVote(Turn turn, Player player, Card card) {
+        Game game = lockGameForTurn(turn.getId());
+        return recordVote(game, findById(turn.getId()), findPlayerById(player.getId()), findCardById(card.getId()));
+    }
+
+    private Card recordVote(Game game, Turn turn, Player player, Card card) {
+        if (game.getPlayers().stream().noneMatch(p -> Objects.equals(p.getId(), player.getId()))
+                || Objects.equals(player.getId(), turn.getStoryteller().getId())) throw new AccessDeniedException("Only non-storyteller participants can vote.");
+        requireCurrentTurn(game, turn, TurnState.SHOWING_CARDS, TurnState.VOTING);
+        if (card.getTurn() == null || !Objects.equals(card.getTurn().getId(), turn.getId())) throw new InvalidRequestException("Card is not on this turn's table.");
+        if (card.getOwner() != null && Objects.equals(card.getOwner().getId(), player.getId())) throw new AccessDeniedException("You cannot vote for your own card.");
+        if (turn.getPlayedCards().stream().flatMap(c -> c.getVotes().stream()).anyMatch(p -> Objects.equals(p.getId(), player.getId()))) {
+            throw new InvalidRequestException("You have already voted.");
+        }
         turn.validateCardBelongsToTurn(card);
         turn.validatePlayerHasntVoted(player);
         boolean readyForScoring = turn.registerVote(player, card);
         Card saved = cardRepository.save(card);
         playerRepository.save(player);
-
         if (readyForScoring) {
             turn.setState(TurnState.SCORING);
+            scoreTurn(turn);
+            if (!game.hasFinished()) advanceFinishedTurn(turn, game);
         }
-        Turn savedTurn = turnRepository.save(turn);
-        notifyTurnUpdate(savedTurn);
-
-        if (turn.getState() == TurnState.SCORING) {
-            scoreTurn(savedTurn);
-        }
-        if (turn.getState() == TurnState.FINISHED) {
-            notifyTurnUpdate(savedTurn);
-            Game game = savedTurn.getGame();
-            if (game != null && !game.hasFinished()) {
-                moveToNextTurn(savedTurn);
-            }
-            notifyGameUpdate(game);
-        }
-
-
+        turnRepository.save(turn);
+        publishCommittedVote(turn, readyForScoring);
         return saved;
+    }
+    private Game lockGameForTurn(Integer turnId) {
+        // This scalar lookup avoids loading stale entities before acquiring the game lock.
+        Integer gameId = turnRepository.findGameIdById(turnId)
+            .orElseThrow(() -> new ResourceNotFoundException("Turn", "id", turnId));
+        return gameService.findByIdForUpdate(gameId);
+    }
+
+    private void publishCommittedVote(Turn turn, boolean gameChanged) {
+        Integer turnId=turn.getId(), gameId=turn.getGame().getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override public void afterCommit() {
+                messagingTemplate.convertAndSend("/topic/turn/"+turnId,GameEvent.turn(gameId,turnId));
+                if(gameChanged) messagingTemplate.convertAndSend("/topic/game/"+gameId,GameEvent.changed(gameId));
+            }
+        });
     }
 
     //Scoring method
     @Transactional
     public void scoreTurn(Turn turn) {
+        if (turn.getState() == TurnState.FINISHED) return;
         Map<Player, Integer> pointAdjustments = turn.calculateScoreAdjustments();
         pointAdjustments.forEach((player, delta) -> {
             player.addPoints(delta);
@@ -174,16 +278,14 @@ public class TurnService {
         });
 
         turn.getPlayedCards().forEach(card -> {
-            card.setUser(card.getOwner().getUser());
+            Player owner = card.getOwner();
+            card.setUser(owner.getUser());
+            owner.getCards().remove(card);
             card.setOwner(null);
         });
 
         turn.finish();
-        Turn saved = turnRepository.save(turn);
-
-        notifyTurnUpdate(saved);
-
-        notifyGameUpdate(turn.getGame());
+        turnRepository.save(turn);
 
         Game game = turn.getGame();
         if (game != null) {
@@ -219,33 +321,26 @@ public class TurnService {
 
     @Transactional
     public void moveToNextTurn(Turn currentTurn) {
-        Game game = currentTurn.getGame();
-        if (game == null) {
-            throw new IllegalStateException("Game not found for the current turn");
-        }
-        if (game.hasFinished()) {
-            throw new IllegalStateException("Cannot start a new turn because the game has already finished");
-        }
+        Game game = lockGameForTurn(currentTurn.getId());
+        advanceFinishedTurn(findById(currentTurn.getId()), game);
+    }
+
+    private void advanceFinishedTurn(Turn currentTurn, Game game) {
+        Turn latest = turnRepository.findFirstByGameIdOrderByIdDesc(game.getId()).orElseThrow();
+        if (!Objects.equals(latest.getId(), currentTurn.getId()) || game.hasFinished()) return;
+        if (currentTurn.getState() != TurnState.FINISHED) throw new IllegalStateException("Only a finished turn can advance");
+        cardService.replenishHands(game);
         Turn newTurn = new Turn();
         newTurn.setGame(game);
-        Player nextStoryteller = game.nextStoryteller(currentTurn.getStoryteller());
-        newTurn.setStoryteller(nextStoryteller);
+        newTurn.setStoryteller(game.nextStoryteller(currentTurn.getStoryteller()));
         newTurn.setState(TurnState.WAITING_STORYTELLER_CARD);
-        // Deal one card to each player if possible
-        if (cardsEnoughToDeal(game)) {
-            List<Card> availableCards = cardRepository.findByOwnerIsNullAndTurnIsNullAndGameId(game.getId());
-            List<Card> dealtCards = game.dealCards(availableCards, 1);
-            persistDealtCards(dealtCards);
-        }
         game.getTurns().add(newTurn);
         turnRepository.save(newTurn);
     }
 
     @Transactional(readOnly = true)
     public Boolean cardsEnoughToDeal(Game game) {
-        int cardsNeeded = game.getPlayers().size();
-        int availableCards = cardRepository.countByGameAndOwnerIsNull(game);
-        return availableCards >= cardsNeeded;
+        return cardService.countAvailableImages(game) >= game.getPlayers().size();
     }
 
     @Transactional(readOnly = true)

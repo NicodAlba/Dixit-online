@@ -12,10 +12,10 @@ export default function RenderTopPlayer({currentPlayer, players, getPlayerName, 
         }
         const topPlayerIndex = (indexPlayer + 2) % players.length;
         const topPlayer = players[topPlayerIndex];
-        const cardsList = topPlayer?.cards?.map((c) => {
+        const cardsList = Array.from({length: topPlayer?.handSize || 0}, (_, index) => {
             const image = `/Cards/card_reversed.png`
             return (
-                <ListInlineItem key={c.id} className="top-card-slot">
+                <ListInlineItem key={index} className="top-card-slot">
                     <img className="card" src = {image} alt="Card" style={{width:"40px"}}/>
                 </ListInlineItem>
             );

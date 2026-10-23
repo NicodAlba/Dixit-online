@@ -158,9 +158,9 @@ public class FriendRestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200")
     })
-    public ResponseEntity<List<User>> getFriends() {
+    public ResponseEntity<List<FriendView>> getFriends() {
         User receiver = userService.findCurrentUser();
-        List<User> friends = friendRequestService.getFriends(receiver);
+        List<FriendView> friends = friendRequestService.friendViews(receiver);
         return new ResponseEntity<>(friends, HttpStatus.OK);
     }
 }

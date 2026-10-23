@@ -18,6 +18,11 @@ import org.springframework.web.context.request.WebRequest;
 @RestControllerAdvice
 public class ExceptionHandlerController {
 
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<MessageResponse> invalidRequest(InvalidRequestException ex) {
+        return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage()));
+    }
+
 	@ExceptionHandler(Exception.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
 	public ResponseEntity<ErrorMessage> globalExceptionHandler(Exception ex, WebRequest request) {

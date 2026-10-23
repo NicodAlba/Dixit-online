@@ -36,6 +36,8 @@ public class SecurityConfiguration {
 	@Autowired
 	DataSource dataSource;
 
+    @org.springframework.beans.factory.annotation.Value("${spring.h2.console.enabled:false}")
+    private boolean h2ConsoleEnabled;
 	private static final String ADMIN = "ADMIN";
 	private static final String PLAYER = "PLAYER";
 
@@ -49,14 +51,19 @@ public class SecurityConfiguration {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-            .exceptionHandling(ex -> ex.authenticationEntryPoint(unauthorizedHandler))
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(unauthorizedHandler)
+                .accessDeniedHandler((request, response, denied) -> {
+                    response.setStatus(403);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"message\":\"Access denied.\"}");
+                }))
 
             .authorizeHttpRequests(auth -> auth
                 // Recursos estáticos comunes (css, js, images, webjars…) públicos
                 .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-                // H2 Console accesible
-                .requestMatchers(PathRequest.toH2Console()).permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
+                // A disabled console has no servlet/properties bean: don't use toH2Console().
+                .requestMatchers("/h2-console/**").access((authentication, context) ->
+                    new org.springframework.security.authorization.AuthorizationDecision(h2ConsoleEnabled))
 
                 // Raíz / páginas públicas
                 .requestMatchers("/", "/oups").permitAll()
@@ -74,10 +81,15 @@ public class SecurityConfiguration {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/developers").permitAll()
                 .requestMatchers("/api/v1/plan").permitAll()
-                .requestMatchers("/api/v1/users/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/users").hasAuthority(ADMIN)
+                .requestMatchers(HttpMethod.PUT, "/api/v1/users/{id}").hasAnyAuthority(PLAYER, ADMIN)
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/users/{id}").hasAuthority(ADMIN)
+                .requestMatchers(HttpMethod.GET, "/api/v1/users", "/api/v1/users/authorities").hasAuthority(ADMIN)
+                .requestMatchers(HttpMethod.GET, "/api/v1/users/**").hasAnyAuthority(PLAYER, ADMIN)
 
                 // API restringida para administradores
-                .requestMatchers(HttpMethod.GET, "/api/v1/games").hasAuthority("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/v1/games", "/api/v1/games/inProgress", "/api/v1/games/pastGames").hasAuthority(ADMIN)
+                .requestMatchers(HttpMethod.GET, "/api/v1/games/games/{username}").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers(HttpMethod.POST, "/api/v1/games").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers("/api/v1/games/my").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers("/api/v1/games/{id}").hasAnyAuthority(PLAYER, ADMIN)
@@ -108,7 +120,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/v1/messages/games/**").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers(HttpMethod.POST, "/api/v1/messages/games/**").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers(HttpMethod.PATCH, "/api/v1/games/{gameId}/spectate/{playerId}").hasAuthority(PLAYER)
-                .requestMatchers(HttpMethod.GET, "/api/v1/players/{playerId}").hasAuthority(PLAYER)
+                .requestMatchers(HttpMethod.GET, "/api/v1/players/{playerId}", "/api/v1/players/{playerId}/cards").hasAnyAuthority(PLAYER, ADMIN)
                 
 
                 // El resto denegado

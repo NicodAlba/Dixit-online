@@ -115,7 +115,7 @@ public class FriendRestControllerTest {
     @WithMockUser("test")
     void testGetFriends() throws Exception{
         when(userService.findCurrentUser()).thenReturn(receiver);
-        when(friendRequestService.getFriends(receiver)).thenReturn(List.of());
+        when(friendRequestService.friendViews(receiver)).thenReturn(List.of());
 
         mockMvc.perform(get(BASE_URL)).andExpect(status().isOk())
         .andExpect(jsonPath("$.size()").value(0));

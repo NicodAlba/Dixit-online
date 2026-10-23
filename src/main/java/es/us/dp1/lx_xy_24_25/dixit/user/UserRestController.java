@@ -19,6 +19,7 @@ import es.us.dp1.lx_xy_24_25.dixit.achievement.Achievement;
 import es.us.dp1.lx_xy_24_25.dixit.achievement.AchievementService;
 import es.us.dp1.lx_xy_24_25.dixit.auth.payload.response.MessageResponse;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.InvalidRequestException;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
 import es.us.dp1.lx_xy_24_25.dixit.util.RestPreconditions;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +36,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -53,26 +55,31 @@ class UserRestController {
 		this.achievementService = achievementService;
 	}
 
+    private UserView view(User user) {
+        User actor = userService.findCurrentUser();
+        return UserView.of(user, actor.hasAuthority("ADMIN") || Objects.equals(actor.getId(), user.getId()));
+    }
+
 	@GetMapping
     @Operation(summary = "Retrieves all users")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200")
     })
-	public ResponseEntity<List<User>> findAll(@RequestParam(required = false) String auth) {
+	public ResponseEntity<List<UserView>> findAll(@RequestParam(required = false) String auth) {
 		List<User> res;
 		if (auth != null) {
 			res = (List<User>) userService.findAllByAuthority(auth);
 		} else
 			res = (List<User>) userService.findAll();
-		return new ResponseEntity<>(res, HttpStatus.OK);
+		return new ResponseEntity<>(res.stream().map(u -> UserView.of(u, true)).toList(), HttpStatus.OK);
 	}
 
     @GetMapping("/players")
-    public ResponseEntity<Page<User>> findPlayers(@RequestParam(required = false) String username, Pageable pageable) {
-        if (username.isBlank()) {
-            throw new IllegalArgumentException("Username cannot be empty");
+    public ResponseEntity<Page<UserView>> findPlayers(@RequestParam(required = false) String username, Pageable pageable) {
+        if (username == null || username.isBlank()) {
+            throw new InvalidRequestException("Username cannot be empty");
         }
-        return new ResponseEntity<>(userService.findPlayersByUsername(username, pageable), HttpStatus.OK);
+        return new ResponseEntity<>(userService.findPlayersByUsername(username, pageable).map(u -> UserView.of(u, false)), HttpStatus.OK);
     }
 
 	@GetMapping("/{userId}/achievements")
@@ -96,11 +103,11 @@ class UserRestController {
         @ApiResponse(responseCode = "200"),
         @ApiResponse(responseCode = "404")
     })
-	public ResponseEntity<User> findById(@PathVariable("id") Integer id) {
+	public ResponseEntity<UserView> findById(@PathVariable("id") Integer id) {
         User user;
         try {
             user = userService.findById(id);
-            return new ResponseEntity<>(user, HttpStatus.OK);
+            return new ResponseEntity<>(view(user), HttpStatus.OK);
         } catch (ResourceNotFoundException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
@@ -111,9 +118,9 @@ class UserRestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200")
     })
-	public ResponseEntity<User> create(@RequestBody @Valid User user) {
-		User savedUser = userService.saveUser(user);
-		return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
+	public ResponseEntity<UserView> create(@RequestBody @Valid User user) {
+		User savedUser = userService.createAccount(user);
+		return new ResponseEntity<>(view(savedUser), HttpStatus.CREATED);
 	}
 
 	@PutMapping(value = "{userId}")
@@ -122,11 +129,11 @@ class UserRestController {
         @ApiResponse(responseCode = "200"),
         @ApiResponse(responseCode = "404")
     })
-	public ResponseEntity<User> update(@PathVariable("userId") Integer id, @RequestBody @Valid UserDTO user) {
+	public ResponseEntity<UserView> update(@PathVariable("userId") Integer id, @RequestBody @Valid UserDTO user) {
         try {
             RestPreconditions.checkNotNull(userService.findById(id), "User", "ID", id);
-            return new ResponseEntity<>(this.userService.updateUser(user, id), HttpStatus.OK);
-        } catch (Exception e) {
+            return new ResponseEntity<>(view(this.userService.updateUser(user, id)), HttpStatus.OK);
+        } catch (ResourceNotFoundException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }

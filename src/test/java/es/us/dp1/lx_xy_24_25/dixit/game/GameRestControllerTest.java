@@ -52,6 +52,7 @@ public class GameRestControllerTest {
 
     @MockBean
     private GameService gameService;
+    @MockBean private GameViews views;
 
     @MockBean
     private UserService userService;
@@ -87,6 +88,7 @@ public class GameRestControllerTest {
 
         Player p1 = new Player();
         p1.setUser(testUser);
+        p1.setId(1);
 
         Player p2 = new Player();
         p2.setUser(user2);
@@ -94,6 +96,7 @@ public class GameRestControllerTest {
 
         Player p3 = new Player();
         p3.setUser(user3);
+        p3.setId(3);
 
         testGame = new Game();
         testGame.setId(GAME_ID);
@@ -103,6 +106,10 @@ public class GameRestControllerTest {
         testGame.getPlayers().add(p1);
         testGame.getPlayers().add(p2);
         testGame.getPlayers().add(p3);
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(views.game(anyInt(),org.mockito.ArgumentMatchers.nullable(Integer.class))).thenAnswer(inv->GameView.of(testGame,1));
+        when(views.spectate(anyInt(),anyInt())).thenAnswer(inv->GameView.of(testGame,2));
+        when(views.catalog(anyString())).thenAnswer(inv->List.of(GameView.catalog(testGame)));
     }
 
 
@@ -122,7 +129,7 @@ public class GameRestControllerTest {
     @WithMockUser
     void testFindByIdSuccess() throws Exception {
         when(userService.findCurrentUser()).thenReturn(testUser);
-        when(gameService.findByIdIfUserInGame(GAME_ID, testUser)).thenReturn(testGame);
+        when(views.game(GAME_ID,null)).thenReturn(GameView.of(testGame,1));
 
         mockMvc.perform(get(BASE_URL + "/{id}", GAME_ID))
                 .andExpect(status().isOk())
@@ -133,7 +140,7 @@ public class GameRestControllerTest {
     @WithMockUser
     void testFindByIdNotFound() throws Exception {
         when(userService.findCurrentUser()).thenReturn(testUser);
-        when(gameService.findByIdIfUserInGame(anyInt(), any(User.class)))
+        when(views.game(anyInt(),org.mockito.ArgumentMatchers.nullable(Integer.class)))
                 .thenThrow(new ResourceNotFoundException("Game not found"));
 
         mockMvc.perform(get(BASE_URL + "/{id}", 999))
@@ -163,7 +170,7 @@ public class GameRestControllerTest {
         Map<String, String> body = new HashMap<>();
         body.put("password", PASSWORD);
 
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+        when(gameService.joinGame(GAME_ID, testUser, PASSWORD)).thenReturn(testGame);
         when(userService.findCurrentUser()).thenReturn(testUser);
 
         mockMvc.perform(patch(BASE_URL + "/{id}/join", GAME_ID)
@@ -172,7 +179,7 @@ public class GameRestControllerTest {
                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk());
 
-        verify(gameService).addPlayerToGame(testGame, testUser);
+        verify(gameService).joinGame(GAME_ID, testUser, PASSWORD);
     }
 
     @Test
@@ -181,7 +188,8 @@ public class GameRestControllerTest {
         Map<String, String> body = new HashMap<>();
         body.put("password", "wrong_pass");
 
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(gameService.joinGame(GAME_ID, testUser, "wrong_pass")).thenThrow(new IllegalArgumentException("Incorrect password"));
 
         mockMvc.perform(patch(BASE_URL + "/{id}/join", GAME_ID)
                 .with(csrf())
@@ -202,36 +210,55 @@ public class GameRestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Game deleted successfully."));
 
-        verify(gameService).deleteGame(testGame);
+        verify(gameService).leaveLobby(GAME_ID, testUser);
     }
 
-    @Test @WithMockUser void testStartGameSuccess() throws Exception {
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+    @Test
+    @WithMockUser
+    void testStartGameSuccess() throws Exception {
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(turnService.startGame(GAME_ID, testUser)).thenReturn(testGame);
         mockMvc.perform(patch(BASE_URL + "/{id}/start", GAME_ID)
             .with(csrf())).andExpect(status().isOk());
-        verify(gameService).saveGame(any(Game.class));
-        verify(turnService).initializeFirstTurn(any(Game.class)); }
+        verify(turnService).startGame(GAME_ID, testUser);
+        verify(messagingTemplate).convertAndSend("/topic/game/" + GAME_ID, GameEvent.changed(GAME_ID));
+    }
 
+    @Test
+    @WithMockUser
+    void testStartGameInvalidState() throws Exception {
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(turnService.startGame(GAME_ID, testUser)).thenThrow(new IllegalStateException("Too few players"));
+        mockMvc.perform(patch(BASE_URL + "/{id}/start", GAME_ID).with(csrf()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Too few players"));
+        verifyNoInteractions(messagingTemplate);
+    }
+
+    @Test
+    @WithMockUser
+    void testStartGameNonLeader() throws Exception {
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(turnService.startGame(GAME_ID, testUser)).thenThrow(
+            new es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException("Only the leader can start the game"));
+        mockMvc.perform(patch(BASE_URL + "/{id}/start", GAME_ID).with(csrf()))
+            .andExpect(status().isForbidden());
+        verifyNoInteractions(messagingTemplate);
+    }
 
     @Test
     @WithMockUser
     void testAcceptInvitationSuccess() throws Exception {
         Integer invId = 100;
-        GameInvitation invitation = new GameInvitation();
-        invitation.setId(invId);
-        invitation.setGameId(GAME_ID);
-        invitation.setInvited(testUser);
-
-        when(gameInvitationRepository.findById(invId)).thenReturn(Optional.of(invitation));
         when(userService.findCurrentUser()).thenReturn(testUser);
-        when(gameService.findById(GAME_ID)).thenReturn(testGame);
+        when(gameInvitationService.acceptInvitation(invId, testUser)).thenReturn(testGame);
 
         mockMvc.perform(patch(BASE_URL + "/invitations/{invitationId}/accept", invId)
                 .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Invitation successfully accepted!"));
 
-        verify(gameService).addPlayerToGame(testGame, testUser);
+        verify(gameInvitationService).acceptInvitation(invId, testUser);
     }
 
     @Test
@@ -273,8 +300,9 @@ public class GameRestControllerTest {
         testGame.setSpectators(List.of());
         Integer somePlayerId = testGame.getPlayers().get(1).getId();
 
+        when(views.spectate(GAME_ID,somePlayerId)).thenThrow(new es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException("Not authorized to spectate"));
         mockMvc.perform(patch(BASE_URL + "/{id}/spectate/{playerId}", GAME_ID, somePlayerId)
                 .with(csrf()))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 }

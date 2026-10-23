@@ -3,7 +3,7 @@ package es.us.dp1.lx_xy_24_25.dixit.game;
 import es.us.dp1.lx_xy_24_25.dixit.auth.payload.response.MessageResponse;
 import es.us.dp1.lx_xy_24_25.dixit.card.Card;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
-import es.us.dp1.lx_xy_24_25.dixit.player.Player;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -20,10 +20,12 @@ import org.springframework.web.bind.annotation.*;
 @SecurityRequirement(name = "bearerAuth")
 public class TurnRestController {
     private final TurnService turnService;
+    private final GameViews views;
 
     @Autowired
-    public TurnRestController(TurnService turnService) {
+    public TurnRestController(TurnService turnService, GameViews views) {
         this.turnService = turnService;
+        this.views = views;
     }
 
     @GetMapping("/{id}")
@@ -33,8 +35,8 @@ public class TurnRestController {
         @ApiResponse(responseCode = "403"),
         @ApiResponse(responseCode = "404")
     })
-    public Turn getTurn(@PathVariable("id") Integer id) {
-        return turnService.findById(id);
+    public GameView.Round getTurn(@PathVariable("id") Integer id,@RequestParam(required=false) Integer perspectivePlayerId) {
+        return views.turn(id,perspectivePlayerId);
     }
 
     @PutMapping("/{turnId}/answer/{cardId}")
@@ -48,21 +50,18 @@ public class TurnRestController {
         @PathVariable Integer turnId,
         @PathVariable Integer cardId
     ) {
-        Turn turn;
-        Card card;
         Turn updatedTurn;
         try {
-            turn = turnService.findById(turnId);
-            card = turnService.findCardById(cardId);
-            updatedTurn = turnService.setStorytellerAnswer(turn, card);
+            updatedTurn = turnService.selectAnswer(turnId, cardId);
         } catch (Exception e) {
+            if (e instanceof AccessDeniedException) throw (AccessDeniedException)e;
             if (e instanceof ResourceNotFoundException) {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);
             } else {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);
             }
         }
-        return ResponseEntity.ok(updatedTurn);
+        return ResponseEntity.ok(views.turn(turnId,null));
     }
 
     @PutMapping("/{turnId}/clue")
@@ -76,20 +75,18 @@ public class TurnRestController {
         @PathVariable Integer turnId,
         @RequestBody String clue
     ) {
-        Turn turn;
         Turn updatedTurn;
         try {
-            turn = turnService.findById(turnId);
-
-            updatedTurn = turnService.setStorytellerClue(turn, clue);
+            updatedTurn = turnService.provideClue(turnId, clue);
         } catch (Exception e) {
+            if (e instanceof AccessDeniedException) throw (AccessDeniedException)e;
             if (e instanceof ResourceNotFoundException) {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);
             } else  {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);
             }
         }
-        return ResponseEntity.ok(updatedTurn);
+        return ResponseEntity.ok(views.turn(turnId,null));
     }
 
     @PostMapping("/{turnId}/play-card/{cardId}/{playerId}")
@@ -104,24 +101,18 @@ public class TurnRestController {
         @PathVariable Integer cardId,
         @PathVariable Integer playerId
     ) {
-        Turn turn;
-        Player player;
-        Card card;
         Card playedCard;
         try {
-            turn = turnService.findById(turnId);
-            player = turnService.findPlayerById(playerId);
-            card = turnService.findCardById(cardId);
-
-            playedCard = turnService.playerPlayCard(turn, player, card);
+            playedCard = turnService.playCard(turnId, playerId, cardId);
         } catch (Exception e) {
+            if (e instanceof AccessDeniedException) throw (AccessDeniedException)e;
             if (e instanceof ResourceNotFoundException) {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);
             } else   {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);
             }
         }
-        return ResponseEntity.ok(playedCard);
+        return ResponseEntity.ok(views.turn(turnId,null));
     }
 
     @PostMapping("/{turnId}/vote/{playerId}/{cardId}")
@@ -131,17 +122,13 @@ public class TurnRestController {
         @ApiResponse(responseCode = "400"),
         @ApiResponse(responseCode = "404")
     })
-    public ResponseEntity<Card> playerVote(
+    public ResponseEntity<GameView.Round> playerVote(
         @PathVariable Integer turnId,
         @PathVariable Integer playerId,
         @PathVariable Integer cardId
     ) {
-        Turn turn = turnService.findById(turnId);
-        Player player = turnService.findPlayerById(playerId);
-        Card card = turnService.findCardById(cardId);
+        Card updatedCard = turnService.playerVote(turnId, playerId, cardId);
 
-        Card updatedCard = turnService.playerVote(turn, player, card);
-
-        return ResponseEntity.ok(updatedCard);
+        return ResponseEntity.ok(views.turn(turnId,null));
     }
 }

@@ -3,6 +3,7 @@ import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.*;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -34,6 +35,7 @@ public class TurnRestControllerTest {
 
     @MockBean
     private TurnService turnService;
+    @MockBean private GameViews views;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -57,16 +59,16 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testGetTurnSuccess() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
+        when(views.turn(turnId,null)).thenReturn(new GameView.Round(turnId,TurnState.WAITING_STORYTELLER_CARD,null,null,null,java.util.List.of(),0,false,false));
 
         mockMvc.perform(get(BASE_URL + "/{id}", turnId)).andExpect(status().isOk());
-        verify(turnService).findById(turnId);
+        verify(views).turn(turnId,null);
     }
 
     @Test
     @WithMockUser("test")
     void testGetTurnNotFound() throws Exception {
-        when(turnService.findById(999)).thenThrow(new ResourceNotFoundException("Turn not found"));
+        when(views.turn(999,null)).thenThrow(new ResourceNotFoundException("Turn not found"));
 
         mockMvc.perform(get(BASE_URL + "/{id}", 999)).andExpect(status().isNotFound());
     }
@@ -74,18 +76,17 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testSetStorytellerAnswerSuccess() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findCardById(cardId)).thenReturn(testCard);
-        when(turnService.setStorytellerAnswer(testTurn, testCard)).thenReturn(testTurn);
+        when(turnService.selectAnswer(turnId, cardId)).thenReturn(testTurn);
 
         mockMvc.perform(put(BASE_URL + "/{turnId}/answer/{cardId}", turnId, cardId).with(csrf())).andExpect(status().isOk());
-        verify(turnService).setStorytellerAnswer(testTurn, testCard);
+        verify(turnService).selectAnswer(turnId, cardId);
     }
 
     @Test
     @WithMockUser("test")
     void testSetStorytellerAnswerTurnNotFound() throws Exception {
-        when(turnService.findById(999)).thenThrow(new ResourceNotFoundException("Turn not found"));
+        when(turnService.selectAnswer(999, cardId)).thenThrow(new ResourceNotFoundException("Resource not found"));
+
 
         mockMvc.perform(put(BASE_URL + "/{turnId}/answer/{cardId}", 999, cardId).with(csrf())).andExpect(status().isNotFound());
     }
@@ -93,8 +94,8 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testSetStorytellerAnswerCardNotFound() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findCardById(999)).thenThrow(new ResourceNotFoundException("Card not found"));
+        when(turnService.selectAnswer(turnId, 999)).thenThrow(new ResourceNotFoundException("Resource not found"));
+
 
         mockMvc.perform(put(BASE_URL + "/{turnId}/answer/{cardId}", turnId, 999).with(csrf())).andExpect(status().isNotFound());
     }
@@ -102,9 +103,7 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testSetStorytellerAnswerBadRequest() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findCardById(cardId)).thenReturn(testCard);
-        when(turnService.setStorytellerAnswer(testTurn, testCard)).thenThrow(new IllegalStateException("Invalid state"));
+        when(turnService.selectAnswer(turnId, cardId)).thenThrow(new IllegalStateException("Invalid state"));
 
         mockMvc.perform(put(BASE_URL + "/{turnId}/answer/{cardId}", turnId, cardId).with(csrf())).andExpect(status().isBadRequest());
     }
@@ -113,8 +112,7 @@ public class TurnRestControllerTest {
     @WithMockUser("test")
     void testSetStorytellerClueSuccess() throws Exception {
         String clue = "test clue";
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.setStorytellerClue(testTurn, clue)).thenReturn(testTurn);
+        when(turnService.provideClue(eq(turnId), anyString())).thenReturn(testTurn);
 
         mockMvc.perform(put(BASE_URL + "/{turnId}/clue", turnId).with(csrf()).contentType("application/json").content(objectMapper.writeValueAsString(clue))).andExpect(status().isOk());
     }
@@ -122,8 +120,9 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testSetStorytellerClueTurnNotFound() throws Exception {
+        when(turnService.provideClue(eq(999), anyString())).thenThrow(new ResourceNotFoundException("Resource not found"));
+
         String clue = "test clue";
-        when(turnService.findById(999)).thenThrow(new ResourceNotFoundException("Turn not found"));
 
         mockMvc.perform(put(BASE_URL + "/{turnId}/clue", 999).with(csrf()).contentType("application/json").content(objectMapper.writeValueAsString(clue))).andExpect(status().isNotFound());
     }
@@ -131,38 +130,35 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testPlayerPlayCardSuccess() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findPlayerById(playerId)).thenReturn(testPlayer);
-        when(turnService.findCardById(cardId)).thenReturn(testCard);
-        when(turnService.playerPlayCard(testTurn, testPlayer, testCard)).thenReturn(testCard);
+        when(turnService.playCard(turnId, playerId, cardId)).thenReturn(testCard);
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/play-card/{cardId}/{playerId}", turnId, cardId, playerId).with(csrf())).andExpect(status().isOk());
-        verify(turnService).playerPlayCard(testTurn, testPlayer, testCard);
+        verify(turnService).playCard(turnId, playerId, cardId);
     }
 
     @Test
     @WithMockUser("test")
     void testPlayerPlayCardTurnNotFound() throws Exception {
-        when(turnService.findById(999)).thenThrow(new ResourceNotFoundException("Turn not found"));
+        when(turnService.playCard(999, playerId, cardId)).thenThrow(new ResourceNotFoundException("Resource not found"));
+
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/play-card/{cardId}/{playerId}", 999, cardId, playerId).with(csrf())).andExpect(status().isNotFound());
     }
 
     @Test
     @WithMockUser("test")
-    void testPlayerPlayCardPlayerNotFound() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findPlayerById(999)).thenThrow(new ResourceNotFoundException("Player not found"));
+    void testPlayerPlayCardRejectsForgedActor() throws Exception {
+        when(turnService.playCard(turnId, 999, cardId)).thenThrow(new AccessDeniedException("Cannot act as another participant"));
 
-        mockMvc.perform(post(BASE_URL + "/{turnId}/play-card/{cardId}/{playerId}", turnId, cardId, 999).with(csrf())).andExpect(status().isNotFound());
+
+        mockMvc.perform(post(BASE_URL + "/{turnId}/play-card/{cardId}/{playerId}", turnId, cardId, 999).with(csrf())).andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser("test")
     void testPlayerPlayCardCardNotFound() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findPlayerById(playerId)).thenReturn(testPlayer);
-        when(turnService.findCardById(999)).thenThrow(new ResourceNotFoundException("Card not found"));
+        when(turnService.playCard(turnId, playerId, 999)).thenThrow(new ResourceNotFoundException("Resource not found"));
+
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/play-card/{cardId}/{playerId}", turnId, 999, playerId).with(csrf())).andExpect(status().isNotFound());
     }
@@ -170,10 +166,7 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testPlayerPlayCardBadRequest() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findPlayerById(playerId)).thenReturn(testPlayer);
-        when(turnService.findCardById(cardId)).thenReturn(testCard);
-        when(turnService.playerPlayCard(testTurn, testPlayer, testCard)).thenThrow(new IllegalStateException("Invalid operation"));
+        when(turnService.playCard(turnId, playerId, cardId)).thenThrow(new IllegalStateException("Invalid operation"));
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/play-card/{cardId}/{playerId}", turnId, cardId, playerId).with(csrf())).andExpect(status().isBadRequest());
     }
@@ -181,38 +174,32 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testPlayerVoteSuccess() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findPlayerById(playerId)).thenReturn(testPlayer);
-        when(turnService.findCardById(cardId)).thenReturn(testCard);
-        when(turnService.playerVote(testTurn, testPlayer, testCard)).thenReturn(testCard);
+        when(turnService.playerVote(turnId, playerId, cardId)).thenReturn(testCard);
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/vote/{playerId}/{cardId}", turnId, playerId, cardId).with(csrf())).andExpect(status().isOk());
-        verify(turnService).playerVote(testTurn, testPlayer, testCard);
+        verify(turnService).playerVote(turnId, playerId, cardId);
     }
 
     @Test
     @WithMockUser("test")
     void testPlayerVoteTurnNotFound() throws Exception {
-        when(turnService.findById(999)).thenThrow(new ResourceNotFoundException("Turn not found"));
+        when(turnService.playerVote(999, playerId, cardId)).thenThrow(new ResourceNotFoundException("Turn not found"));
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/vote/{playerId}/{cardId}", 999, playerId, cardId).with(csrf())).andExpect(status().isNotFound());
     }
 
     @Test
     @WithMockUser("test")
-    void testPlayerVotePlayerNotFound() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findPlayerById(999)).thenThrow(new ResourceNotFoundException("Player not found"));
+    void testPlayerVoteRejectsForgedActor() throws Exception {
+        when(turnService.playerVote(turnId, 999, cardId)).thenThrow(new AccessDeniedException("Cannot act as another participant"));
 
-        mockMvc.perform(post(BASE_URL + "/{turnId}/vote/{playerId}/{cardId}", turnId, 999, cardId).with(csrf())).andExpect(status().isNotFound());
+        mockMvc.perform(post(BASE_URL + "/{turnId}/vote/{playerId}/{cardId}", turnId, 999, cardId).with(csrf())).andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser("test")
     void testPlayerVoteCardNotFound() throws Exception {
-        when(turnService.findById(turnId)).thenReturn(testTurn);
-        when(turnService.findPlayerById(playerId)).thenReturn(testPlayer);
-        when(turnService.findCardById(999)).thenThrow(new ResourceNotFoundException("Card not found"));
+        when(turnService.playerVote(turnId, playerId, 999)).thenThrow(new ResourceNotFoundException("Card not found"));
 
         mockMvc.perform(post(BASE_URL + "/{turnId}/vote/{playerId}/{cardId}", turnId, playerId, 999).with(csrf())).andExpect(status().isNotFound());
     }

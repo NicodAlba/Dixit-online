@@ -77,7 +77,7 @@ export default function Home() {
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     if (response.status === 409) {
-                        setMessage("You are already in this game.");
+                        setMessage(data.message || "Unable to join this game.");
                         setVisible(true);
                         navigate("/");
                     } else if (response.status === 401) {

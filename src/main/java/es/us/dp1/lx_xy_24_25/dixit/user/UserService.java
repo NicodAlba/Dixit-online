@@ -17,8 +17,11 @@ package es.us.dp1.lx_xy_24_25.dixit.user;
 
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
 import es.us.dp1.lx_xy_24_25.dixit.social.FriendRequestService;
+import es.us.dp1.lx_xy_24_25.dixit.social.GameInvitationRepository;
 import jakarta.validation.Valid;
-import org.springframework.beans.BeanUtils;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.InvalidRequestException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
@@ -34,14 +37,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final AuthoritiesRepository authoritiesRepository;
+    private final GameInvitationRepository invitationRepository;
 	private final PasswordEncoder passwordEncoder;
     private final FriendRequestService friendRequestService;
 
     @Autowired
-	public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, FriendRequestService friendRequestService) {
+	public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, FriendRequestService friendRequestService, AuthoritiesRepository authoritiesRepository, GameInvitationRepository invitationRepository) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
         this.friendRequestService = friendRequestService;
+        this.authoritiesRepository = authoritiesRepository;
+        this.invitationRepository = invitationRepository;
     }
 
      @Transactional
@@ -86,25 +93,62 @@ public class UserService {
 		return userRepository.findAllByAuthority(auth);
 	}
 
-	@Transactional
-	public User updateUser(@Valid UserDTO user, Integer idToUpdate) {
-		User toUpdate = findById(idToUpdate);
-		if (user.getPassword() != null && !user.getPassword().trim().isEmpty()) {
-			user.setPassword(passwordEncoder.encode(user.getPassword()));
-		} else {
-			BeanUtils.copyProperties(user, toUpdate, "id", "password");
-			userRepository.save(toUpdate);
-			return toUpdate;
-		}
-		BeanUtils.copyProperties(user, toUpdate, "id");
-         userRepository.save(toUpdate);
+    @Transactional
+    public User createAccount(User input) {
+        if (!findCurrentUser().hasAuthority("ADMIN")) throw new AccessDeniedException();
+        if (input.getId() != null) throw new InvalidRequestException("A new account cannot have an id.");
+        if (input.getUsername() == null || input.getUsername().isBlank()
+                || input.getPassword() == null || input.getPassword().isBlank()) {
+            throw new InvalidRequestException("Username and password are required.");
+        }
+        User account = new User();
+        account.setUsername(input.getUsername());
+        account.setPassword(input.getPassword());
+        account.setAuthority(resolveAuthority(input.getAuthority()));
+        return saveUser(account);
+    }
 
-         return toUpdate;
+    private Authorities resolveAuthority(Authorities authority) {
+        if (authority == null || authority.getId() == null) {
+            throw new InvalidRequestException("An existing authority is required.");
+        }
+        return authoritiesRepository.findById(authority.getId())
+            .orElseThrow(() -> new InvalidRequestException("Unknown authority."));
+    }
+
+    @Transactional
+    public User updateUser(@Valid UserDTO input, Integer idToUpdate) {
+        User actor = findCurrentUser();
+        boolean ownAccount = Objects.equals(actor.getId(), idToUpdate);
+        if (!ownAccount && !actor.hasAuthority("ADMIN")) throw new AccessDeniedException();
+        User target = findById(idToUpdate);
+        Authorities authority = input.getAuthority() == null ? target.getAuthority() : resolveAuthority(input.getAuthority());
+        if (!actor.hasAuthority("ADMIN") && !Objects.equals(authority.getId(), target.getAuthority().getId())) {
+            throw new AccessDeniedException("You cannot change your authority.");
+        }
+        boolean changingPassword = input.getPassword() != null && !input.getPassword().isBlank();
+        if (changingPassword && !ownAccount) {
+            throw new AccessDeniedException("Only the account holder can change its password.");
+        }
+        if (input.getUsername() == null || input.getUsername().isBlank()) {
+            throw new InvalidRequestException("Username is required.");
+        }
+        target.setUsername(input.getUsername());
+        target.setAuthority(authority);
+        if (changingPassword) target.setPassword(passwordEncoder.encode(input.getPassword()));
+        return userRepository.save(target);
     }
 
 	@Transactional
 	public void deleteUser(Integer id) {
-		User toDelete = findById(id);
+        User actor = findCurrentUser();
+        if (!actor.hasAuthority("ADMIN") || Objects.equals(actor.getId(), id)) throw new AccessDeniedException();
+        User toDelete = findById(id);
+        if (toDelete.getPlayers().stream().anyMatch(p -> p.getGame() != null)
+                || !toDelete.getGamesToSpectate().isEmpty()) {
+            throw new AccessDeniedException("Accounts linked to games cannot be deleted; their history must be preserved.");
+        }
+        invitationRepository.deleteAll(invitationRepository.findAllByInvited(toDelete));
         friendRequestService.removeAllRequests(toDelete);
 		this.userRepository.delete(toDelete);
 	}

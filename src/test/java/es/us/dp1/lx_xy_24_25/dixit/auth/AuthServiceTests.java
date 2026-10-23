@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Epic("Users & Admin Module")
 @Feature("Authentication")
@@ -35,12 +35,12 @@ public class AuthServiceTests {
 
     @Test
 	@Transactional
-	public void shouldCreateAdminUser() {
+	public void shouldRejectPublicAdminUser() {
 		SignupRequest request = createRequest("ADMIN", "admin2");
 		int userFirstCount = ((Collection<User>) this.userService.findAll()).size();
-		this.authService.createUser(request);
+		assertThrows(IllegalArgumentException.class, () -> this.authService.createUser(request));
 		int userLastCount = ((Collection<User>) this.userService.findAll()).size();
-		assertEquals(userFirstCount + 1, userLastCount);
+		assertEquals(userFirstCount, userLastCount);
 	}
 
 

@@ -11,7 +11,10 @@ import es.us.dp1.lx_xy_24_25.dixit.social.FriendRequestService;
 import es.us.dp1.lx_xy_24_25.dixit.user.User;
 import es.us.dp1.lx_xy_24_25.dixit.user.UserService;
 import jakarta.validation.Valid;
-import org.springframework.beans.BeanUtils;
+import java.util.Map;
+import java.util.Set;
+import java.util.Objects;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.InvalidRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,7 @@ public class GameService {
     private final UserService userService;
     private final AchievementService achievementService;
     private final FriendRequestService friendRequestService;
+    @Autowired private org.springframework.context.ApplicationEventPublisher events;
 
     @Autowired
     public GameService(GameRepository gameRepository, PlayerService playerService, UserService userService, AchievementService achievementService, FriendRequestService friendRequestService) {
@@ -82,12 +86,38 @@ public class GameService {
     }
 
     @Transactional
-    public Game updateGame(@Valid Game game, Integer idToUpdate) {
-        Game toUpdate = findById(idToUpdate);
-        BeanUtils.copyProperties(game, toUpdate, "id");
-        gameRepository.save(toUpdate);
+    public Game updateGame(Map<String, Object> fields, Integer idToUpdate) {
+        Game game = findByIdForUpdate(idToUpdate);
+        User actor = userService.findCurrentUser();
+        if (game.getLeader() == null || !Objects.equals(actor.getId(), game.getLeader().getId())) throw new AccessDeniedException("Only the lobby leader can change its password.");
+        try { ensureLobbyOpen(game); }
+        catch (IllegalStateException ex) { throw new InvalidRequestException(ex.getMessage()); }
+        if (!Set.of("password").containsAll(fields.keySet())
+                || (fields.get("password") != null && !(fields.get("password") instanceof String))) {
+            throw new InvalidRequestException("Only the lobby password can be changed here; use the game actions for state changes.");
+        }
+        if (fields.containsKey("password")) {
+            String password = (String)fields.get("password");
+            game.setPassword(password == null || password.isBlank() ? null : password);
+        }
+        return gameRepository.save(game);
+    }
 
-        return toUpdate;
+    @Transactional
+    public Game leaveLobby(Integer gameId, User user) {
+        Game game = findByIdForUpdate(gameId);
+        if (!playerInGame(game, user)) throw new AccessDeniedException("You are not a participant in this lobby.");
+        if (game.getStartDate() != null) {
+            if (Objects.equals(game.getLeader().getId(),user.getId())) cancel(game);
+            return game; // Other participants retain their seat, hand and history.
+        }
+        ensureLobbyOpen(game);
+        if (Objects.equals(game.getLeader().getId(), user.getId())) {
+            gameRepository.delete(game);
+            return null;
+        }
+        removePlayerFromGame(game, user);
+        return game;
     }
 
     @Transactional
@@ -125,14 +155,54 @@ public class GameService {
         return gameRepository.save(game);
     }
 
+    @Transactional
+    public Game findByIdForUpdate(Integer id) {
+        return gameRepository.findByIdForUpdate(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Game", "id", id));
+    }
+
+    @Transactional(rollbackFor = {PlayerAlreadyInGameException.class, TooManyPlayersException.class})
+    public Game joinGame(Integer gameId, User user, String password)
+        throws PlayerAlreadyInGameException, TooManyPlayersException {
+        Game game = findByIdForUpdate(gameId);
+        // An existing participant resumes an active seat; this is not another admission.
+        if (game.getStartDate()!=null && !game.hasFinished() && playerInGame(game,user)) return game;
+        if (game.getPassword() != null && !game.getPassword().isBlank() && !game.getPassword().equals(password)) {
+            throw new IllegalArgumentException("Incorrect password");
+        }
+        addPlayerToGame(game, user);
+        return game;
+    }
+
+    @Transactional(readOnly=true)
+    public boolean isHost(Integer gameId,String username){return gameRepository.existsByIdAndLeaderUsername(gameId,username);}
+
+    @Transactional(readOnly=true)
+    public boolean isRunning(Integer gameId){return gameRepository.existsByIdAndStartDateNotNullAndEndDateNull(gameId);}
+
+    @Transactional
+    public void cancelForHostDisconnect(Integer gameId){
+        gameRepository.findByIdForUpdate(gameId).ifPresent(this::cancel);
+    }
+
+    private void cancel(Game game){
+        if(game.getStartDate()==null || game.hasFinished())return;
+        game.setCancelled(true);
+        game.setEndDate(new Date());
+        gameRepository.save(game);
+        events.publishEvent(new GameCancelled(game.getId()));
+        // No scoring, refill, winner declaration or achievement checks on cancellation.
+    }
+
+    public void ensureLobbyOpen(Game game) {
+        if (game.getStartDate() != null || game.hasFinished() || !game.getTurns().isEmpty()) {
+            throw new IllegalStateException("The game has already started or finished");
+        }
+    }
+
     @Transactional(rollbackFor = {PlayerAlreadyInGameException.class, TooManyPlayersException.class})
     public void addPlayerToGame(Game game, User user) throws PlayerAlreadyInGameException, TooManyPlayersException {
-        Player player = new Player();
-        player.setGame(game);
-        player.setUser(user);
-        playerService.savePlayer(player);
-        user.getPlayers().add(player);
-
+        ensureLobbyOpen(game);
         if (playerInGame(game, user)) {
             throw new PlayerAlreadyInGameException();
         }
@@ -140,7 +210,12 @@ public class GameService {
             throw new TooManyPlayersException();
         }
 
+        Player player = new Player();
+        player.setGame(game);
+        player.setUser(user);
+        playerService.savePlayer(player);
         game.getPlayers().add(player);
+        user.getPlayers().add(player);
         gameRepository.save(game);
     }
 
@@ -201,7 +276,6 @@ public class GameService {
             .filter(p -> p.getPoints() == maxPoints)
             .collect(Collectors.toList());
         game.setWinners(winners);
-        game.setSpectators(new ArrayList<>());
         gameRepository.save(game);
         game.getWinners().stream().map(Player::getUser).forEach(achievementService::checkWinAchievements);
         game.getPlayers().stream().map(Player::getUser).forEach(u -> {

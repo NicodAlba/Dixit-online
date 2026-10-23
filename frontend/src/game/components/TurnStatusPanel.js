@@ -21,15 +21,15 @@ export default function TurnStatusPanel({game, turn, currentPlayer, isStorytelle
     };
 
     const renderPlayedCards = () => {
-        if (turn?.state !== "SHOWING_CARDS") {
+        if (!["SHOWING_CARDS", "VOTING", "FINISHED"].includes(turn?.state)) {
             return null;
         }
 
         const cards = turn?.playedCards || [];
         const cardsList = cards.map((card) => {
             const image = `/Cards/${card.image.id}.png`;
-            const isOwnCard = card.owner?.id === currentPlayer?.id;
-            const canVote = !isStoryteller && !isOwnCard && turn?.state === "SHOWING_CARDS";
+            const isOwnCard = Boolean(card.isOwn);
+            const canVote = !isStoryteller && !isOwnCard && !turn?.hasVoted && ["SHOWING_CARDS", "VOTING"].includes(turn?.state);
             const cardClasses = [
                 "card-button",
                 canVote ? "card-clickable" : "card-disabled",
@@ -43,7 +43,7 @@ export default function TurnStatusPanel({game, turn, currentPlayer, isStorytelle
 
             return (
                 <ListInlineItem key={card.id}>
-                    <h3>{card.votes?.length} votes</h3>
+                    {turn?.state === "FINISHED" && <h3>{card.votes?.length || 0} votes</h3>}
                     <div className={cardClasses} onClick={handleVote}>
                         <img className="card" src={image} alt="Card" />
                     </div>
@@ -54,7 +54,7 @@ export default function TurnStatusPanel({game, turn, currentPlayer, isStorytelle
         return (
             <div>
                 <h1 className="clue">Clue: {turn?.clue}</h1>
-                <h1>{isStoryteller ? "Wait until everyone has voted" : "Vote a card"}</h1>
+                <h1>{turn?.state === "FINISHED" ? "Round result" : isStoryteller || turn?.hasVoted ? "Wait until everyone has voted" : "Vote a card"}</h1>
                 <List>{cardsList}</List>
             </div>
         );
@@ -93,7 +93,7 @@ export default function TurnStatusPanel({game, turn, currentPlayer, isStorytelle
                     <h1>Waiting for storyteller</h1>
                 )}
             {!isStoryteller && turn?.state === "SHOWING_CARDS" && <h1>Choose a card to vote</h1>}
-            {game.endDate != null && <div className="text-center">
+            {game.endDate != null && !game.cancelled && <div className="text-center">
                 <h1>GAME FINISHED</h1>
                 <h3>Winners: {game?.winners?.map((winner) => {
                     return getPlayerName(winner)
@@ -106,10 +106,8 @@ export default function TurnStatusPanel({game, turn, currentPlayer, isStorytelle
         return renderWaitingForCards();
     }
 
-    if (turn?.state === "SHOWING_CARDS") {
-        return renderPlayedCards();
-    }
-    console.log(game)
+    if (turn?.state === "FINISHED") return <>{renderStorytellerForm()}{renderPlayedCards()}</>;
+    if (["SHOWING_CARDS", "VOTING"].includes(turn?.state)) return renderPlayedCards();
 
     return renderStorytellerForm();
 }

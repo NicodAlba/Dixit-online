@@ -14,16 +14,13 @@ export function FriendList() {
 
     const [friends, setFriends] = useFetchState(
         [],
-        "http://localhost:3000/api/v1/friends",
+        "/api/v1/friends",
         jwt,
         setMessage,
         setVisible
         )
     
     const navigate = useNavigate();
-    const user = tokenService.getUser();
-
-    const [fetchedUser, setFetchedUser] = useFetchState(user, `/api/v1/users/${user?.id}`, jwt, setMessage, setVisible)
 
     const handleRemoveFriend = async (user) => {
         deleteFromList(
@@ -61,14 +58,10 @@ export function FriendList() {
         }
     };
 
-    const gamesToSpectate = fetchedUser?.gamesToSpectate
-    console.log(gamesToSpectate)
     const friendList =
         friends.map((u) => {
-            const lastPlayer = u.players[u.players.length - 1]
-            console.log(lastPlayer)
-            const gameToSpectate = gamesToSpectate?.find((game) => game?.players.some((p) => p.id === lastPlayer.id))
-            console.log(gameToSpectate)
+            const gameToSpectate = u.spectatableGame;
+            const lastPlayer = gameToSpectate ? {id: gameToSpectate.playerId} : null;
             return (
                 <tbody className="ls" style={{paddingTop:30}}>
                     <tr key={u.id} style={{flex:1, alignSelf:"center", backgroundColor:"transparent"}}>

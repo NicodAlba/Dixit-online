@@ -39,6 +39,21 @@ public class FriendRequestService {
         return friends;
     }
 
+    @Transactional(readOnly = true)
+    public List<FriendView> friendViews(User viewer) {
+        return getFriends(viewer).stream().map(friend -> {
+            FriendView.SpectatableGame available = viewer.getGamesToSpectate().stream()
+                .filter(game -> game.getStartDate() != null && game.getEndDate() == null)
+                .filter(game -> game.getSpectators().stream().anyMatch(u -> u.getId().equals(viewer.getId())))
+                .sorted(java.util.Comparator.comparing(es.us.dp1.lx_xy_24_25.dixit.game.Game::getId).reversed())
+                .flatMap(game -> game.getPlayers().stream()
+                    .filter(player -> player.getUser().getId().equals(friend.getId()))
+                    .map(player -> new FriendView.SpectatableGame(game.getId(), player.getId())))
+                .findFirst().orElse(null);
+            return new FriendView(friend.getId(), friend.getUsername(), available);
+        }).toList();
+    }
+
     @Transactional
     public void sendFriendRequest(User sender, User receiver) {
         if (getFriends(sender).contains(receiver)) {

@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 public class Game extends BaseEntity {
 
     @Column(name = "password")
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @Column
@@ -31,6 +32,9 @@ public class Game extends BaseEntity {
 
     @Column
     private Date endDate;
+
+    @Column(nullable = false)
+    private boolean cancelled = false;
 
     //@NotNull was eliminated so the game could be deleted
     @ManyToOne
@@ -59,6 +63,7 @@ public class Game extends BaseEntity {
 
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference("game-cards") //prevents infinite looping during serialization
+    // All card occurrences, including history; CardService calculates drawable images.
     private List<Card> deck = new ArrayList<>();
 
     @ManyToMany

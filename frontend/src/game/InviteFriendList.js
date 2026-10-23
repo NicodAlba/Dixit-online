@@ -12,7 +12,7 @@ export function InviteFriendList(props) {
 
     const [friends, setFriends] = useFetchState(
         [],
-        "http://localhost:3000/api/v1/friends",
+        "/api/v1/friends",
         jwt,
         setMessage,
         setVisible
@@ -26,7 +26,7 @@ export function InviteFriendList(props) {
                 password: game.password || ""
             }
             const response = await fetch(
-                `http://localhost:3000/api/v1/games/${game.id}/invite`,
+                `/api/v1/games/${game.id}/invite`,
                 {
                     method: "POST",
                     headers: {

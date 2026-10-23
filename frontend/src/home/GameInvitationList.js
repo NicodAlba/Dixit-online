@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useCallback, useState} from "react";
 import tokenService from "../services/token.service";
 import {Button, Table} from "reactstrap";
 import useFetchState from "../util/useFetchState";
@@ -6,19 +6,34 @@ import "../../src/static/css/social/social.css"
 import {useNavigate} from "react-router-dom";
 
 export function GameInvitationList() {
-    const jwt = tokenService.getLocalAccessToken()
+    const jwt = tokenService.getLocalAccessToken();
+    return jwt ? <AuthenticatedGameInvitationList key={jwt} jwt={jwt} /> : null;
+}
+
+function AuthenticatedGameInvitationList({jwt}) {
     const [message, setMessage] = useState(null)
     const [visible, setVisible] = useState(false)
     const [alerts, setAlerts] = useState([])
 
     const navigate = useNavigate()
 
+    const expireSession = useCallback((error, destination = "/") => {
+        if (error.status !== 401) return false;
+        // A delayed rejection of an old token must not remove a newer login.
+        if (tokenService.getLocalAccessToken() !== jwt) return true;
+        tokenService.removeUser();
+        window.location.replace(destination);
+        return true;
+    }, [jwt]);
+
     const [invitations, setInvitations] = useFetchState(
         [],
-        "http://localhost:3000/api/v1/games/invitations",
+        "/api/v1/games/invitations",
         jwt,
         setMessage,
-        setVisible
+        setVisible,
+        null,
+        expireSession
     )
 
     function handleAccept(invitation) {
@@ -34,17 +49,15 @@ export function GameInvitationList() {
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     if (response.status === 409) {
-                        setMessage("You are already in this game.");
+                        setMessage(data.message || "Unable to join this game.");
                         setVisible(true);
-                        navigate("/");
                     } else if (response.status === 401) {
-                        setMessage("Incorrect password.");
-                        setVisible(true);
+                        expireSession({status: 401}, "/login");
                     } else if (response.status === 404) {
                         setMessage("Game not found.");
                         setVisible(true);
                     } else if (response.status === 403) {
-                        setMessage("Already 4 players in the game");
+                        setMessage(data.message || "You are not invited to this game.");
                         setVisible(true);
                     } else {
                         setMessage(data.message || "Error joining the game.");
@@ -73,6 +86,7 @@ export function GameInvitationList() {
 
     return (
         <div>
+            {visible && message && <div role="alert">{message}</div>}
             { invitations.length > 0 &&
                 <div className="ls-container">
                     <h3 className="text-center">Invitations</h3>

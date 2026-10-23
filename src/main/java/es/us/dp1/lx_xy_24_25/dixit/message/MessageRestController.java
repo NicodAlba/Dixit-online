@@ -1,6 +1,7 @@
 package es.us.dp1.lx_xy_24_25.dixit.message;
 
 import es.us.dp1.lx_xy_24_25.dixit.auth.payload.response.MessageResponse;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
 import es.us.dp1.lx_xy_24_25.dixit.game.Game;
 import es.us.dp1.lx_xy_24_25.dixit.game.GameService;
 import es.us.dp1.lx_xy_24_25.dixit.player.Player;
@@ -45,12 +46,12 @@ public class MessageRestController {
             
             // Verify user is in the game (optional security check, good practice)
             User currentUser = userService.findCurrentUser();
-            // We might want to add a check here if the user is actually a player in this game
-            // For now, assuming if they can view the game page, they can fetch messages
+            gameService.findByIdIfUserInGame(gameId, currentUser);
              
             List<Message> messages = messageService.findMessagesByGameId(gameId);
             List<MessageDTO> messageDTOs = messages.stream().map(MessageDTO::new).toList();
             return new ResponseEntity<>(messageDTOs, HttpStatus.OK);
+        } catch (AccessDeniedException ex) { throw ex;
         } catch (Exception e) {
              return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);
         }

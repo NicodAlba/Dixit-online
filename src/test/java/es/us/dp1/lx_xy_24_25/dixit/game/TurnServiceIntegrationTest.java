@@ -2,6 +2,8 @@
 
 package es.us.dp1.lx_xy_24_25.dixit.game;
 
+import es.us.dp1.lx_xy_24_25.dixit.achievement.AchievementService;
+import es.us.dp1.lx_xy_24_25.dixit.achievement.PlayAchievement;
 import es.us.dp1.lx_xy_24_25.dixit.auth.AuthService;
 import es.us.dp1.lx_xy_24_25.dixit.auth.payload.request.SignupRequest;
 import es.us.dp1.lx_xy_24_25.dixit.card.Card;
@@ -59,6 +61,9 @@ public class TurnServiceIntegrationTest {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private AchievementService achievementService;
+
     @Test
     void registeredPlayersCanFinishGameOnLastVote() throws Exception {
         List<User> users = new ArrayList<>();
@@ -77,6 +82,7 @@ public class TurnServiceIntegrationTest {
         for (User user : users) {
             assertEquals(1, user.getPlayers().size());
             assertNull(user.getPlayers().getFirst().getGame());
+            achievementService.initializePlayAchievements(user);
         }
 
         Game game = gameService.createGame(null, users.getFirst());
@@ -101,6 +107,11 @@ public class TurnServiceIntegrationTest {
             turnService.playerPlayCard(turn, voters.get(1), voters.get(1).getCards().getFirst());
             turnService.playerVote(turn, voters.getFirst(), answer);
             assertNull(game.getEndDate(), "The game must not finish before the last vote");
+            for (User user : users) {
+                achievementService.checkPlayAchievements(user);
+                assertTrue(achievementService.findAllAchievementsByUserId(user.getId()).stream()
+                    .allMatch(a -> a.getDateObtained() == null), "An ongoing game must not unlock PLAY achievements");
+            }
             turnService.playerVote(turn, voters.get(1), answer);
             expectedPoints.merge(voters.getFirst().getId(), 2, Integer::sum);
             expectedPoints.merge(voters.get(1).getId(), 2, Integer::sum);
@@ -118,6 +129,16 @@ public class TurnServiceIntegrationTest {
         assertEquals(3, finished.getWinners().size(), "Equal scores must preserve tied winners");
         for (Player player : finished.getPlayers()) {
             assertEquals(expectedPoints.get(player.getId()), player.getPoints());
+            List<PlayAchievement> playAchievements = achievementService.findAllAchievementsByUserId(player.getUser().getId())
+                .stream().filter(PlayAchievement.class::isInstance).map(PlayAchievement.class::cast).toList();
+            assertEquals(4, playAchievements.size());
+            for (PlayAchievement achievement : playAchievements) {
+                if (achievement.getThreshold() == 1) {
+                    assertNotNull(achievement.getDateObtained(), "The last vote must unlock the first completed game");
+                } else {
+                    assertNull(achievement.getDateObtained(), "The signup participation must not count as a game");
+                }
+            }
         }
         for (Turn turn : finished.getTurns()) {
             for (Card card : turn.getPlayedCards()) {
@@ -314,24 +335,16 @@ public class TurnServiceIntegrationTest {
 
         game = gameRepository.save(game);
 
-        Turn turn = new Turn();
-        turn.setGame(game);
+        game.setStartDate(new java.util.Date());
+        turnService.initializeFirstTurn(game);
+        Turn turn = game.getTurns().getFirst();
         turn.setStoryteller(storyteller);
-        turn.setState(TurnState.WAITING_STORYTELLER_CARD);
-        turn = turnRepository.save(turn);
-
-        Card storytellerCard = new Card();
-        storytellerCard.setOwner(storyteller);
-        storytellerCard = cardRepository.save(storytellerCard);
+        Card storytellerCard = storyteller.getCards().getFirst();
         turnService.setStorytellerAnswer(turn, storytellerCard);
         turnService.setStorytellerClue(turn, "hint");
-
         Map<Integer, Card> cardsByPlayer = new HashMap<>();
         for (Player player : players) {
-            Card card = new Card();
-            card.setOwner(player);
-            card = cardRepository.save(card);
-            Card played = turnService.playerPlayCard(turn, player, card);
+            Card played = turnService.playerPlayCard(turn, player, player.getCards().getFirst());
             cardsByPlayer.put(player.getId(), played);
         }
 
@@ -417,48 +430,24 @@ public class TurnServiceIntegrationTest {
 
     @Test
     public void testMoveToNextTurn() {
-//         Create a game
-        Game game = new Game();
-        game = gameRepository.save(game);
-
-//        create a deck of cards for the game
-        List<Card> deck = new ArrayList<>();
-        for (int i = 0; i < 30; i++) {
-            Card card = new Card();
-            card.setGame(game);
-            deck.add(cardRepository.save(card));
-        }
-
-//         Create a storyteller and two players
-        Player storyteller = createPlayer(game);
-        game.getPlayers().add(storyteller);
-        Player player1 = createPlayer(game);
-        game.getPlayers().add(player1);
-        Player player2 = createPlayer(game);
-        game.getPlayers().add(player2);
-        game = gameRepository.save(game);
-
-//         Create and save a current turn
-        Turn currentTurn = new Turn();
-        currentTurn.setGame(game);
-        currentTurn.setStoryteller(storyteller);
-        currentTurn = turnRepository.save(currentTurn);
-
-//         Call service to move to next turn
+        ScoringContext context = createVotingTurnWithPlayers(2);
+        Turn currentTurn = context.turn();
+        Game game = currentTurn.getGame();
+        Player expectedNext = game.nextStoryteller(context.storyteller());
+        for (Player voter : context.nonStoryPlayers()) currentTurn.registerVote(voter, context.storytellerCard());
+        turnService.scoreTurn(currentTurn);
         turnService.moveToNextTurn(currentTurn);
         Turn newTurn = game.getTurns().getLast();
-//         Assertions
-        assertNotNull(newTurn);
-        assertNotEquals(currentTurn.getId(), newTurn.getId(), "New turn should have a different ID");
-        assertEquals(game.getId(), newTurn.getGame().getId(), "New turn should belong to the same game");
-        assertNotEquals(storyteller.getId(), newTurn.getStoryteller().getId(), "Storyteller should rotate to the next player");
-        assertEquals(player1.getId(), newTurn.getStoryteller().getId(), "Rotation should select the next player in order");
-        assertEquals(TurnState.WAITING_STORYTELLER_CARD, newTurn.getState(), "New turn should be in WAITING_STORYTELLER_CARD state");
-        assertEquals(0, newTurn.getPlayedCards().size(), "New turn should have no played cards initially");
-        assertEquals(1, storyteller.getCards().size(), "Old storyteller should have received one new card");
-        assertEquals(1, player1.getCards().size(), "Player1 should have received one new card");
-        assertEquals(1, player2.getCards().size(), "Player2 should have received one new card");
-        assertEquals(27, cardRepository.countByGameAndOwnerIsNull(game), "There should be 27 cards left in the deck");
+        assertNotEquals(currentTurn.getId(), newTurn.getId());
+        assertEquals(game.getId(), newTurn.getGame().getId());
+        assertEquals(expectedNext.getId(), newTurn.getStoryteller().getId());
+        assertEquals(TurnState.WAITING_STORYTELLER_CARD, newTurn.getState());
+        assertTrue(newTurn.getPlayedCards().isEmpty());
+        for (Player player : game.getPlayers()) assertEquals(6, player.getCards().size(), "Every hand must be replenished to six");
+        assertEquals(18, cardRepository.countByGameAndOwnerIsNull(game), "15 unused plus 3 historical cards");
+        turnService.moveToNextTurn(currentTurn);
+        assertEquals(2, game.getTurns().size(), "Retry must not create another successor");
+        assertTrue(game.getPlayers().stream().allMatch(p -> p.getCards().size() == 6));
     }
 
     @Test
