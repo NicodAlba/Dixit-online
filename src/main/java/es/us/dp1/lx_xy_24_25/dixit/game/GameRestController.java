@@ -2,6 +2,8 @@ package es.us.dp1.lx_xy_24_25.dixit.game;
 
 import es.us.dp1.lx_xy_24_25.dixit.auth.payload.response.MessageResponse;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.PlayerAlreadyInGameException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
+import java.util.Map;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.TooManyPlayersException;
 import es.us.dp1.lx_xy_24_25.dixit.social.GameInvitationService;
@@ -70,6 +72,9 @@ public class GameRestController {
             game = gameService.findByIdIfUserInGame(id, currentUser);
         } catch (Exception e) {
             switch (e) {
+                case AccessDeniedException denied -> {
+                    return new ResponseEntity<>(new MessageResponse(denied.getMessage()), HttpStatus.FORBIDDEN);
+                }
                 case DataAccessException dataAccessException -> {
                     return new ResponseEntity<>(new MessageResponse(dataAccessException.getMessage()), HttpStatus.FORBIDDEN);
                 }
@@ -176,8 +181,7 @@ public class GameRestController {
         @ApiResponse(responseCode = "200"),
         @ApiResponse(responseCode = "404")
     })
-    public ResponseEntity<Game> update(@PathVariable Integer id, @RequestBody @Valid Game game) {
-        RestPreconditions.checkNotNull(gameService.findById(id), "Game", "ID", id);
+    public ResponseEntity<Game> update(@PathVariable Integer id, @RequestBody Map<String, Object> game) {
         Game updatedGame = gameService.updateGame(game, id);
         return new ResponseEntity<>(updatedGame, HttpStatus.OK);
     }
@@ -189,21 +193,15 @@ public class GameRestController {
         @ApiResponse(responseCode = "404")
     })
     public ResponseEntity<?> leaveGame(@PathVariable Integer id) {
-        Game game = gameService.findById(id);
-        User currentUser = userService.findCurrentUser();
-
-        boolean isLeader = game.getLeader().equals(currentUser);
-
-        if (isLeader) {
-            gameService.deleteGame(game);
+        Game game;
+        try { game = gameService.leaveLobby(id, userService.findCurrentUser()); }
+        catch (IllegalStateException ex) { return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage())); }
+        if (game == null) {
             messagingTemplate.convertAndSend("/topic/game/" + id, "DELETED");
-            return new ResponseEntity<>(new MessageResponse("Game deleted successfully."), HttpStatus.OK);
-        } else {
-            gameService.removePlayerFromGame(game, currentUser);
-
-            messagingTemplate.convertAndSend("/topic/game/" + id, game);
-            return new ResponseEntity<>(new MessageResponse("Left game successfully."), HttpStatus.OK);
+            return ResponseEntity.ok(new MessageResponse("Game deleted successfully."));
         }
+        messagingTemplate.convertAndSend("/topic/game/" + id, game);
+        return ResponseEntity.ok(new MessageResponse("Left game successfully."));
     }
 
     @PatchMapping("/{id}/start")
@@ -304,8 +302,9 @@ public class GameRestController {
             return new ResponseEntity<>(new MessageResponse("You are not a friend of all players in the game"), HttpStatus.UNAUTHORIZED);
         }
 
-        messagingTemplate.convertAndSend("/topic/game/" + id, game);
-
+        if (game.getPlayers().stream().noneMatch(p -> p.getId().equals(playerId))) {
+            return ResponseEntity.badRequest().body(new MessageResponse("The selected perspective does not belong to this game."));
+        }
         return new ResponseEntity<>(game, HttpStatus.OK);
     }
 

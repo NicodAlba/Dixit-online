@@ -3,7 +3,7 @@ package es.us.dp1.lx_xy_24_25.dixit.game;
 import es.us.dp1.lx_xy_24_25.dixit.auth.payload.response.MessageResponse;
 import es.us.dp1.lx_xy_24_25.dixit.card.Card;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
-import es.us.dp1.lx_xy_24_25.dixit.player.Player;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -34,7 +34,7 @@ public class TurnRestController {
         @ApiResponse(responseCode = "404")
     })
     public Turn getTurn(@PathVariable("id") Integer id) {
-        return turnService.findById(id);
+        return turnService.findVisibleById(id);
     }
 
     @PutMapping("/{turnId}/answer/{cardId}")
@@ -48,14 +48,11 @@ public class TurnRestController {
         @PathVariable Integer turnId,
         @PathVariable Integer cardId
     ) {
-        Turn turn;
-        Card card;
         Turn updatedTurn;
         try {
-            turn = turnService.findById(turnId);
-            card = turnService.findCardById(cardId);
-            updatedTurn = turnService.setStorytellerAnswer(turn, card);
+            updatedTurn = turnService.selectAnswer(turnId, cardId);
         } catch (Exception e) {
+            if (e instanceof AccessDeniedException) throw (AccessDeniedException)e;
             if (e instanceof ResourceNotFoundException) {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);
             } else {
@@ -76,13 +73,11 @@ public class TurnRestController {
         @PathVariable Integer turnId,
         @RequestBody String clue
     ) {
-        Turn turn;
         Turn updatedTurn;
         try {
-            turn = turnService.findById(turnId);
-
-            updatedTurn = turnService.setStorytellerClue(turn, clue);
+            updatedTurn = turnService.provideClue(turnId, clue);
         } catch (Exception e) {
+            if (e instanceof AccessDeniedException) throw (AccessDeniedException)e;
             if (e instanceof ResourceNotFoundException) {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);
             } else  {
@@ -104,17 +99,11 @@ public class TurnRestController {
         @PathVariable Integer cardId,
         @PathVariable Integer playerId
     ) {
-        Turn turn;
-        Player player;
-        Card card;
         Card playedCard;
         try {
-            turn = turnService.findById(turnId);
-            player = turnService.findPlayerById(playerId);
-            card = turnService.findCardById(cardId);
-
-            playedCard = turnService.playerPlayCard(turn, player, card);
+            playedCard = turnService.playCard(turnId, playerId, cardId);
         } catch (Exception e) {
+            if (e instanceof AccessDeniedException) throw (AccessDeniedException)e;
             if (e instanceof ResourceNotFoundException) {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);
             } else   {

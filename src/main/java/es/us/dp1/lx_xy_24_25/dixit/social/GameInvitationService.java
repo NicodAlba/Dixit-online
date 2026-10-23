@@ -1,6 +1,9 @@
 package es.us.dp1.lx_xy_24_25.dixit.social;
 
 import es.us.dp1.lx_xy_24_25.dixit.user.User;
+import es.us.dp1.lx_xy_24_25.dixit.user.UserService;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.InvalidRequestException;
+import java.util.Objects;
 import es.us.dp1.lx_xy_24_25.dixit.game.Game;
 import es.us.dp1.lx_xy_24_25.dixit.game.GameService;
 import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
@@ -18,10 +21,14 @@ public class GameInvitationService {
     private final GameInvitationRepository gameInvitationRepository;
 
     private final GameService gameService;
+    private final UserService userService;
+    private final FriendRequestService friendRequestService;
 
-    public GameInvitationService(GameInvitationRepository gameInvitationRepository, GameService gameService) {
+    public GameInvitationService(GameInvitationRepository gameInvitationRepository, GameService gameService, UserService userService, FriendRequestService friendRequestService) {
         this.gameInvitationRepository = gameInvitationRepository;
         this.gameService = gameService;
+        this.userService = userService;
+        this.friendRequestService = friendRequestService;
     }
 
     @Transactional(rollbackFor = {PlayerAlreadyInGameException.class, TooManyPlayersException.class})
@@ -45,13 +52,22 @@ public class GameInvitationService {
 
     @Transactional
     public void sendInvitation(String inviter, User invitee, Integer gameId,  String password) {
+        User actor = userService.findCurrentUser();
+        Game game = gameService.findByIdForUpdate(gameId);
+        if (!gameService.playerInGame(game, actor)) throw new AccessDeniedException("Only lobby participants can invite friends.");
+        try { gameService.ensureLobbyOpen(game); }
+        catch (IllegalStateException ex) { throw new InvalidRequestException(ex.getMessage()); }
+        if (friendRequestService.getFriends(actor).stream().noneMatch(friend -> Objects.equals(friend.getId(), invitee.getId()))) {
+            throw new AccessDeniedException("You can only invite your friends.");
+        }
+        if (gameInvitationRepository.findAllByInvited(invitee).stream().anyMatch(i -> Objects.equals(i.getGameId(), gameId))) {
+            throw new InvalidRequestException("This friend already has an invitation to the lobby.");
+        }
         GameInvitation invitation = new GameInvitation();
-        invitation.setInviter(inviter);
+        invitation.setInviter(actor.getUsername());
         invitation.setGameId(gameId);
         invitation.setInvited(invitee);
-        if (password != null && !password.isBlank()) {
-            invitation.setPassword(password);
-        }
+        invitation.setPassword(game.getPassword());
         gameInvitationRepository.save(invitation);
     }
 

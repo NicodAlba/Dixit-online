@@ -87,6 +87,7 @@ public class GameRestControllerTest {
 
         Player p1 = new Player();
         p1.setUser(testUser);
+        p1.setId(1);
 
         Player p2 = new Player();
         p2.setUser(user2);
@@ -94,6 +95,7 @@ public class GameRestControllerTest {
 
         Player p3 = new Player();
         p3.setUser(user3);
+        p3.setId(3);
 
         testGame = new Game();
         testGame.setId(GAME_ID);
@@ -203,7 +205,7 @@ public class GameRestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Game deleted successfully."));
 
-        verify(gameService).deleteGame(testGame);
+        verify(gameService).leaveLobby(GAME_ID, testUser);
     }
 
     @Test
