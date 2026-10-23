@@ -6,7 +6,11 @@ import "../../src/static/css/social/social.css"
 import {useNavigate} from "react-router-dom";
 
 export function GameInvitationList() {
-    const jwt = tokenService.getLocalAccessToken()
+    const jwt = tokenService.getLocalAccessToken();
+    return jwt ? <AuthenticatedGameInvitationList key={jwt} jwt={jwt} /> : null;
+}
+
+function AuthenticatedGameInvitationList({jwt}) {
     const [message, setMessage] = useState(null)
     const [visible, setVisible] = useState(false)
     const [alerts, setAlerts] = useState([])
