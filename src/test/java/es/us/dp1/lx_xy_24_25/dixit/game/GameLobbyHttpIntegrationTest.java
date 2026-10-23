@@ -638,6 +638,12 @@ class GameLobbyHttpIntegrationTest {
     }
 
     private int invite(int id, Account host, Account invitee) {
+        if (count("select count(*) from friend_requests where ((sender_id=? and receiver_id=?) or (sender_id=? and receiver_id=?)) and date_accepted is not null", host.id(), invitee.id(), invitee.id(), host.id()) == 0) {
+            assertStatus(200, request(HttpMethod.POST, "/friends/addFriend/" + invitee.id(), host, null));
+            int friendship = count("select id from friend_requests where sender_id=? and receiver_id=?", host.id(), invitee.id());
+            assertStatus(200, request(HttpMethod.PATCH, "/friends/" + friendship + "/accept", invitee, null));
+        }
+
         // Password is optional, including when the lobby has none.
         assertStatus(200, request(HttpMethod.POST, "/games/" + id + "/invite", host,
             Map.of("invited", Integer.toString(invitee.id()))));

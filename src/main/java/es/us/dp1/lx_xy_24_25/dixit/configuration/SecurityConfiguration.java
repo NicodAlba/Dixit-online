@@ -117,7 +117,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/v1/messages/games/**").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers(HttpMethod.POST, "/api/v1/messages/games/**").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers(HttpMethod.PATCH, "/api/v1/games/{gameId}/spectate/{playerId}").hasAuthority(PLAYER)
-                .requestMatchers(HttpMethod.GET, "/api/v1/players/{playerId}").hasAuthority(PLAYER)
+                .requestMatchers(HttpMethod.GET, "/api/v1/players/{playerId}", "/api/v1/players/{playerId}/cards").hasAnyAuthority(PLAYER, ADMIN)
                 
 
                 // El resto denegado

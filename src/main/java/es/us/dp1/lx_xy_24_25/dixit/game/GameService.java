@@ -11,7 +11,10 @@ import es.us.dp1.lx_xy_24_25.dixit.social.FriendRequestService;
 import es.us.dp1.lx_xy_24_25.dixit.user.User;
 import es.us.dp1.lx_xy_24_25.dixit.user.UserService;
 import jakarta.validation.Valid;
-import org.springframework.beans.BeanUtils;
+import java.util.Map;
+import java.util.Set;
+import java.util.Objects;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.InvalidRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
@@ -82,12 +85,34 @@ public class GameService {
     }
 
     @Transactional
-    public Game updateGame(@Valid Game game, Integer idToUpdate) {
-        Game toUpdate = findById(idToUpdate);
-        BeanUtils.copyProperties(game, toUpdate, "id");
-        gameRepository.save(toUpdate);
+    public Game updateGame(Map<String, Object> fields, Integer idToUpdate) {
+        Game game = findByIdForUpdate(idToUpdate);
+        User actor = userService.findCurrentUser();
+        if (game.getLeader() == null || !Objects.equals(actor.getId(), game.getLeader().getId())) throw new AccessDeniedException("Only the lobby leader can change its password.");
+        try { ensureLobbyOpen(game); }
+        catch (IllegalStateException ex) { throw new InvalidRequestException(ex.getMessage()); }
+        if (!Set.of("password").containsAll(fields.keySet())
+                || (fields.get("password") != null && !(fields.get("password") instanceof String))) {
+            throw new InvalidRequestException("Only the lobby password can be changed here; use the game actions for state changes.");
+        }
+        if (fields.containsKey("password")) {
+            String password = (String)fields.get("password");
+            game.setPassword(password == null || password.isBlank() ? null : password);
+        }
+        return gameRepository.save(game);
+    }
 
-        return toUpdate;
+    @Transactional
+    public Game leaveLobby(Integer gameId, User user) {
+        Game game = findByIdForUpdate(gameId);
+        if (!playerInGame(game, user)) throw new AccessDeniedException("You are not a participant in this lobby.");
+        ensureLobbyOpen(game);
+        if (Objects.equals(game.getLeader().getId(), user.getId())) {
+            gameRepository.delete(game);
+            return null;
+        }
+        removePlayerFromGame(game, user);
+        return game;
     }
 
     @Transactional
@@ -142,7 +167,7 @@ public class GameService {
         return game;
     }
 
-    void ensureLobbyOpen(Game game) {
+    public void ensureLobbyOpen(Game game) {
         if (game.getStartDate() != null || game.hasFinished() || !game.getTurns().isEmpty()) {
             throw new IllegalStateException("The game has already started or finished");
         }

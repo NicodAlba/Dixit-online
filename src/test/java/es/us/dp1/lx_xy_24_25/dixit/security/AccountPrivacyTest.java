@@ -90,6 +90,8 @@ class AccountPrivacyTest extends SecurityHttpSupport {
         var game=request(HttpMethod.POST,"/games",host.token(),Map.of());status(201,game);
         int id=game.getBody().path("id").asInt();
         status(200,request(HttpMethod.POST,"/friends/addFriend/"+target.id(),host.token(),null));
+        int friendship=count("select id from friend_requests where sender_id=? and receiver_id=?",host.id(),target.id());
+        status(200,request(HttpMethod.PATCH,"/friends/"+friendship+"/accept",target.token(),null));
         status(200,request(HttpMethod.POST,"/games/"+id+"/invite",host.token(),Map.of("invited",String.valueOf(target.id()))));
         status(200,request(HttpMethod.DELETE,"/users/"+target.id(),admin.token(),null));
         assertEquals(0,count("select count(*) from appusers where id=?",target.id()));

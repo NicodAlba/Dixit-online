@@ -1,6 +1,8 @@
 package es.us.dp1.lx_xy_24_25.dixit.player;
 
 import es.us.dp1.lx_xy_24_25.dixit.card.Card;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException;
+import es.us.dp1.lx_xy_24_25.dixit.exceptions.ResourceNotFoundException;
 import es.us.dp1.lx_xy_24_25.dixit.user.User;
 import es.us.dp1.lx_xy_24_25.dixit.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,8 +44,12 @@ public class PlayerRestController {
     })
     public ResponseEntity<Player> getPlayer(@PathVariable("id") Integer id) {
         try {
-            return new ResponseEntity<>(playerService.findById(id), HttpStatus.OK);
-        } catch (Exception e) {
+            Player player = playerService.findById(id);
+            User actor = userService.findCurrentUser();
+            // Until actor projections (U5), only an owner's hand can be returned.
+            if (!player.getUser().getId().equals(actor.getId())) throw new AccessDeniedException("Only the participant can read their hand.");
+            return new ResponseEntity<>(player, HttpStatus.OK);
+        } catch (ResourceNotFoundException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
