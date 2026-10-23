@@ -48,6 +48,7 @@ class GameLobbyHttpIntegrationTest {
     @SpyBean private SimpMessagingTemplate messagingTemplate;
 
     record Account(int id, String token) {}
+    private final Map<Integer, Account> fixtureAccounts = new java.util.concurrent.ConcurrentHashMap<>();
 
     @ParameterizedTest
     @NullAndEmptySource
@@ -62,8 +63,8 @@ class GameLobbyHttpIntegrationTest {
         assertEquals(2, count("select count(*) from players where user_id = ?", host.id()));
         assertTrue(game.path("startDate").isNull());
         assertEquals(0, game.path("turns").size());
-        if (password == null || password.isBlank()) assertTrue(game.path("password").isNull());
-        else assertEquals(password, game.path("password").asText());
+        assertFalse(game.has("password"));
+        assertEquals(password != null && !password.isBlank(), game.path("hasPassword").asBoolean());
         // No new restriction on owning more than one lobby.
         assertNotEquals(id, lobby(null, host));
     }
@@ -224,7 +225,7 @@ class GameLobbyHttpIntegrationTest {
         }).when(cardService).initializeDeck(any(Game.class));
         assertStatus(500, start(id, host));
         assertUnstarted(id, host);
-        verify(messagingTemplate, never()).convertAndSend(eq("/topic/game/" + id), any(Game.class));
+        verify(messagingTemplate, never()).convertAndSend(eq("/topic/game/" + id), any(GameEvent.class));
     }
 
     @Test
@@ -255,10 +256,10 @@ class GameLobbyHttpIntegrationTest {
         doAnswer(invocation -> {
             assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
             return invocation.callRealMethod();
-        }).when(messagingTemplate).convertAndSend(eq("/topic/game/" + id), any(Game.class));
+        }).when(messagingTemplate).convertAndSend(eq("/topic/game/" + id), any(GameEvent.class));
         join(id, null, third);
         assertStatus(200, start(id, host));
-        verify(messagingTemplate, times(2)).convertAndSend(eq("/topic/game/" + id), any(Game.class));
+        verify(messagingTemplate, times(2)).convertAndSend(eq("/topic/game/" + id), any(GameEvent.class));
     }
 
     @Test
@@ -288,16 +289,16 @@ class GameLobbyHttpIntegrationTest {
             subscribeConfirmed(second, accountName(secondPlayer), destination, secondMessages);
 
             join(id, null, third);
-            awaitGame(firstMessages, id, 3, false);
-            awaitGame(secondMessages, id, 3, false);
+            awaitGame(firstMessages, id, 3, false, host);
+            awaitGame(secondMessages, id, 3, false, secondPlayer);
             assertEquals(3, read(id, host).path("players").size());
             int invitation = invite(id, host, fourth);
             assertStatus(200, accept(invitation, fourth));
-            awaitGame(firstMessages, id, 4, false);
-            awaitGame(secondMessages, id, 4, false);
+            awaitGame(firstMessages, id, 4, false, host);
+            awaitGame(secondMessages, id, 4, false, secondPlayer);
             assertStatus(200, start(id, host));
-            JsonNode firstStart = awaitGame(firstMessages, id, 4, true);
-            JsonNode secondStart = awaitGame(secondMessages, id, 4, true);
+            JsonNode firstStart = awaitGame(firstMessages, id, 4, true, host);
+            JsonNode secondStart = awaitGame(secondMessages, id, 4, true, secondPlayer);
             JsonNode persisted = assertStarted(id, host, 4);
             assertEquals(persisted.path("startDate"), firstStart.path("startDate"));
             assertEquals(persisted.path("turns").get(0).path("id"), secondStart.path("turns").get(0).path("id"));
@@ -308,6 +309,8 @@ class GameLobbyHttpIntegrationTest {
         }
     }
 
+    private Set<String> fieldNames(JsonNode node) {Set<String> fields=new HashSet<>();node.fieldNames().forEachRemaining(fields::add);return fields;}
+
     private String accountName(Account account) {
         return jdbc.queryForObject("select username from appusers where id=?", String.class, account.id());
     }
@@ -316,22 +319,11 @@ class GameLobbyHttpIntegrationTest {
         StompHeaders headers = new StompHeaders(); headers.add("Authorization", "Bearer " + token); return headers;
     }
 
-    @Autowired org.springframework.messaging.simp.user.SimpUserRegistry stompUsers;
-    @Autowired org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler broker;
-
-    private void subscribeConfirmed(StompSession session, String username, String destination, BlockingQueue<JsonNode> messages) throws Exception {
-        var subscription=session.subscribe(destination, frames(messages));
-        var headers=org.springframework.messaging.simp.SimpMessageHeaderAccessor.create(org.springframework.messaging.simp.SimpMessageType.MESSAGE);
-        headers.setDestination(destination);
-        var probe=org.springframework.messaging.support.MessageBuilder.createMessage(new byte[0],headers.getMessageHeaders());
-        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
-        while(System.nanoTime()<deadline) {
-            var user=stompUsers.getUser(username);
-            var installed=broker.getSubscriptionRegistry().findSubscriptions(probe);
-            if(user!=null && user.getSessions().stream().anyMatch(s -> installed.getOrDefault(s.getId(), List.of()).contains(subscription.getSubscriptionId()))) return;
-            Thread.sleep(10);
-        }
-        fail("Subscription was not installed in the real broker");
+    private void subscribeConfirmed(StompSession session,String username,String destination,BlockingQueue<JsonNode> messages) throws Exception {
+        session.subscribe(destination,frames(messages));
+        JsonNode initial=messages.poll(5,TimeUnit.SECONDS);
+        assertNotNull(initial,"Missing initial invalidation after subscription installation");
+        assertEquals("GAME_UPDATED",initial.path("type").asText());
     }
 
     private StompFrameHandler frames(BlockingQueue<JsonNode> messages) {
@@ -341,9 +333,12 @@ class GameLobbyHttpIntegrationTest {
         };
     }
 
-    private JsonNode awaitGame(BlockingQueue<JsonNode> messages, int id, int participants, boolean started) throws Exception {
-        JsonNode game = messages.poll(5, TimeUnit.SECONDS);
-        assertNotNull(game, "Missing lobby notification");
+    private JsonNode awaitGame(BlockingQueue<JsonNode> messages, int id, int participants, boolean started, Account viewer) throws Exception {
+        JsonNode event = messages.poll(5, TimeUnit.SECONDS);
+        assertNotNull(event, "Missing lobby notification");
+        assertEquals(Set.of("type","gameId"),fieldNames(event));
+        assertEquals(id,event.path("gameId").asInt());
+        JsonNode game=read(id,viewer);
         assertEquals(id, game.path("id").asInt());
         assertEquals(participants, game.path("players").size());
         assertEquals(started, !game.path("startDate").isNull());
@@ -425,7 +420,8 @@ class GameLobbyHttpIntegrationTest {
         Account host = users.getFirst();
         ResponseEntity<JsonNode> started = start(id, host);
         assertStatus(200, started);
-        assertEquals(36, started.getBody().path("deck").size());
+        assertFalse(started.getBody().has("deck"));
+        assertEquals(36, count("select count(*) from cards where game_id = ?", id));
         Map<Integer, Integer> points = new HashMap<>();
         List<Map<String, Object>> history = List.of();
         Set<Integer> initial = new HashSet<>(jdbc.queryForList("select id from cards where game_id = ?", Integer.class, id));
@@ -562,12 +558,14 @@ class GameLobbyHttpIntegrationTest {
                     try (java.sql.ResultSet result = statement.executeQuery()) { assertTrue(result.next()); assertEquals(5, result.getInt(1)); }
                 }
                 return inv.callRealMethod();
-            }).when(messagingTemplate).convertAndSend(eq(destination), any(JsonNode.class));
+            }).when(messagingTemplate).convertAndSend(eq(destination), any(GameEvent.class));
             finishVoting(voting);
             JsonNode event = messages.poll(5, TimeUnit.SECONDS);
-            assertNotNull(event); assertEquals(5, event.path("turns").size()); assertEquals(40, event.path("deck").size());
-            for (JsonNode p : event.path("players")) assertEquals(6, p.path("cards").size());
-            assertEquals(read(id, users.getFirst()), event, "Event must represent durable REST state");
+            assertNotNull(event);assertEquals(Set.of("type","gameId"),fieldNames(event));
+            assertEquals(id,event.path("gameId").asInt());
+            JsonNode current=read(id,users.getFirst());
+            assertEquals(5,current.path("turns").size());assertEquals(40,count("select count(*) from cards where game_id=?",id));
+            for(JsonNode p:current.path("players"))assertEquals(6,p.path("cards").size());
         } finally {
             if (session != null && session.isConnected()) session.disconnect();
             stomp.stop();
@@ -630,7 +628,9 @@ class GameLobbyHttpIntegrationTest {
         ResponseEntity<JsonNode> login = request(HttpMethod.POST, "/auth/signin", null,
             Map.of("username", username, "password", "LocalTest123!"));
         assertStatus(200, login);
-        return new Account(login.getBody().path("id").asInt(), login.getBody().path("token").asText());
+        Account account = new Account(login.getBody().path("id").asInt(), login.getBody().path("token").asText());
+        fixtureAccounts.put(account.id(), account);
+        return account;
     }
 
     private int lobby(String password, Account... accounts) {
@@ -677,10 +677,25 @@ class GameLobbyHttpIntegrationTest {
         return request(HttpMethod.PATCH, "/games/invitations/" + invitation + "/accept", account, null);
     }
 
+    // The driver combines each fixture participant's own authenticated read, never a wire
+    // response containing rival hands. Every response is checked before combining choices.
     private JsonNode read(int id, Account account) {
-        ResponseEntity<JsonNode> response = request(HttpMethod.GET, "/games/" + id, account, null);
-        assertStatus(200, response);
-        return response.getBody();
+        ResponseEntity<JsonNode> response=request(HttpMethod.GET,"/games/"+id,account,null);
+        assertStatus(200,response);
+        com.fasterxml.jackson.databind.node.ObjectNode combined=response.getBody().deepCopy();
+        assertFalse(combined.has("deck"));assertFalse(combined.has("password"));
+        for(JsonNode participant:combined.path("players")) {
+            int userId=participant.path("user").path("id").asInt();
+            Account owner=fixtureAccounts.get(userId);assertNotNull(owner);
+            var ownResponse=userId==account.id()?response:request(HttpMethod.GET,"/games/"+id,owner,null);
+            assertStatus(200,ownResponse);
+            for(JsonNode visible:ownResponse.getBody().path("players")) {
+                boolean own=visible.path("user").path("id").asInt()==userId;
+                assertEquals(own?visible.path("handSize").asInt():0,visible.path("cards").size(),"Each client sees only their own hand");
+                if(own) ((com.fasterxml.jackson.databind.node.ObjectNode)participant).set("cards",visible.path("cards").deepCopy());
+            }
+        }
+        return combined;
     }
 
     private ResponseEntity<JsonNode> request(HttpMethod method, String path, Account account, Object body) {

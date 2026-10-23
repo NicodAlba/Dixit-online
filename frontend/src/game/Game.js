@@ -17,11 +17,12 @@ const jwt = tokenService.getLocalAccessToken();
 const currentUser = tokenService.getUser();
 
 export default function Game() {
-    const [_message, setMessage] = useState(null);
-    const [_visible, setVisible] = useState(false);
+    const [message, setMessage] = useState(null);
+    const [visible, setVisible] = useState(false);
     const [pendingPlayedCardIds, setPendingPlayedCardIds] = useState([]);
+    const [clueDraft, setClueDraft] = useState("");
     const gameId = getIdFromUrl(2);
-    const { game, turn, turnId, setTurn, players, storyteller } = useGameTurnState({
+    const { game, turn, turnId, refresh, players, storyteller } = useGameTurnState({
         gameId,
         jwt,
         setMessage,
@@ -98,29 +99,9 @@ export default function Game() {
     const getPlayerHandCards = (player) => {
         const cards = player?.cards || [];
         if (!cards.length) {
-            return [];
+            return Array.from({length: player?.handSize || 0}, (_, index) => ({id: `back-${index}`}));
         }
         return cards.filter((card) => card?.id == null || !playedCardIds.has(card.id));
-    };
-
-    const refreshTurn = async () => {
-        if (!turnId) {
-            return;
-        }
-        try {
-            const response = await fetch(`/api/v1/turns/${turnId}`, {
-                headers: {
-                    Authorization: `Bearer ${jwt}`,
-                    Accept: "application/json",
-                },
-            });
-            if (response.ok) {
-                const freshTurn = await response.json();
-                setTurn(freshTurn);
-            }
-        } catch (err) {
-            console.error("Error refreshing turn", err);
-        }
     };
 
     const selectCard = async (card) => {
@@ -148,11 +129,7 @@ export default function Game() {
             if (!response.ok) {
                 throw new Error(payload.message || `Error HTTP: ${response.status}`);
             }
-            if (payload && payload.state) {
-                setTurn(payload);
-            } else {
-                await refreshTurn();
-            }
+            await refresh();
         } catch (error) {
             console.error("Error when trying to select card:", error);
             alert(`Card couldn't be selected: ${error.message}`);
@@ -160,52 +137,23 @@ export default function Game() {
         }
     };
 
-    function handleChange(event) {
-        const target = event.target;
-        const value = target.value;
-        const name = target.name;
-        setTurn({ ...turn, [name]: value });
-    }
+    useEffect(() => {setClueDraft("");}, [turnId]);
 
-    function handleSendClue(event) {
+    function handleChange(event) {setClueDraft(event.target.value);}
+
+    async function handleSendClue(event) {
         event.preventDefault();
-        if (!turnId) {
-            return;
-        }
-        const clueToSend = turn?.clue || "";
-        fetch(`/api/v1/turns/${turnId}/clue`, {
-            method: "PUT",
-            headers: {
-                Authorization: `Bearer ${jwt}`,
-                Accept: "application/json",
-                "Content-Type": "application/json",
-            },
-            body: clueToSend,
-        })
-            .then(async (response) => {
-                const data = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    if (response.status === 409) {
-                        setMessage("You are already in this game.");
-                        setVisible(true);
-                        navigate("/");
-                    } else if (response.status === 401) {
-                        setMessage("Incorrect password.");
-                        setVisible(true);
-                    } else if (response.status === 404) {
-                        setMessage("Game not found.");
-                        setVisible(true);
-                    } else if (response.status === 403) {
-                        setMessage("Already 4 players in the game");
-                        setVisible(true);
-                    } else {
-                        setMessage(data.message || "Error joining the game.");
-                        setVisible(true);
-                    }
-                    throw new Error(data.message);
-                }
-            })
-            .catch((error) => console.error("Clue not valid", error.message));
+        if (!turnId) return;
+        try {
+            const response = await fetch(`/api/v1/turns/${turnId}/clue`, {
+                method: "PUT",
+                headers: {Authorization: `Bearer ${jwt}`, Accept: "application/json", "Content-Type": "application/json"},
+                body: clueDraft,
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || `Unable to set clue (${response.status}).`);
+            await refresh();
+        } catch (error) {setMessage(error.message);setVisible(true);}
     }
 
     const voteCard = async (card) => {
@@ -227,11 +175,7 @@ export default function Game() {
             if (!response.ok) {
                 throw new Error(payload.message || `Error HTTP: ${response.status}`);
             }
-            if (payload && payload.state) {
-                setTurn(payload);
-            } else {
-                await refreshTurn();
-            }
+            await refresh();
         } catch (error) {
             console.error("Error when trying to select card:", error);
             alert(`Card couldn't be selected: ${error.message}`);
@@ -240,10 +184,12 @@ export default function Game() {
 
     return (
         <div className="game-page-container">
+            {visible && message && <div role="alert">{message}</div>}
+            {game.deleted && <div role="alert">This game has been deleted.</div>}
             <Button  className= "leave-game" style={{position: "absolute", top: 10, left:30}} onClick={() => navigate("/")}>Leave game</Button>
             <TurnStatusPanel
                 game={game}
-                turn={turn}
+                turn={turn?.state === "WAITING_STORYTELLER_CLUE" ? {...turn, clue: clueDraft} : turn}
                 currentPlayer={currentPlayer}
                 isStoryteller={isStoryteller}
                 storyteller={storyteller}

@@ -5,7 +5,7 @@ import "../../static/css/game/Game.css";
 
 export function OwnPlayerPanel({ currentPlayer, currentUser, isStoryteller, turn, selectCard, getPlayerName, handCards }) {
     const playedCardIds = new Set((turn?.playedCards || []).map((card) => card.id));
-    const hasPlayedCard = (turn?.playedCards || []).some((card) => card.owner?.id === currentPlayer?.id);
+    const hasPlayedCard = Boolean(turn?.hasPlayed);
 
     const visibleHand = handCards || (currentPlayer.cards || []).filter((card) => !playedCardIds.has(card.id));
 

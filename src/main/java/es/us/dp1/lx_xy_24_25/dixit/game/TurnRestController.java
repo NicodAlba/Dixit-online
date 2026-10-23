@@ -20,10 +20,12 @@ import org.springframework.web.bind.annotation.*;
 @SecurityRequirement(name = "bearerAuth")
 public class TurnRestController {
     private final TurnService turnService;
+    private final GameViews views;
 
     @Autowired
-    public TurnRestController(TurnService turnService) {
+    public TurnRestController(TurnService turnService, GameViews views) {
         this.turnService = turnService;
+        this.views = views;
     }
 
     @GetMapping("/{id}")
@@ -33,8 +35,8 @@ public class TurnRestController {
         @ApiResponse(responseCode = "403"),
         @ApiResponse(responseCode = "404")
     })
-    public Turn getTurn(@PathVariable("id") Integer id) {
-        return turnService.findVisibleById(id);
+    public GameView.Round getTurn(@PathVariable("id") Integer id,@RequestParam(required=false) Integer perspectivePlayerId) {
+        return views.turn(id,perspectivePlayerId);
     }
 
     @PutMapping("/{turnId}/answer/{cardId}")
@@ -59,7 +61,7 @@ public class TurnRestController {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);
             }
         }
-        return ResponseEntity.ok(updatedTurn);
+        return ResponseEntity.ok(views.turn(turnId,null));
     }
 
     @PutMapping("/{turnId}/clue")
@@ -84,7 +86,7 @@ public class TurnRestController {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);
             }
         }
-        return ResponseEntity.ok(updatedTurn);
+        return ResponseEntity.ok(views.turn(turnId,null));
     }
 
     @PostMapping("/{turnId}/play-card/{cardId}/{playerId}")
@@ -110,7 +112,7 @@ public class TurnRestController {
                 return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);
             }
         }
-        return ResponseEntity.ok(playedCard);
+        return ResponseEntity.ok(views.turn(turnId,null));
     }
 
     @PostMapping("/{turnId}/vote/{playerId}/{cardId}")
@@ -120,13 +122,13 @@ public class TurnRestController {
         @ApiResponse(responseCode = "400"),
         @ApiResponse(responseCode = "404")
     })
-    public ResponseEntity<Card> playerVote(
+    public ResponseEntity<GameView.Round> playerVote(
         @PathVariable Integer turnId,
         @PathVariable Integer playerId,
         @PathVariable Integer cardId
     ) {
         Card updatedCard = turnService.playerVote(turnId, playerId, cardId);
 
-        return ResponseEntity.ok(updatedCard);
+        return ResponseEntity.ok(views.turn(turnId,null));
     }
 }

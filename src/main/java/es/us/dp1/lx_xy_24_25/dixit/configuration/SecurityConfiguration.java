@@ -86,7 +86,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/v1/users/**").hasAnyAuthority(PLAYER, ADMIN)
 
                 // API restringida para administradores
-                .requestMatchers(HttpMethod.GET, "/api/v1/games").hasAuthority("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/v1/games", "/api/v1/games/inProgress", "/api/v1/games/pastGames").hasAuthority(ADMIN)
+                .requestMatchers(HttpMethod.GET, "/api/v1/games/games/{username}").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers(HttpMethod.POST, "/api/v1/games").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers("/api/v1/games/my").hasAnyAuthority(PLAYER, ADMIN)
                 .requestMatchers("/api/v1/games/{id}").hasAnyAuthority(PLAYER, ADMIN)

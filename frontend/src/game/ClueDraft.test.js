@@ -1,0 +1,25 @@
+import React from "react";
+import {fireEvent, render, screen, waitFor} from "@testing-library/react";
+import Game from "./Game";
+let mockState;
+jest.mock("react-router-dom",()=>({useNavigate:()=>jest.fn()}));
+jest.mock("../services/token.service",()=>({getLocalAccessToken:()=>"token",getUser:()=>({id:1,username:"narrator"})}));
+jest.mock("../util/getIdFromUrl",()=>()=>"42");
+jest.mock("../hooks/useGameTurnState",()=>()=>mockState);
+jest.mock("../hooks/usePlayerNames",()=>()=>({}));
+jest.mock("./components/Chat",()=>()=>null);
+const originalFetch=global.fetch;
+afterEach(()=>{global.fetch=originalFetch;});
+test("private refresh preserves an unsent clue while changing rounds clears it",async()=>{
+ const player={id:20,user:{id:1,username:"narrator"},cards:[],points:0};
+ mockState={game:{id:42,turns:[],winners:[]},turn:{id:31,state:"WAITING_STORYTELLER_CLUE",playedCards:[]},turnId:31,players:[player],storyteller:player,refresh:jest.fn().mockResolvedValue()};
+ const {rerender}=render(<Game/>);
+ fireEvent.change(screen.getByLabelText("Clue"),{target:{value:"still writing"}});
+ mockState={...mockState,game:{...mockState.game},turn:{...mockState.turn}};rerender(<Game/>);
+ expect(screen.getByLabelText("Clue")).toHaveValue("still writing");
+ global.fetch=jest.fn().mockResolvedValue({ok:true,json:async()=>({})});
+ fireEvent.click(screen.getByText("Set clue"));await waitFor(()=>expect(mockState.refresh).toHaveBeenCalled());
+ expect(global.fetch).toHaveBeenCalledWith("/api/v1/turns/31/clue",expect.objectContaining({body:"still writing"}));
+ mockState={...mockState,turnId:32,turn:{...mockState.turn,id:32}};rerender(<Game/>);
+ expect(screen.getByLabelText("Clue")).toHaveValue("");
+});

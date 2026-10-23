@@ -52,6 +52,7 @@ public class GameRestControllerTest {
 
     @MockBean
     private GameService gameService;
+    @MockBean private GameViews views;
 
     @MockBean
     private UserService userService;
@@ -105,6 +106,10 @@ public class GameRestControllerTest {
         testGame.getPlayers().add(p1);
         testGame.getPlayers().add(p2);
         testGame.getPlayers().add(p3);
+        when(userService.findCurrentUser()).thenReturn(testUser);
+        when(views.game(anyInt(),org.mockito.ArgumentMatchers.nullable(Integer.class))).thenAnswer(inv->GameView.of(testGame,1));
+        when(views.spectate(anyInt(),anyInt())).thenAnswer(inv->GameView.of(testGame,2));
+        when(views.catalog(anyString())).thenAnswer(inv->List.of(GameView.catalog(testGame)));
     }
 
 
@@ -124,7 +129,7 @@ public class GameRestControllerTest {
     @WithMockUser
     void testFindByIdSuccess() throws Exception {
         when(userService.findCurrentUser()).thenReturn(testUser);
-        when(gameService.findByIdIfUserInGame(GAME_ID, testUser)).thenReturn(testGame);
+        when(views.game(GAME_ID,null)).thenReturn(GameView.of(testGame,1));
 
         mockMvc.perform(get(BASE_URL + "/{id}", GAME_ID))
                 .andExpect(status().isOk())
@@ -135,7 +140,7 @@ public class GameRestControllerTest {
     @WithMockUser
     void testFindByIdNotFound() throws Exception {
         when(userService.findCurrentUser()).thenReturn(testUser);
-        when(gameService.findByIdIfUserInGame(anyInt(), any(User.class)))
+        when(views.game(anyInt(),org.mockito.ArgumentMatchers.nullable(Integer.class)))
                 .thenThrow(new ResourceNotFoundException("Game not found"));
 
         mockMvc.perform(get(BASE_URL + "/{id}", 999))
@@ -216,7 +221,7 @@ public class GameRestControllerTest {
         mockMvc.perform(patch(BASE_URL + "/{id}/start", GAME_ID)
             .with(csrf())).andExpect(status().isOk());
         verify(turnService).startGame(GAME_ID, testUser);
-        verify(messagingTemplate).convertAndSend("/topic/game/" + GAME_ID, testGame);
+        verify(messagingTemplate).convertAndSend("/topic/game/" + GAME_ID, GameEvent.changed(GAME_ID));
     }
 
     @Test
@@ -295,8 +300,9 @@ public class GameRestControllerTest {
         testGame.setSpectators(List.of());
         Integer somePlayerId = testGame.getPlayers().get(1).getId();
 
+        when(views.spectate(GAME_ID,somePlayerId)).thenThrow(new es.us.dp1.lx_xy_24_25.dixit.exceptions.AccessDeniedException("Not authorized to spectate"));
         mockMvc.perform(patch(BASE_URL + "/{id}/spectate/{playerId}", GAME_ID, somePlayerId)
                 .with(csrf()))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 }

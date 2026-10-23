@@ -10,6 +10,14 @@ import es.us.dp1.lx_xy_24_25.dixit.user.UserService;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.support.ExecutorChannelInterceptor;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler;
+import es.us.dp1.lx_xy_24_25.dixit.game.GameEvent;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.simp.stomp.*;
@@ -19,7 +27,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
-import java.nio.charset.StandardCharsets;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -31,16 +41,35 @@ public class StompAccess {
     private static final Pattern TOPIC = Pattern.compile("/topic/(game|turn)/([1-9][0-9]*)");
     private final Map<String,Session> sessions = new ConcurrentHashMap<>();
     private final JwtUtils jwt;
+    private final ObjectMapper mapper;
+    private final ObjectProvider<MessageChannel> outbound;
     private final UserDetailsServiceImpl users;
     private final UserService accounts;
     private final GameService games;
     private final TurnRepository turns;
 
-    public StompAccess(JwtUtils jwt, UserDetailsServiceImpl users, UserService accounts, GameService games, TurnRepository turns) {
-        this.jwt=jwt;this.users=users;this.accounts=accounts;this.games=games;this.turns=turns;
+    public StompAccess(JwtUtils jwt, UserDetailsServiceImpl users, UserService accounts, GameService games, TurnRepository turns, ObjectMapper mapper, @Qualifier("clientOutboundChannel") ObjectProvider<MessageChannel> outbound) {
+        this.jwt=jwt;this.users=users;this.accounts=accounts;this.games=games;this.turns=turns;this.mapper=mapper;this.outbound=outbound;
     }
     public ChannelInterceptor inbound() {
-        return new ChannelInterceptor() {
+        return new ExecutorChannelInterceptor() {
+            @Override public void afterMessageHandled(Message<?> message,MessageChannel channel,MessageHandler handler,Exception failure) {
+                var headers=MessageHeaderAccessor.getAccessor(message,StompHeaderAccessor.class);
+                if(failure!=null || !(handler instanceof SimpleBrokerMessageHandler) || headers==null || headers.getCommand()!=StompCommand.SUBSCRIBE)return;
+                try {
+                    Session session=authenticated(headers.getSessionId());
+                    Integer gameId=authorize(session,headers.getDestination());
+                    var match=TOPIC.matcher(headers.getDestination());
+                    if(!match.matches())return;
+                    GameEvent event=match.group(1).equals("game")?GameEvent.changed(gameId):GameEvent.turn(gameId,Integer.valueOf(match.group(2)));
+                    var notification=SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);
+                    notification.setSessionId(headers.getSessionId());
+                    notification.setSubscriptionId(headers.getSubscriptionId());
+                    notification.setDestination(headers.getDestination());
+                    notification.setHeader(MessageHeaders.CONTENT_TYPE,org.springframework.util.MimeTypeUtils.APPLICATION_JSON);
+                    outbound.getObject().send(MessageBuilder.createMessage(mapper.writeValueAsBytes(event),notification.getMessageHeaders()));
+                }catch(Exception denied){ /* No initial state when access disappeared. */ }
+            }
             @Override public Message<?> preSend(Message<?> message, MessageChannel channel) {
                 StompHeaderAccessor headers=MessageHeaderAccessor.getAccessor(message,StompHeaderAccessor.class);
                 if(headers==null) throw new AccessDeniedException("Invalid STOMP frame.");
@@ -80,11 +109,16 @@ public class StompAccess {
                 try {
                     Session session=authenticated(id);
                     if(subscription==null || destination==null || !destination.equals(session.subscriptions().get(subscription))) return null;
-                    try { authorize(session,destination); }
+                    JsonNode event=event(message.getPayload(),destination);
+                    if(event==null) return null;
+                    try {
+                        Integer gameId=authorize(session,destination);
+                        if(gameId!=event.path("gameId").asInt()) return null;
+                    }
                     catch(ResourceNotFoundException absent) {
                         // A deleted lobby has no membership left to query. Only its minimal deletion
                         // signal may reach a previously authorized subscriber, never an entity payload.
-                        if(!destination.startsWith("/topic/game/") || !isDeletion(message.getPayload())) return null;
+                        if(!destination.startsWith("/topic/game/") || !"DELETED".equals(event.path("type").asText())) return null;
                     }
                     return message;
                 } catch(RuntimeException denied) { return null; }
@@ -98,7 +132,7 @@ public class StompAccess {
         users.loadUserByUsername(session.username());
         return session;
     }
-    private void authorize(Session session,String destination) {
+    private Integer authorize(Session session,String destination) {
         var match=TOPIC.matcher(destination==null?"":destination);
         if(!match.matches()) throw new AccessDeniedException("Subscription destination is not allowed.");
         Integer id;
@@ -106,10 +140,25 @@ public class StompAccess {
         catch(NumberFormatException invalid) { throw new AccessDeniedException("Invalid subscription destination."); }
         Integer gameId=match.group(1).equals("game")?id:turns.findGameIdById(id).orElseThrow(() -> new ResourceNotFoundException("Turn", "id", id));
         games.findByIdIfUserInGame(gameId,accounts.findByUsername(session.username()));
+        return gameId;
     }
-    private boolean isDeletion(Object payload) {
-        String text=payload instanceof byte[] bytes?new String(bytes,StandardCharsets.UTF_8):String.valueOf(payload);
-        return "DELETED".equals(text)||"\"DELETED\"".equals(text);
+    private JsonNode event(Object payload,String destination) {
+        try {
+            JsonNode event;
+            if(payload instanceof byte[] bytes){if(bytes.length>256)return null;event=mapper.readTree(bytes);}
+            else if(payload instanceof String text){if(text.length()>256)return null;event=mapper.readTree(text);}
+            else event=mapper.valueToTree(payload);
+            var match=TOPIC.matcher(destination);
+            if(!match.matches() || event==null || !event.isObject() || !event.path("gameId").canConvertToInt())return null;
+            Set<String> fields=new java.util.HashSet<>();event.fieldNames().forEachRemaining(fields::add);
+            if(match.group(1).equals("game")) {
+                if(!fields.equals(Set.of("type","gameId")) || event.path("gameId").asInt()!=Integer.parseInt(match.group(2)))return null;
+                return Set.of("GAME_UPDATED","DELETED").contains(event.path("type").asText())?event:null;
+            }
+            return fields.equals(Set.of("type","gameId","turnId")) && "TURN_UPDATED".equals(event.path("type").asText())
+                && event.path("turnId").canConvertToInt() && event.path("turnId").asInt()==Integer.parseInt(match.group(2))?event:null;
+        }catch(Exception invalid){return null;}
     }
+
     @EventListener public void disconnected(SessionDisconnectEvent event) { sessions.remove(event.getSessionId()); }
 }

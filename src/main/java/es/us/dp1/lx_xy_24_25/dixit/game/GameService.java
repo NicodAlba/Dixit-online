@@ -249,7 +249,6 @@ public class GameService {
             .filter(p -> p.getPoints() == maxPoints)
             .collect(Collectors.toList());
         game.setWinners(winners);
-        game.setSpectators(new ArrayList<>());
         gameRepository.save(game);
         game.getWinners().stream().map(Player::getUser).forEach(achievementService::checkWinAchievements);
         game.getPlayers().stream().map(Player::getUser).forEach(u -> {

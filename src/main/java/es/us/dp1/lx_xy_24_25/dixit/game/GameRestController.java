@@ -33,6 +33,7 @@ import java.util.List;
 @SecurityRequirement(name = "bearerAuth")
 public class GameRestController {
     private final GameService gameService;
+    private final GameViews views;
     private final UserService userService;
     private final TurnService turnService;
     private final SimpMessagingTemplate messagingTemplate;
@@ -40,8 +41,9 @@ public class GameRestController {
 
 
     @Autowired
-    public GameRestController(GameService gameService, UserService userService, TurnService turnService, SimpMessagingTemplate messagingTemplate, GameInvitationService gameInvitationService){
+    public GameRestController(GameService gameService, UserService userService, TurnService turnService, SimpMessagingTemplate messagingTemplate, GameInvitationService gameInvitationService, GameViews views){
         this.gameService = gameService;
+        this.views = views;
         this.userService = userService;
         this.turnService = turnService;
         this.messagingTemplate = messagingTemplate;
@@ -53,9 +55,8 @@ public class GameRestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200")
     })
-    public ResponseEntity<Iterable<Game>> findAll() {
-        Iterable<Game> res = gameService.findAll();
-        return new ResponseEntity<>(res, HttpStatus.OK);
+    public ResponseEntity<List<GameView.Catalog>> findAll() {
+        return ResponseEntity.ok(views.catalog("all"));
     }
 
     @GetMapping(value = "{id}")
@@ -65,29 +66,8 @@ public class GameRestController {
         @ApiResponse(responseCode = "403", description = "User can't see the game since they're not a player of it"),
         @ApiResponse(responseCode = "404")
     })
-    public ResponseEntity<?> findById(@PathVariable Integer id) {
-        User currentUser = userService.findCurrentUser();
-        Game game;
-        try {
-            game = gameService.findByIdIfUserInGame(id, currentUser);
-        } catch (Exception e) {
-            switch (e) {
-                case AccessDeniedException denied -> {
-                    return new ResponseEntity<>(new MessageResponse(denied.getMessage()), HttpStatus.FORBIDDEN);
-                }
-                case DataAccessException dataAccessException -> {
-                    return new ResponseEntity<>(new MessageResponse(dataAccessException.getMessage()), HttpStatus.FORBIDDEN);
-                }
-                case ResourceNotFoundException resourceNotFoundException -> {
-                    return new ResponseEntity<>(new MessageResponse(resourceNotFoundException.getMessage()), HttpStatus.NOT_FOUND);
-                }
-                default -> {
-                    return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-            }
-        }
-
-        return new ResponseEntity<>(game, HttpStatus.OK);
+    public ResponseEntity<GameView> findById(@PathVariable Integer id,@RequestParam(required=false) Integer perspectivePlayerId) {
+        return ResponseEntity.ok(views.game(id,perspectivePlayerId));
     }
 
     @GetMapping("/inProgress")
@@ -95,13 +75,9 @@ public class GameRestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200")
     })
-    public ResponseEntity<List<Game>> getGamesInProgress() {
-        List<Game> gamesInProgress = gameService.findPlaying();
-
-        if(gamesInProgress.isEmpty()){
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        }
-        return new ResponseEntity<>(gamesInProgress, HttpStatus.OK);
+    public ResponseEntity<List<GameView.Catalog>> getGamesInProgress() {
+        List<GameView.Catalog> games=views.catalog("playing");
+        return games.isEmpty()?ResponseEntity.noContent().build():ResponseEntity.ok(games);
     }
 
     @GetMapping("/pastGames")
@@ -109,9 +85,8 @@ public class GameRestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200")
     })
-    public ResponseEntity<List<Game>> getGamesPastGames() {
-        List<Game> gamesInProgress = gameService.findPast();
-        return new ResponseEntity<>(gamesInProgress, HttpStatus.OK);
+    public ResponseEntity<List<GameView.Catalog>> getGamesPastGames() {
+        return ResponseEntity.ok(views.catalog("past"));
     }
 
 
@@ -120,11 +95,8 @@ public class GameRestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200")
     })
-    public ResponseEntity<List<Game>> findMyGames() {
-        User currentUser = userService.findCurrentUser();
-        List<Game> myGames = gameService.findGamesByPlayerUsername(currentUser.getUsername());
-
-        return new ResponseEntity<>(myGames, HttpStatus.OK);
+    public ResponseEntity<List<GameView.Catalog>> findMyGames() {
+        return ResponseEntity.ok(views.history(null));
     }
 
     @GetMapping("/games/{username}")
@@ -133,10 +105,8 @@ public class GameRestController {
         @ApiResponse(responseCode = "200"),
         @ApiResponse(responseCode = "403", description = "User can't see the games of the given user because they're not an ADMIN")
     })
-    public ResponseEntity<?> findGamesByPlayerUsername(@PathVariable String username) {
-        List<Game> games = gameService.findGamesByPlayerUsername(username);
-
-        return new ResponseEntity<>(games, HttpStatus.OK);
+    public ResponseEntity<List<GameView.Catalog>> findGamesByPlayerUsername(@PathVariable String username) {
+        return ResponseEntity.ok(views.history(username));
     }
 
     @PostMapping
@@ -144,11 +114,11 @@ public class GameRestController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204")
     })
-    public ResponseEntity<Game> create(@RequestBody HashMap<String,String> body) {
+    public ResponseEntity<GameView> create(@RequestBody HashMap<String,String> body) {
         String password = body.get("password");
         User currentUser = userService.findCurrentUser();
         Game game = gameService.createGame(password, currentUser);
-        return new ResponseEntity<>(game, HttpStatus.CREATED);
+        return new ResponseEntity<>(views.game(game.getId(),null), HttpStatus.CREATED);
     }
 
     @PatchMapping("/{id}/join")
@@ -170,9 +140,9 @@ public class GameRestController {
             return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.CONFLICT);
         }
 
-        messagingTemplate.convertAndSend("/topic/game/" + id, game);
+        messagingTemplate.convertAndSend("/topic/game/" + id, GameEvent.changed(id));
 
-        return new ResponseEntity<>(game, HttpStatus.OK);
+        return new ResponseEntity<>(views.game(game.getId(),null), HttpStatus.OK);
     }
 
     @PutMapping(value = "{id}")
@@ -181,9 +151,10 @@ public class GameRestController {
         @ApiResponse(responseCode = "200"),
         @ApiResponse(responseCode = "404")
     })
-    public ResponseEntity<Game> update(@PathVariable Integer id, @RequestBody Map<String, Object> game) {
+    public ResponseEntity<GameView> update(@PathVariable Integer id, @RequestBody Map<String, Object> game) {
         Game updatedGame = gameService.updateGame(game, id);
-        return new ResponseEntity<>(updatedGame, HttpStatus.OK);
+        messagingTemplate.convertAndSend("/topic/game/"+id,GameEvent.changed(id));
+        return new ResponseEntity<>(views.game(updatedGame.getId(),null), HttpStatus.OK);
     }
 
     @PatchMapping("/{id}/leave")
@@ -197,10 +168,10 @@ public class GameRestController {
         try { game = gameService.leaveLobby(id, userService.findCurrentUser()); }
         catch (IllegalStateException ex) { return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage())); }
         if (game == null) {
-            messagingTemplate.convertAndSend("/topic/game/" + id, "DELETED");
+            messagingTemplate.convertAndSend("/topic/game/" + id, GameEvent.deleted(id));
             return ResponseEntity.ok(new MessageResponse("Game deleted successfully."));
         }
-        messagingTemplate.convertAndSend("/topic/game/" + id, game);
+        messagingTemplate.convertAndSend("/topic/game/" + id, GameEvent.changed(id));
         return ResponseEntity.ok(new MessageResponse("Left game successfully."));
     }
 
@@ -220,9 +191,9 @@ public class GameRestController {
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.BAD_REQUEST);
         }
-        messagingTemplate.convertAndSend("/topic/game/" + id, game);
+        messagingTemplate.convertAndSend("/topic/game/" + id, GameEvent.changed(id));
 
-        return new ResponseEntity<>(game, HttpStatus.OK);
+        return new ResponseEntity<>(views.game(game.getId(),null), HttpStatus.OK);
     }
 
     @DeleteMapping(value = "{id}")
@@ -240,6 +211,7 @@ public class GameRestController {
         }
         Game game =  gameService.findById(id);
         gameService.deleteGame(game);
+        messagingTemplate.convertAndSend("/topic/game/"+id,GameEvent.deleted(id));
         return new ResponseEntity<>(new MessageResponse("Game deleted!"), HttpStatus.NO_CONTENT);
     }
 
@@ -283,7 +255,7 @@ public class GameRestController {
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.CONFLICT);
         }
-        messagingTemplate.convertAndSend("/topic/game/" + game.getId(), game);
+        messagingTemplate.convertAndSend("/topic/game/" + game.getId(), GameEvent.changed(game.getId()));
         return new ResponseEntity<>(new MessageResponse("Invitation successfully accepted!"), HttpStatus.OK);
     }
 
@@ -294,18 +266,8 @@ public class GameRestController {
         @ApiResponse(responseCode = "404"),
         @ApiResponse(responseCode = "409", description = "You are not friend of all players"),
     })
-    public ResponseEntity<?> spectateGame(@PathVariable Integer id, @PathVariable Integer playerId) {
-        Game game = gameService.findById(id);
-        User currentUser = userService.findCurrentUser();
-
-        if (!game.getSpectators().contains(currentUser)) {
-            return new ResponseEntity<>(new MessageResponse("You are not a friend of all players in the game"), HttpStatus.UNAUTHORIZED);
-        }
-
-        if (game.getPlayers().stream().noneMatch(p -> p.getId().equals(playerId))) {
-            return ResponseEntity.badRequest().body(new MessageResponse("The selected perspective does not belong to this game."));
-        }
-        return new ResponseEntity<>(game, HttpStatus.OK);
+    public ResponseEntity<GameView> spectateGame(@PathVariable Integer id,@PathVariable Integer playerId) {
+        return ResponseEntity.ok(views.spectate(id,playerId));
     }
 
 }
