@@ -36,6 +36,8 @@ public class SecurityConfiguration {
 	@Autowired
 	DataSource dataSource;
 
+    @org.springframework.beans.factory.annotation.Value("${spring.h2.console.enabled:false}")
+    private boolean h2ConsoleEnabled;
 	private static final String ADMIN = "ADMIN";
 	private static final String PLAYER = "PLAYER";
 
@@ -59,9 +61,9 @@ public class SecurityConfiguration {
             .authorizeHttpRequests(auth -> auth
                 // Recursos estáticos comunes (css, js, images, webjars…) públicos
                 .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-                // H2 Console accesible
-                .requestMatchers(PathRequest.toH2Console()).permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
+                // A disabled console has no servlet/properties bean: don't use toH2Console().
+                .requestMatchers("/h2-console/**").access((authentication, context) ->
+                    new org.springframework.security.authorization.AuthorizationDecision(h2ConsoleEnabled))
 
                 // Raíz / páginas públicas
                 .requestMatchers("/", "/oups").permitAll()
