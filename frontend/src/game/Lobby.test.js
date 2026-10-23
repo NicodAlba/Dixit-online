@@ -29,6 +29,7 @@ async function openLobby() {
 test("socket follows the current application origin", async () => {
     const options = await openLobby(); options.webSocketFactory();
     expect(SockJS).toHaveBeenLastCalledWith("/ws");
+    expect(options.connectHeaders).toEqual({Authorization: "Bearer token"});
 });
 test("each connection attempt gets a new SockJS instance", async () => {
     const options = await openLobby();
@@ -71,4 +72,16 @@ test("a delayed initial GET cannot overwrite a more recent membership message", 
     act(() => receive({body: JSON.stringify(newest)}));
     await act(async () => releaseInitial({ok: true, json: async () => lobby}));
     expect(screen.getByText("fourth")).toBeInTheDocument();
+});
+
+test.each(['DELETED', '"DELETED"'])("deletion signal %s returns participants home", async (body) => {
+    const oldAlert = window.alert;
+    window.alert = jest.fn();
+    try {
+        const options = await openLobby(); await act(async () => options.onConnect());
+        const receive = client.subscribe.mock.calls[0][1];
+        act(() => receive({body}));
+        expect(window.alert).toHaveBeenCalledWith("The leader deleted the game");
+        expect(mockNavigate).toHaveBeenCalledWith("/");
+    } finally {window.alert = oldAlert;}
 });

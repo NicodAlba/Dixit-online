@@ -249,7 +249,8 @@ class GameLobbyHttpIntegrationTest {
     @Test
     void admissionAndStartNotificationsArePublishedAfterCommit() {
         Account host = account(), third = account();
-        int id = lobby(null, host, account());
+        Account secondPlayer = account();
+        int id = lobby(null, host, secondPlayer);
         clearInvocations(messagingTemplate);
         doAnswer(invocation -> {
             assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
@@ -263,7 +264,8 @@ class GameLobbyHttpIntegrationTest {
     @Test
     void twoRealSockJsSubscribersReceiveJoinsInvitationsAndCommittedStart() throws Exception {
         Account host = account(), third = account(), fourth = account();
-        int id = lobby(null, host, account());
+        Account secondPlayer = account();
+        int id = lobby(null, host, secondPlayer);
         String destination = "/topic/game/" + id;
         // Java's default 8 KiB text buffer is smaller than the existing Game JSON.
         // Browser clients do not have this Java-container limit.
@@ -276,27 +278,14 @@ class GameLobbyHttpIntegrationTest {
         stomp.start();
         StompSession first = null, second = null;
         try {
-            first = stomp.connectAsync("http://127.0.0.1:" + port + "/ws", new StompSessionHandlerAdapter() {})
+            first = stomp.connectAsync("http://127.0.0.1:" + port + "/ws", new org.springframework.web.socket.WebSocketHttpHeaders(), bearer(host.token()), new StompSessionHandlerAdapter() {})
                 .get(5, TimeUnit.SECONDS);
-            second = stomp.connectAsync("http://127.0.0.1:" + port + "/ws", new StompSessionHandlerAdapter() {})
+            second = stomp.connectAsync("http://127.0.0.1:" + port + "/ws", new org.springframework.web.socket.WebSocketHttpHeaders(), bearer(secondPlayer.token()), new StompSessionHandlerAdapter() {})
                 .get(5, TimeUnit.SECONDS);
             BlockingQueue<JsonNode> firstMessages = new LinkedBlockingQueue<>();
             BlockingQueue<JsonNode> secondMessages = new LinkedBlockingQueue<>();
-            first.subscribe(destination, frames(firstMessages));
-            second.subscribe(destination, frames(secondMessages));
-            // Broker echo confirms both subscriptions are installed before changing the lobby.
-            String firstProbe = "first-" + UUID.randomUUID();
-            String secondProbe = "second-" + UUID.randomUUID();
-            first.send(destination, Map.of("probe", firstProbe));
-            assertEquals(firstProbe, firstMessages.poll(5, TimeUnit.SECONDS).path("probe").asText());
-            second.send(destination, Map.of("probe", secondProbe));
-            JsonNode message;
-            do { message = secondMessages.poll(5, TimeUnit.SECONDS); assertNotNull(message); }
-            while (!secondProbe.equals(message.path("probe").asText()));
-            do { message = firstMessages.poll(5, TimeUnit.SECONDS); assertNotNull(message); }
-            while (!secondProbe.equals(message.path("probe").asText()));
-            firstMessages.clear();
-            secondMessages.clear();
+            subscribeConfirmed(first, accountName(host), destination, firstMessages);
+            subscribeConfirmed(second, accountName(secondPlayer), destination, secondMessages);
 
             join(id, null, third);
             awaitGame(firstMessages, id, 3, false);
@@ -317,6 +306,32 @@ class GameLobbyHttpIntegrationTest {
             if (second != null && second.isConnected()) second.disconnect();
             stomp.stop();
         }
+    }
+
+    private String accountName(Account account) {
+        return jdbc.queryForObject("select username from appusers where id=?", String.class, account.id());
+    }
+
+    private StompHeaders bearer(String token) {
+        StompHeaders headers = new StompHeaders(); headers.add("Authorization", "Bearer " + token); return headers;
+    }
+
+    @Autowired org.springframework.messaging.simp.user.SimpUserRegistry stompUsers;
+    @Autowired org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler broker;
+
+    private void subscribeConfirmed(StompSession session, String username, String destination, BlockingQueue<JsonNode> messages) throws Exception {
+        var subscription=session.subscribe(destination, frames(messages));
+        var headers=org.springframework.messaging.simp.SimpMessageHeaderAccessor.create(org.springframework.messaging.simp.SimpMessageType.MESSAGE);
+        headers.setDestination(destination);
+        var probe=org.springframework.messaging.support.MessageBuilder.createMessage(new byte[0],headers.getMessageHeaders());
+        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+        while(System.nanoTime()<deadline) {
+            var user=stompUsers.getUser(username);
+            var installed=broker.getSubscriptionRegistry().findSubscriptions(probe);
+            if(user!=null && user.getSessions().stream().anyMatch(s -> installed.getOrDefault(s.getId(), List.of()).contains(subscription.getSubscriptionId()))) return;
+            Thread.sleep(10);
+        }
+        fail("Subscription was not installed in the real broker");
     }
 
     private StompFrameHandler frames(BlockingQueue<JsonNode> messages) {
@@ -537,12 +552,9 @@ class GameLobbyHttpIntegrationTest {
         stomp.start();
         StompSession session = null;
         try {
-            session = stomp.connectAsync("http://127.0.0.1:" + port + "/ws", new StompSessionHandlerAdapter() {}).get(5, TimeUnit.SECONDS);
+            session = stomp.connectAsync("http://127.0.0.1:" + port + "/ws", new org.springframework.web.socket.WebSocketHttpHeaders(), bearer(users.getFirst().token()), new StompSessionHandlerAdapter() {}).get(5, TimeUnit.SECONDS);
             BlockingQueue<JsonNode> messages = new LinkedBlockingQueue<>();
-            session.subscribe(destination, frames(messages));
-            session.send(destination, Map.of("probe", "ready"));
-            JsonNode probe = messages.poll(5, TimeUnit.SECONDS);
-            assertNotNull(probe); assertEquals("ready", probe.path("probe").asText());
+            subscribeConfirmed(session, accountName(users.getFirst()), destination, messages);
             doAnswer(inv -> {
                 try (java.sql.Connection connection = dataSource.getConnection();
                      java.sql.PreparedStatement statement = connection.prepareStatement("select count(*) from turns where game_id = ?")) {
