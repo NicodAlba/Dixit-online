@@ -1,7 +1,5 @@
 package es.us.dp1.lx_xy_24_25.dixit.game;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import es.us.dp1.lx_xy_24_25.dixit.card.Card;
@@ -35,33 +33,18 @@ public class TurnService {
     private final GameService gameService;
     private final CardService cardService;
     private final SimpMessagingTemplate messagingTemplate;
-    private final ObjectMapper objectMapper;
     private final UserService userService;
 
     @Autowired
     public TurnService(TurnRepository turnRepository, CardRepository cardRepository, PlayerRepository playerRepository,
-                       GameService gameService, CardService cardService, SimpMessagingTemplate messagingTemplate, ObjectMapper objectMapper, UserService userService) {
+                       GameService gameService, CardService cardService, SimpMessagingTemplate messagingTemplate, UserService userService) {
         this.turnRepository = turnRepository;
         this.cardRepository = cardRepository;
         this.playerRepository = playerRepository;
         this.gameService = gameService;
         this.cardService = cardService;
         this.messagingTemplate = messagingTemplate;
-        this.objectMapper = objectMapper;
         this.userService = userService;
-    }
-    private void notifyGameUpdate(Game game) {
-        messagingTemplate.convertAndSend(
-            "/topic/game/" + game.getId(),
-            game
-        );
-    }
-
-    private void notifyTurnUpdate(Turn turn) {
-        messagingTemplate.convertAndSend(
-            "/topic/turn/" + turn.getId(),
-            turn
-        );
     }
     @Transactional(readOnly = true)
     public Turn findById(Integer id) {
@@ -153,8 +136,7 @@ public class TurnService {
         }
         Turn saved = turnRepository.save(turn);
 
-        notifyTurnUpdate(saved);
-        notifyGameUpdate(turn.getGame());
+        publishCommittedVote(saved, true);
 
         return saved;
     }
@@ -172,8 +154,7 @@ public class TurnService {
 
         Turn saved = turnRepository.save(turn);
 
-        notifyTurnUpdate(saved);
-        notifyGameUpdate(turn.getGame());
+        publishCommittedVote(saved, true);
 
         return saved;
     }
@@ -227,8 +208,7 @@ public class TurnService {
         }
         Turn saved = turnRepository.save(turn);
 
-        notifyTurnUpdate(saved);
-        notifyGameUpdate(turn.getGame());
+        publishCommittedVote(saved, true);
 
         return card;
     }
@@ -278,15 +258,11 @@ public class TurnService {
     }
 
     private void publishCommittedVote(Turn turn, boolean gameChanged) {
-        // Snapshot while associations are attached; publish JSON only after a successful commit.
-        JsonNode turnPayload = objectMapper.valueToTree(turn);
-        JsonNode gamePayload = gameChanged ? objectMapper.valueToTree(turn.getGame()) : null;
-        Integer turnId = turn.getId(), gameId = turn.getGame().getId();
+        Integer turnId=turn.getId(), gameId=turn.getGame().getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                messagingTemplate.convertAndSend("/topic/turn/" + turnId, turnPayload);
-                if (gamePayload != null) messagingTemplate.convertAndSend("/topic/game/" + gameId, gamePayload);
+            @Override public void afterCommit() {
+                messagingTemplate.convertAndSend("/topic/turn/"+turnId,GameEvent.turn(gameId,turnId));
+                if(gameChanged) messagingTemplate.convertAndSend("/topic/game/"+gameId,GameEvent.changed(gameId));
             }
         });
     }

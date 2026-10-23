@@ -12,7 +12,7 @@ export default function RightPlayerPanel({currentPlayer, players, getPlayerName,
         }
         const lastPlayer = indexPlayer === players.length - 1
         const nextPlayer = players[lastPlayer?0:indexPlayer+1]
-        const nextPlayerCards = getPlayerHandCards ? getPlayerHandCards(nextPlayer) : (nextPlayer?.cards || []);
+        const nextPlayerCards = getPlayerHandCards ? getPlayerHandCards(nextPlayer) : Array.from({length: nextPlayer?.handSize || 0}, (_, index) => ({id: `back-${index}`}));
         const cardsList = nextPlayerCards?.map((c) => {
             const image = `/Cards/card_reversed.png`
             return (

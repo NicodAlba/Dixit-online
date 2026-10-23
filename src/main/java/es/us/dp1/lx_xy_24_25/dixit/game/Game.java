@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 public class Game extends BaseEntity {
 
     @Column(name = "password")
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @Column

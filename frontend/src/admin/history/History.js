@@ -123,7 +123,7 @@ export default function History() {
                 </span>
             </td>
             <td>
-                {game.password}
+                {game.hasPassword ? "Yes" : "No"}
             </td>
         </tr>
     ));
@@ -161,7 +161,7 @@ export default function History() {
                         <th>Start Date</th>
                         <th>End Date</th>
                         <th>Status</th>
-                        <th>Password</th>
+                        <th>Password protected</th>
                     </tr>
                     </thead>
                     <tbody>{gamesList}</tbody>

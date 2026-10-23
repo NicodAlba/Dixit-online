@@ -26,54 +26,19 @@ import java.util.List;
 @SecurityRequirement(name = "bearerAuth")
 public class PlayerRestController {
 
-    private final PlayerService playerService;
-    private final UserService userService;
+    private final es.us.dp1.lx_xy_24_25.dixit.game.GameViews views;
 
-    @Autowired
-    public PlayerRestController(PlayerService playerService, UserService userService) {
-        this.playerService = playerService;
-        this.userService = userService;
-    }
+    public PlayerRestController(es.us.dp1.lx_xy_24_25.dixit.game.GameViews views) { this.views=views; }
 
-
-    @GetMapping("{id}")
-    @Operation(summary = "Gets a player by its id")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200"),
-        @ApiResponse(responseCode = "404")
-    })
-    public ResponseEntity<Player> getPlayer(@PathVariable("id") Integer id) {
-        try {
-            Player player = playerService.findById(id);
-            User actor = userService.findCurrentUser();
-            // Until actor projections (U5), only an owner's hand can be returned.
-            if (!player.getUser().getId().equals(actor.getId())) throw new AccessDeniedException("Only the participant can read their hand.");
-            return new ResponseEntity<>(player, HttpStatus.OK);
-        } catch (ResourceNotFoundException e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+    @GetMapping("/{id}")
+    public ResponseEntity<es.us.dp1.lx_xy_24_25.dixit.game.GameView.Participant> getPlayer(
+        @PathVariable Integer id,@org.springframework.web.bind.annotation.RequestParam(required=false) Integer perspectivePlayerId) {
+        return ResponseEntity.ok(views.player(id,perspectivePlayerId));
     }
 
     @GetMapping("/{id}/cards")
-    @Operation(summary = "Retrieves the cards of the given player")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200"),
-        @ApiResponse(responseCode = "400"),
-        @ApiResponse(responseCode = "403")
-    })
-    public ResponseEntity<List<Card>> getPlayerCards(@PathVariable("id") Integer id) {
-        User currentUser = userService.findCurrentUser();
-        Player player;
-        try {
-            player = playerService.findById(id);
-            if (currentUser.getPlayers().contains(player)) {
-                return new ResponseEntity<>(player.getCards(), HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
-            }
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<List<es.us.dp1.lx_xy_24_25.dixit.game.GameView.PlayedCard>> getPlayerCards(
+        @PathVariable Integer id,@org.springframework.web.bind.annotation.RequestParam(required=false) Integer perspectivePlayerId) {
+        return ResponseEntity.ok(views.cards(id,perspectivePlayerId));
     }
-
 }

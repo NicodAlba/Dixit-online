@@ -1,6 +1,7 @@
 package es.us.dp1.lx_xy_24_25.dixit.security;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import es.us.dp1.lx_xy_24_25.dixit.game.GameEvent;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.websocket.ContainerProvider;
@@ -63,16 +64,10 @@ class StompPermissionsTest extends SecurityHttpSupport {
             public Type getPayloadType(StompHeaders h){return h.getContentType()!=null && org.springframework.http.MediaType.TEXT_PLAIN.isCompatibleWith(h.getContentType()) ? String.class : JsonNode.class;}
             public void handleFrame(StompHeaders h,Object payload){events.add(payload instanceof String text ? com.fasterxml.jackson.databind.node.TextNode.valueOf(text) : (JsonNode)payload);}
         });
-        var h=SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);h.setDestination(destination);
-        var message=MessageBuilder.createMessage(new byte[0],h.getMessageHeaders());
-        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
-        while(System.nanoTime()<deadline){
-            var user=registry.getUser(account.name());var installed=broker.getSubscriptionRegistry().findSubscriptions(message);
-            if(user!=null&&user.getSessions().stream().anyMatch(s->installed.getOrDefault(s.getId(),List.of()).contains(subscription.getSubscriptionId())))return events;
-            if(!connection.signals().errors.isEmpty()) fail("Valid subscription was rejected");
-            Thread.sleep(10);
-        }
-        fail("Valid subscription did not reach the broker");return events;
+        JsonNode initial=events.poll(5,TimeUnit.SECONDS);
+        assertNotNull(initial,"Initial invalidation confirms subscription installation");
+        assertTrue(Set.of("GAME_UPDATED","TURN_UPDATED").contains(initial.path("type").asText()));
+        return events;
     }
     int lobby(Account host,Account guest){
         var created=request(HttpMethod.POST,"/games",host.token(),Map.of());status(201,created);int id=created.getBody().path("id").asInt();
@@ -101,9 +96,9 @@ class StompPermissionsTest extends SecurityHttpSupport {
         Connection member=connect(host),spectator=connect(viewer);
         var memberGame=subscribe(member,host,"/topic/game/"+id);var memberTurn=subscribe(member,host,"/topic/turn/"+turn);
         var viewerGame=subscribe(spectator,viewer,"/topic/game/"+id);var viewerTurn=subscribe(spectator,viewer,"/topic/turn/"+turn);
-        publisher.convertAndSend("/topic/game/"+id,Map.of("id",id));publisher.convertAndSend("/topic/turn/"+turn,Map.of("id",turn));
-        assertEquals(id,memberGame.poll(5,TimeUnit.SECONDS).path("id").asInt());assertEquals(id,viewerGame.poll(5,TimeUnit.SECONDS).path("id").asInt());
-        assertEquals(turn,memberTurn.poll(5,TimeUnit.SECONDS).path("id").asInt());assertEquals(turn,viewerTurn.poll(5,TimeUnit.SECONDS).path("id").asInt());
+        publisher.convertAndSend("/topic/game/"+id,GameEvent.changed(id));publisher.convertAndSend("/topic/turn/"+turn,GameEvent.turn(id,turn));
+        assertEquals(id,memberGame.poll(5,TimeUnit.SECONDS).path("gameId").asInt());assertEquals(id,viewerGame.poll(5,TimeUnit.SECONDS).path("gameId").asInt());
+        assertEquals(turn,memberTurn.poll(5,TimeUnit.SECONDS).path("turnId").asInt());assertEquals(turn,viewerTurn.poll(5,TimeUnit.SECONDS).path("turnId").asInt());
         for(Account outsider:List.of(account(),admin()))for(String destination:List.of("/topic/game/"+id,"/topic/turn/"+turn)){
             Connection denied=connect(outsider);denied.session().subscribe(destination,new Signals());
             assertNotNull(denied.signals().errors.poll(5,TimeUnit.SECONDS),"An outsider must not subscribe");
@@ -121,7 +116,17 @@ class StompPermissionsTest extends SecurityHttpSupport {
         assertNotNull(sender.signals().errors.poll(5,TimeUnit.SECONDS));assertNull(events.poll(300,TimeUnit.MILLISECONDS));
         assertEquals(2,count("select count(*) from players where game_id=?",id));
         status(200,request(HttpMethod.PATCH,"/games/"+id+"/join",third.token(),Map.of()));
-        JsonNode legitimate=events.poll(5,TimeUnit.SECONDS);assertNotNull(legitimate);assertEquals(id,legitimate.path("id").asInt());assertFalse(legitimate.has("probe"));
+        JsonNode legitimate=events.poll(5,TimeUnit.SECONDS);assertNotNull(legitimate);assertEquals(id,legitimate.path("gameId").asInt());assertFalse(legitimate.has("probe"));
+    }
+    @Test void sharedChannelDropsPrivateOrUnexpectedServerPayloads()throws Exception{
+        Account host=account();int id=lobby(host,null);
+        var events=subscribe(connect(host),host,"/topic/game/"+id);
+        publisher.convertAndSend("/topic/game/"+id,Map.of("type","GAME_UPDATED","gameId",id,"players",List.of(Map.of("cards",List.of(123)))));
+        publisher.convertAndSend("/topic/game/"+id,Map.of("id",id,"password","fixture-secret"));
+        publisher.convertAndSend("/topic/game/"+id,GameEvent.changed(id+1));
+        assertNull(events.poll(400,TimeUnit.MILLISECONDS));
+        publisher.convertAndSend("/topic/game/"+id,GameEvent.changed(id));
+        assertEquals(id,events.poll(5,TimeUnit.SECONDS).path("gameId").asInt());
     }
     @Test void membershipRevocationStopsExistingDeliveryAndDeletedLobbySendsOnlyDeletion()throws Exception{
         Account host=account(),second=account();int id=lobby(host,second);
@@ -132,17 +137,17 @@ class StompPermissionsTest extends SecurityHttpSupport {
         Account third=account();status(200,request(HttpMethod.PATCH,"/games/"+id+"/join",third.token(),Map.of()));retained.poll(5,TimeUnit.SECONDS);
         Connection remaining=connect(third);var deleted=subscribe(remaining,third,"/topic/game/"+id);
         status(200,request(HttpMethod.PATCH,"/games/"+id+"/leave",host.token(),null));
-        JsonNode signal=deleted.poll(5,TimeUnit.SECONDS);assertNotNull(signal);assertEquals("DELETED",signal.asText());
+        JsonNode signal=deleted.poll(5,TimeUnit.SECONDS);assertNotNull(signal);assertEquals("DELETED",signal.path("type").asText());
     }
     @Test void tokenExpiryAlsoStopsDeliveryOnAnAlreadyConnectedSession()throws Exception{
         Account host=account(),second=account();int id=lobby(host,second);
         Date expiry=new Date(System.currentTimeMillis()+12000);
         Connection expiring=connect(token(second,expiry,signingKey)),valid=connect(host);
         var expiredEvents=subscribe(expiring,second,"/topic/game/"+id);var currentEvents=subscribe(valid,host,"/topic/game/"+id);
-        publisher.convertAndSend("/topic/game/"+id,Map.of("id",id));
+        publisher.convertAndSend("/topic/game/"+id,GameEvent.changed(id));
         assertNotNull(expiredEvents.poll(5,TimeUnit.SECONDS));assertNotNull(currentEvents.poll(5,TimeUnit.SECONDS));
         Thread.sleep(Math.max(0,expiry.getTime()-System.currentTimeMillis())+150);
-        publisher.convertAndSend("/topic/game/"+id,Map.of("id",id));
+        publisher.convertAndSend("/topic/game/"+id,GameEvent.changed(id));
         assertNotNull(currentEvents.poll(5,TimeUnit.SECONDS));assertNull(expiredEvents.poll(400,TimeUnit.MILLISECONDS));
         expiring.session().subscribe("/topic/game/"+id,new Signals());assertNotNull(expiring.signals().errors.poll(5,TimeUnit.SECONDS));
     }

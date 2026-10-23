@@ -11,10 +11,10 @@ export default function RenderRightPlayer({currentPlayer, players, getPlayerName
         }
         const lastPlayer = indexPlayer === players.length - 1
         const nextPlayer = players[lastPlayer?0:indexPlayer+1]
-        const cardsList = nextPlayer?.cards?.map((c) => {
+        const cardsList = Array.from({length: nextPlayer?.handSize || 0}, (_, index) => {
             const image = `/Cards/card_reversed.png`
             return (
-                <div key={c.id} className="opponent-card-slot">
+                <div key={index} className="opponent-card-slot">
                     <img className= "card" src = {image} alt="Card" style={{width:"30px"}}/>
                 </div>
             );

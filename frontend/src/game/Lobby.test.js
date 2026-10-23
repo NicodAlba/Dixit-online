@@ -44,13 +44,15 @@ test("subscription refreshes changes made during initial connection", async () =
     expect(global.fetch).toHaveBeenCalledTimes(2);
     expect(screen.getByText("third")).toBeInTheDocument();
 });
-test("membership and start messages update the lobby and navigate", async () => {
+test("membership and start invalidations reload the private lobby and navigate", async () => {
     const options = await openLobby(); await act(async () => options.onConnect());
     const receive = client.subscribe.mock.calls[0][1];
-    act(() => receive({body: JSON.stringify(joined)}));
-    expect(screen.getByRole("button", {name: "Start"})).toBeEnabled();
-    act(() => receive({body: JSON.stringify({...joined, startDate: "2026-10-22T20:00:00Z"})}));
-    expect(mockNavigate).toHaveBeenCalledWith("/games/42/game");
+    global.fetch.mockResolvedValue({ok:true,json:async()=>joined});
+    await act(async()=>receive({body:JSON.stringify({type:"GAME_UPDATED",gameId:42})}));
+    await waitFor(()=>expect(screen.getByRole("button",{name:"Start"})).toBeEnabled());
+    global.fetch.mockResolvedValue({ok:true,json:async()=>({...joined,startDate:"2026-10-23T12:00:00Z"})});
+    await act(async()=>receive({body:JSON.stringify({type:"GAME_UPDATED",gameId:42})}));
+    await waitFor(()=>expect(mockNavigate).toHaveBeenCalledWith("/games/42/game"));
 });
 test("REST start navigates without waiting for a socket message", async () => {
     global.fetch.mockResolvedValue({ok: true, json: async () => joined}); await openLobby();
@@ -69,19 +71,20 @@ test("a delayed initial GET cannot overwrite a more recent membership message", 
     await act(async () => options.onConnect());
     const receive = client.subscribe.mock.calls[0][1];
     const newest = {...joined, players: [...joined.players, {user: {username: "fourth"}}]};
-    act(() => receive({body: JSON.stringify(newest)}));
+    global.fetch.mockResolvedValue({ok:true,json:async()=>newest});
+    await act(async () => receive({body: JSON.stringify({type:"GAME_UPDATED",gameId:42})}));
+    await screen.findByText("fourth");
     await act(async () => releaseInitial({ok: true, json: async () => lobby}));
     expect(screen.getByText("fourth")).toBeInTheDocument();
 });
 
-test.each(['DELETED', '"DELETED"'])("deletion signal %s returns participants home", async (body) => {
-    const oldAlert = window.alert;
-    window.alert = jest.fn();
+test("minimal deletion notification returns participants home", async () => {
+    const oldAlert=window.alert;window.alert=jest.fn();
     try {
-        const options = await openLobby(); await act(async () => options.onConnect());
-        const receive = client.subscribe.mock.calls[0][1];
-        act(() => receive({body}));
+        const options=await openLobby();await act(async()=>options.onConnect());
+        const receive=client.subscribe.mock.calls[0][1];
+        act(()=>receive({body:JSON.stringify({type:"DELETED",gameId:42})}));
         expect(window.alert).toHaveBeenCalledWith("The leader deleted the game");
         expect(mockNavigate).toHaveBeenCalledWith("/");
-    } finally {window.alert = oldAlert;}
+    } finally {window.alert=oldAlert;}
 });

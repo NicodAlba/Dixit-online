@@ -35,6 +35,7 @@ public class TurnRestControllerTest {
 
     @MockBean
     private TurnService turnService;
+    @MockBean private GameViews views;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -58,16 +59,16 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testGetTurnSuccess() throws Exception {
-        when(turnService.findVisibleById(turnId)).thenReturn(testTurn);
+        when(views.turn(turnId,null)).thenReturn(new GameView.Round(turnId,TurnState.WAITING_STORYTELLER_CARD,null,null,null,java.util.List.of(),0,false,false));
 
         mockMvc.perform(get(BASE_URL + "/{id}", turnId)).andExpect(status().isOk());
-        verify(turnService).findVisibleById(turnId);
+        verify(views).turn(turnId,null);
     }
 
     @Test
     @WithMockUser("test")
     void testGetTurnNotFound() throws Exception {
-        when(turnService.findVisibleById(999)).thenThrow(new ResourceNotFoundException("Turn not found"));
+        when(views.turn(999,null)).thenThrow(new ResourceNotFoundException("Turn not found"));
 
         mockMvc.perform(get(BASE_URL + "/{id}", 999)).andExpect(status().isNotFound());
     }

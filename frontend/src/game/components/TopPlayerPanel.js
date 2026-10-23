@@ -12,7 +12,7 @@ export default function TopPlayerPanel({currentPlayer, players, getPlayerName, s
         }
         const topPlayerIndex = (indexPlayer + 2) % players.length;
         const topPlayer = players[topPlayerIndex];
-        const topPlayerCards = getPlayerHandCards ? getPlayerHandCards(topPlayer) : (topPlayer?.cards || []);
+        const topPlayerCards = getPlayerHandCards ? getPlayerHandCards(topPlayer) : Array.from({length: topPlayer?.handSize || 0}, (_, index) => ({id: `back-${index}`}));
         const cardsList = topPlayerCards?.map((c) => {
             const image = `/Cards/card_reversed.png`
             return (

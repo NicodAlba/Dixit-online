@@ -20,8 +20,8 @@ export default function Spectate() {
     const [message, setMessage] = useState(null)
     const [visible, setVisible] = useState(false)
     const gameId = getIdFromUrl(2);
-    const {game, turn, turnId, setGame, setTurn, players, storyteller} = useGameTurnState({gameId, jwt, setMessage, setVisible});
     const playerId = getIdFromUrl(4);
+    const {game, turn, players, storyteller} = useGameTurnState({gameId, jwt, setMessage, setVisible, perspectivePlayerId: playerId});
     console.log(playerId)
 
     const usernamesById = usePlayerNames(players, jwt);
@@ -55,6 +55,8 @@ export default function Spectate() {
 
     return (
         <div className="game-page-container">
+            {visible && message && <div role="alert">{message}</div>}
+            {game.deleted && <div role="alert">This game has been deleted.</div>}
             <Button  className= "leave-game" style={{position: "absolute", top: 10, left:30}} onClick={() => navigate("/")}>Leave game</Button>
             <TurnStatusPanel game={game} turn={turn} currentPlayer={spectatingPlayer} getPlayerName={getPlayerName}/>
             <RenderSpectatingPlayer currentPlayer={spectatingPlayer} spectatingUser={spectatingUser} isStoryteller={isStoryteller} getPlayerName={getPlayerName}/>

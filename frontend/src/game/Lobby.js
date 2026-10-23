@@ -70,18 +70,17 @@ export default function Lobby() {
                 if (cancelled) return;
                 stompClient.subscribe(`/topic/game/${gameId}`, (message) => {
                     if (cancelled) return;
-                    revision++;
-                    if (message.body === '"DELETED"' || message.body === 'DELETED') {
-                        alert("The leader deleted the game");
-                        navigate("/");
-                    } else {
-                        const updatedGame = JSON.parse(message.body);
-                        setGameData(updatedGame);
-                        setLoading(false);
-
-                        if(updatedGame.startDate) {
-                            navigate(`/games/${gameId}/game`);
+                    try {
+                        const event = JSON.parse(message.body);
+                        if (event.type === "DELETED" && event.gameId === Number(gameId)) {
+                            revision++;
+                            alert("The leader deleted the game");
+                            navigate("/");
+                        } else if (event.type === "GAME_UPDATED" && event.gameId === Number(gameId)) {
+                            fetchGame();
                         }
+                    } catch (error) {
+                        setError("Invalid lobby notification.");
                     }
                 });
                 // Recover changes made between the initial GET and subscription.

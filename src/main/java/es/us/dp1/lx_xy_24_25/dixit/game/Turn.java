@@ -1,6 +1,7 @@
 package es.us.dp1.lx_xy_24_25.dixit.game;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import es.us.dp1.lx_xy_24_25.dixit.card.Card;
@@ -19,6 +20,10 @@ import java.util.stream.Collectors;
 @Setter
 @Table(name = "turns")
 public class Turn extends BaseEntity {
+
+    @JsonIgnore
+    @Column(name = "table_order_seed", length = 64)
+    private String tableOrderSeed = UUID.randomUUID().toString();
 
     @ManyToOne
     @JoinColumn(name = "answer_id")

@@ -18,7 +18,7 @@ test("a reused image with a new card ID stays visible and selectable while the h
     const historical = {id: 10, image: {id: 7}}, replacement = {id: 100, image: {id: 7}};
     const player = {id: 20, user: {id: 1, username: "host"}, points: 0,
         cards: [historical, replacement, ...[2, 3, 4, 5, 6].map(i => ({id: 100 + i, image: {id: i}}))]};
-    mockState = {game: {id: 42, turns: [{id: 30, playedCards: [historical]}]},
+    mockState = {refresh: jest.fn().mockResolvedValue(), game: {id: 42, turns: [{id: 30, playedCards: [historical]}]},
         turn: {id: 31, state: "WAITING_STORYTELLER_CARD", playedCards: []}, turnId: 31,
         setTurn: jest.fn(), players: [player], storyteller: player};
     global.fetch = jest.fn().mockResolvedValue({ok: true, json: async () => ({state: "WAITING_STORYTELLER_CLUE"})});

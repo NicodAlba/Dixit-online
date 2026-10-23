@@ -1,132 +1,89 @@
-import { useEffect, useRef, useState } from "react";
-import { Client } from "@stomp/stompjs";
+import {useCallback, useEffect, useRef, useState} from "react";
+import {Client} from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import useFetchState from "../util/useFetchState";
 
-
-export default function useGameTurnState({gameId, jwt, setMessage, setVisible}) {
-    const emptyGame = {
-        id: gameId,
-        players: [],
-        turns: [],
-        winners: []
-    };
-    const [game, setGame] = useFetchState(emptyGame, `/api/v1/games/${gameId}`, jwt, setMessage, setVisible, gameId)
-
-    const lastTurn = game.turns?.length ? game.turns[game.turns.length - 1] : null;
-    const turnId = lastTurn?.id || null;
-
-    const emptyTurn = {
-        id: turnId,
-        playedCards: []
-    }
-    const turnUrl = turnId ? `/api/v1/turns/${turnId}` : null;
-    const [turn, setTurn] = useFetchState(emptyTurn, turnUrl, jwt, setMessage, setVisible, turnId)
-
-    // Single STOMP connection reused for game + turn topics
+// Every notification reloads a single actor-specific snapshot; no shared event carries a hand.
+export default function useGameTurnState({gameId, jwt, setMessage, setVisible, perspectivePlayerId = null}) {
+    const [game, setGame] = useState({id: gameId, players: [], turns: [], winners: []});
+    const turn = game.turns?.length ? game.turns[game.turns.length - 1] : {playedCards: []};
+    const turnId = turn?.id || null;
+    const requestRef = useRef(0);
     const clientRef = useRef(null);
-    const gameSubRef = useRef(null);
-    const turnSubRef = useRef(null);
-    const [connected, setConnected] = useState(false);
+    const turnSubscriptionRef = useRef(null);
+    const turnIdRef = useRef(turnId);
+    const refreshRef = useRef(() => {});
+    const perspective = perspectivePlayerId == null ? "" : `?perspectivePlayerId=${encodeURIComponent(perspectivePlayerId)}`;
 
-    const resubscribeRef = useRef(() => {});
+    const refresh = useCallback(async () => {
+        if (!gameId || !jwt) return;
+        const request = ++requestRef.current;
+        try {
+            const response = await fetch(`/api/v1/games/${gameId}${perspective}`, {headers: {Authorization: `Bearer ${jwt}`, Accept: "application/json"}});
+            const payload = await response.json().catch(() => ({}));
+            if (request !== requestRef.current) return;
+            if (!response.ok) throw new Error(payload.message || `Unable to load game (${response.status}).`);
+            setGame(payload);
+        } catch (error) {
+            if (request !== requestRef.current) return;
+            setMessage(error.message || "Unable to load the game.");
+            setVisible(true);
+        }
+    }, [gameId, jwt, perspective, setMessage, setVisible]);
+    refreshRef.current = refresh;
+    turnIdRef.current = turnId;
 
-    const resubscribe = () => {
-        const client = clientRef.current;
-        if (!client || !client.connected) {
-            return;
-        }
-        if (gameSubRef.current) {
-            gameSubRef.current.unsubscribe();
-            gameSubRef.current = null;
-        }
-        if (turnSubRef.current) {
-            turnSubRef.current.unsubscribe();
-            turnSubRef.current = null;
-        }
-        if (gameId) {
-            gameSubRef.current = client.subscribe(`/topic/game/${gameId}`, (message) => {
-                if (message.body) {
-                    setGame(JSON.parse(message.body));
-                }
-            });
-        }
-        if (turnId) {
-            turnSubRef.current = client.subscribe(`/topic/turn/${turnId}`, (message) => {
-                if (message.body) {
-                    setTurn(JSON.parse(message.body));
-                }
-            });
-        }
-    };
-
-    resubscribeRef.current = resubscribe;
+    const setTurn = useCallback(value => setGame(previous => {
+        if (!previous.turns?.length) return previous;
+        const rounds = [...previous.turns];
+        rounds[rounds.length - 1] = typeof value === "function" ? value(rounds[rounds.length - 1]) : value;
+        return {...previous, turns: rounds};
+    }), []);
 
     useEffect(() => {
-        // Update subscriptions when ids change or after a reconnect
-        resubscribeRef.current();
-    }, [gameId, turnId, connected]);
+        setGame({id: gameId, players: [], turns: [], winners: []});
+        refresh();
+        return () => {requestRef.current++;};
+    }, [refresh, gameId]);
 
     useEffect(() => {
-        if (!jwt) {
-            return;
-        }
-
+        if (!gameId || !jwt) return;
+        let stopped = false;
+        const receive = message => {
+            if (stopped || !message.body) return;
+            try {
+                const event = JSON.parse(message.body);
+                if (event.type === "DELETED") {
+                    requestRef.current++;
+                    setGame({id: gameId, players: [], turns: [], winners: [], deleted: true});
+                    return;
+                }
+                if (event.gameId === Number(gameId) && (event.type === "GAME_UPDATED" || event.type === "TURN_UPDATED")) refreshRef.current();
+            } catch (error) {
+                setMessage("Invalid game notification."); setVisible(true);
+            }
+        };
         const client = new Client({
             webSocketFactory: () => new SockJS("/ws"),
-            connectHeaders: {
-                Authorization: `Bearer ${jwt}`,
-            },
-            reconnectDelay: 500,
-            heartbeatIncoming: 2000,
-            heartbeatOutgoing: 2000,
+            connectHeaders: {Authorization: `Bearer ${jwt}`},
+            reconnectDelay: 1000, heartbeatIncoming: 2000, heartbeatOutgoing: 2000,
         });
-
+        const subscribeTurn = () => {
+            turnSubscriptionRef.current?.unsubscribe();
+            turnSubscriptionRef.current = turnIdRef.current ? client.subscribe(`/topic/turn/${turnIdRef.current}`, receive) : null;
+        };
         client.onConnect = () => {
-            setConnected(true);
-            resubscribeRef.current();
+            if (stopped) return;
+            client.subscribe(`/topic/game/${gameId}`, receive);
+            subscribeTurn();
+            refreshRef.current();
         };
-        client.onStompError = (frame) => {
-            setConnected(false);
-            console.error("Broker reported error: " + frame.headers["message"]);
-            console.error("Additional details: " + frame.body);
-        };
-        client.onDisconnect = () => {
-            setConnected(false);
-        };
-        client.onWebSocketClose = () => {
-            setConnected(false);
-        };
-
+        client.onStompError = () => {if (!stopped) {setMessage("Unable to authenticate or subscribe to this game.");setVisible(true);}};
+        client.onWebSocketClose = () => {turnSubscriptionRef.current = null;};
+        clientRef.current = {client, subscribeTurn};
         client.activate();
-        clientRef.current = client;
+        return () => {stopped = true; clientRef.current = null;turnSubscriptionRef.current = null;client.deactivate();};
+    }, [gameId, jwt, setMessage, setVisible]);
 
-        return () => {
-            if (gameSubRef.current) {
-                gameSubRef.current.unsubscribe();
-                gameSubRef.current = null;
-            }
-            if (turnSubRef.current) {
-                turnSubRef.current.unsubscribe();
-                turnSubRef.current = null;
-            }
-            setConnected(false);
-            if (clientRef.current) {
-                clientRef.current.deactivate();
-                clientRef.current = null;
-                console.log("STOMP Client deactivated");
-            }
-        };
-    }, [jwt]);
-
-    return {
-        game,
-        turn,
-        turnId,
-        setGame,
-        setTurn,
-        players: game.players || [],
-        storyteller: lastTurn?.storyteller || null
-    };
-
+    useEffect(() => {if (clientRef.current?.client.connected) clientRef.current.subscribeTurn();}, [turnId]);
+    return {game, turn, turnId, setGame, setTurn, refresh, players: game.players || [], storyteller: turn?.storyteller || null};
 }
