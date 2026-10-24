@@ -205,3 +205,31 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+/* Keep lobby content in the page flow so it can wrap and scroll on small screens. */
+.lobby-page-container {position: relative; inset: auto; min-height: 100vh; min-height: 100dvh; padding: 40px 20px; flex-wrap: wrap; align-content: center; color: #24180f;}
+.lobby-lobby-card {width: min(100%, 384px); padding-top: 3.2rem; background: rgba(255, 250, 240, .96); overflow-wrap: anywhere;}
+.lobby-lobby-card h1 {font-size: 1.5rem;}
+.lobby-friends {max-width: 100%;}
+.lobby-friends .ls-container {width: 330px; max-width: 100%; max-height: 65vh; padding: 12px; background: rgba(255, 250, 240, .96);}
+.lobby-friends td {vertical-align: middle; overflow-wrap: anywhere;}
+.lobby-status, .lobby-help {font-size: .9rem;}
+.lobby-error {padding: 10px; background: #f9dce2; border: 1px solid #a43c55; border-radius: 6px; color: #6c182c;}
+.lobby-player-count.enough {color: #146334;}
+.lobby-player-count.not-enough {color: #a51d2d;}
+.lobby-btn.start.enough {background: #186536;}
+.lobby-btn.start.not-enough {background: #992832;}
+.lobby-btn.leave, .btn-cancel {background: #5a626d;}
+.lobby-btn:disabled {opacity: .65; cursor: default;}
+.lobby-page-container :is(button, input):focus-visible {outline: 3px solid #2b4ca0; outline-offset: 3px;}
+.lobby-button-container {gap: 10px; flex-wrap: wrap;}
+@media (max-width: 760px) {
+    .lobby-page-container {padding: 20px 12px; align-content: flex-start; gap: 16px;}
+    .lobby-lobby-card, .lobby-friends {width: 100%; max-width: 440px;}
+    .lobby-friends .ls-container {width: 100%; max-height: none;}
+}
+
+.lobby-page-container {min-height: calc(100vh - 64px); min-height: calc(100dvh - 64px);}
+.lobby-lobby-card h1 {color: #24180f !important;}
+.lobby-player-empty {color: #5d5662;}
+.lobby-btn, .btn-cancel, .btn-confirm {min-height: 44px;}

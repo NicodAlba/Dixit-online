@@ -8,12 +8,21 @@ export default function Chat({gameId}) {
     const [newMessage, setNewMessage] = useState("");
     const messagesRef = useRef(null);
     const user = tokenService.getUser();
+    const [open, setOpen] = useState(() => window.matchMedia ? window.matchMedia("(min-width: 901px)").matches : true);
+    const followMessagesRef = useRef(true);
+    useEffect(() => {
+        if (!window.matchMedia) return;
+        const query = window.matchMedia("(min-width: 901px)");
+        const update = event => setOpen(event.matches);
+        query.addEventListener("change", update);
+        return () => query.removeEventListener("change", update);
+    }, []);
 
     useEffect(() => setNewMessage(""), [gameId]);
     useEffect(() => {
         const panel = messagesRef.current;
-        if (panel) panel.scrollTop = panel.scrollHeight;
-    }, [messages]);
+        if (panel && followMessagesRef.current) panel.scrollTop = panel.scrollHeight;
+    }, [messages, open]);
 
     async function sendMessage(event) {
         event.preventDefault();
@@ -21,8 +30,14 @@ export default function Chat({gameId}) {
     }
 
     return (
-        <div className="chat-container" aria-label="Game chat">
-            <div className="chat-messages" ref={messagesRef} aria-label="Messages">
+        <details className="chat-container" open={open} onToggle={event => setOpen(event.currentTarget.open)}>
+            <summary>Chat <span>· game participants</span></summary>
+            <div className="chat-content">
+            <div className="chat-messages" ref={messagesRef} role="log" aria-live="polite" aria-label="Messages"
+                onScroll={event => {
+                    const panel = event.currentTarget;
+                    followMessagesRef.current = panel.scrollHeight - panel.scrollTop - panel.clientHeight < 48;
+                }}>
                 {loading && <p role="status">Loading chat…</p>}
                 {messages.map((msg, index) => (
                     <div key={index} className={`chat-message ${msg.username === user?.username ? "my-message" : "other-message"}`}>
@@ -44,6 +59,7 @@ export default function Chat({gameId}) {
                 />
                 <button type="submit" disabled={sending || !newMessage.trim()}>{sending ? "Sending…" : "Send"}</button>
             </form>
-        </div>
+            </div>
+        </details>
     );
 }

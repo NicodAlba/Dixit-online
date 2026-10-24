@@ -29,7 +29,7 @@ export default function Login() {
         window.location.href = "/";
       })
       .catch((error) => {         
-        setMessage(error);
+        setMessage(typeof error === "string" ? error : error.message || "Unable to log in. Please try again.");
       });            
   }
 

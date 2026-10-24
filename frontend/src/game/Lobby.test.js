@@ -88,3 +88,28 @@ test("minimal deletion notification returns participants home", async () => {
         expect(mockNavigate).toHaveBeenCalledWith("/");
     } finally {window.alert=oldAlert;}
 });
+
+test("a pending start is blocked and server failures remain visible in the lobby", async () => {
+    global.fetch.mockResolvedValue({ok: true, json: async () => joined});
+    await openLobby();
+    let finish;
+    global.fetch.mockReturnValueOnce(new Promise(resolve => {finish = resolve;}));
+    const start = screen.getByRole("button", {name: "Start"});
+    fireEvent.click(start); fireEvent.click(start);
+    expect(start).toBeDisabled();
+    expect(global.fetch.mock.calls.filter(([, options]) => options.method === "PATCH")).toHaveLength(1);
+    await act(async () => finish({ok: false, json: async () => ({message: "Start rejected"})}));
+    expect(screen.getByRole("alert")).toHaveTextContent("Start rejected");
+    expect(start).toBeEnabled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+test("the leave dialog can be dismissed without sending an action", async () => {
+    await openLobby();
+    fireEvent.click(screen.getByRole("button", {name: "Leave"}));
+    expect(await screen.findByRole("dialog", {name: "Leave this lobby?"})).toBeInTheDocument();
+    expect(screen.getByText(/Leaving deletes this lobby/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", {name: "Cancel"}));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(global.fetch.mock.calls.every(([, options]) => options.method === "GET")).toBe(true);
+});

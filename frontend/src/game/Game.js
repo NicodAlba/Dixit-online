@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../static/css/game/Game.css";
 import { useNavigate } from "react-router-dom";
 import tokenService from "../services/token.service";
@@ -12,17 +12,19 @@ import TopPlayerPanel from "./components/TopPlayerPanel";
 import TurnStatusPanel from "./components/TurnStatusPanel";
 import Chat from "./components/Chat";
 import { Button } from "reactstrap";
-
-const jwt = tokenService.getLocalAccessToken();
-const currentUser = tokenService.getUser();
+import GameLayout from "./components/GameLayout";
 
 export default function Game() {
+    const jwt = tokenService.getLocalAccessToken();
+    const currentUser = tokenService.getUser();
+    const [action, setAction] = useState(null);
+    const actionRef = useRef(false);
     const [message, setMessage] = useState(null);
     const [visible, setVisible] = useState(false);
     const [pendingPlayedCardIds, setPendingPlayedCardIds] = useState([]);
     const [clueDraft, setClueDraft] = useState("");
     const gameId = getIdFromUrl(2);
-    const { game, turn: serverTurn, turnId, refresh, players, storyteller } = useGameTurnState({
+    const { game, turn: serverTurn, turnId, refresh, players, storyteller, loading = false, connection = "connected" } = useGameTurnState({
         gameId,
         jwt,
         setMessage,
@@ -30,6 +32,16 @@ export default function Game() {
     });
     const turn=game.cancelled?{...serverTurn,state:"CANCELLED"}:serverTurn;
     const navigate = useNavigate();
+    const ready = connection === "connected" && !loading;
+    const busy = Boolean(action) || !ready;
+    const beginAction = name => {
+        if (actionRef.current) return false;
+        actionRef.current = true;
+        setAction(name);
+        setVisible(false);
+        return true;
+    };
+    const finishAction = () => {actionRef.current = false; setAction(null);};
 
     const usernamesById = usePlayerNames(players, jwt);
 
@@ -110,6 +122,7 @@ export default function Game() {
             console.warn("Cannot select card without a valid turn or player");
             return;
         }
+        if (!ready || game.endDate || game.deleted || !beginAction("Sending card…")) return;
         const endpoint = isStoryteller
             ? `/api/v1/turns/${turnId}/answer/${card.id}`
             : `/api/v1/turns/${turnId}/play-card/${card.id}/${currentPlayer.id}`;
@@ -132,10 +145,10 @@ export default function Game() {
             }
             await refresh();
         } catch (error) {
-            console.error("Error when trying to select card:", error);
-            alert(`Card couldn't be selected: ${error.message}`);
+            setMessage(error.message || "Unable to select this card.");
+            setVisible(true);
             setPendingPlayedCardIds((prev) => prev.filter((id) => id !== card.id));
-        }
+        } finally {finishAction();}
     };
 
     useEffect(() => {setClueDraft("");}, [turnId]);
@@ -144,7 +157,7 @@ export default function Game() {
 
     async function handleSendClue(event) {
         event.preventDefault();
-        if (!turnId) return;
+        if (!turnId || !clueDraft.trim() || !ready || game.endDate || !beginAction("Sending clue…")) return;
         try {
             const response = await fetch(`/api/v1/turns/${turnId}/clue`, {
                 method: "PUT",
@@ -155,6 +168,7 @@ export default function Game() {
             if (!response.ok) throw new Error(data.message || `Unable to set clue (${response.status}).`);
             await refresh();
         } catch (error) {setMessage(error.message);setVisible(true);}
+        finally {finishAction();}
     }
 
     const voteCard = async (card) => {
@@ -162,6 +176,7 @@ export default function Game() {
             console.warn("Cannot select card without a valid turn or player");
             return;
         }
+        if (!ready || game.endDate || game.deleted || !beginAction("Sending vote…")) return;
         const endpoint = `/api/v1/turns/${turnId}/vote/${currentPlayer?.id}/${card.id}`;
         try {
             const response = await fetch(endpoint, {
@@ -178,66 +193,41 @@ export default function Game() {
             }
             await refresh();
         } catch (error) {
-            console.error("Error when trying to select card:", error);
-            alert(`Card couldn't be selected: ${error.message}`);
-        }
+            setMessage(error.message || "Unable to vote for this card.");
+            setVisible(true);
+        } finally {finishAction();}
     };
 
     async function leaveGame(){
+        if (!beginAction("Leaving game…")) return;
         try{
             const response=await fetch(`/api/v1/games/${gameId}/leave`,{method:"PATCH",headers:{Authorization:`Bearer ${jwt}`}});
             if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(error.message||"Unable to leave the game.");}
             navigate("/");
         }catch(error){setMessage(error.message);setVisible(true);}
+        finally {finishAction();}
     }
+    const opponents = <>
+        <LeftPlayerPanel currentPlayer={currentPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller} getPlayerHandCards={getPlayerHandCards} />
+        <TopPlayerPanel currentPlayer={currentPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller} getPlayerHandCards={getPlayerHandCards} />
+        <RightPlayerPanel currentPlayer={currentPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller} getPlayerHandCards={getPlayerHandCards} />
+    </>;
     return (
-        <div className="game-page-container">
-            {visible && message && <div role="alert">{message}</div>}
-            {game.cancelled && <div role="alert">Game cancelled. The game history has been preserved.</div>}
-            {game.deleted && <div role="alert">This game has been deleted.</div>}
-            <Button  className= "leave-game" style={{position: "absolute", top: 10, left:30}} onClick={leaveGame}>Leave game</Button>
-            <TurnStatusPanel
-                game={game}
-                turn={turn?.state === "WAITING_STORYTELLER_CLUE" ? {...turn, clue: clueDraft} : turn}
-                currentPlayer={currentPlayer}
-                isStoryteller={isStoryteller}
-                storyteller={storyteller}
-                handleChange={handleChange}
-                handleSendClue={handleSendClue}
-                voteCard={voteCard}
-                getPlayerName={getPlayerName}
-            />
-            <OwnPlayerPanel
-                currentPlayer={currentPlayer}
-                currentUser={currentUser}
-                isStoryteller={isStoryteller}
-                turn={turn}
-                selectCard={selectCard}
-                getPlayerName={getPlayerName}
-                handCards={getPlayerHandCards(currentPlayer)}
-            />
-            <LeftPlayerPanel
-                currentPlayer={currentPlayer}
-                players={players}
-                getPlayerName={getPlayerName}
-                storyteller={storyteller}
-                getPlayerHandCards={getPlayerHandCards}
-            />
-            <RightPlayerPanel
-                currentPlayer={currentPlayer}
-                players={players}
-                getPlayerName={getPlayerName}
-                storyteller={storyteller}
-                getPlayerHandCards={getPlayerHandCards}
-            />
-            <TopPlayerPanel
-                currentPlayer={currentPlayer}
-                players={players}
-                getPlayerName={getPlayerName}
-                storyteller={storyteller}
-                getPlayerHandCards={getPlayerHandCards}
-            />
-            <Chat gameId={gameId} />
-        </div>
+        <GameLayout gameId={gameId} game={game} loading={loading} connection={connection}
+            storytellerName={getPlayerName(storyteller)} role={isStoryteller ? "You are the storyteller" : "You are a player"}
+            message={visible ? message : null} onDismiss={() => setVisible(false)} onRetry={refresh}
+            toolbar={<>
+                <Button className="leave-game" disabled={Boolean(action)} onClick={leaveGame}>Leave game</Button>
+                {game.leader?.id === currentUser?.id && !game.endDate && <span className="game-help">As host, leaving cancels this game.</span>}
+            </>}
+            opponents={opponents}
+            hand={<OwnPlayerPanel currentPlayer={currentPlayer} currentUser={currentUser} isStoryteller={isStoryteller} turn={turn}
+                selectCard={selectCard} getPlayerName={getPlayerName} handCards={getPlayerHandCards(currentPlayer)} busy={busy} />}
+            chat={<Chat gameId={gameId} />}>
+            {action && <p role="status" className="game-action-status">{action}</p>}
+            <TurnStatusPanel game={game} turn={turn?.state === "WAITING_STORYTELLER_CLUE" ? {...turn, clue: clueDraft} : turn}
+                currentPlayer={currentPlayer} isStoryteller={isStoryteller} storyteller={storyteller} handleChange={handleChange}
+                handleSendClue={handleSendClue} voteCard={voteCard} getPlayerName={getPlayerName} busy={busy} />
+        </GameLayout>
     );
 }

@@ -22,7 +22,7 @@ const FormInput = forwardRef(({ tag, name, type, defaultValue, values, isRequire
             setErrors: (errors) => {
                 setInputErrors(errors);
             },
-            value: inputField.current ? inputField.current.value : "",
+            get value() {return inputField.current ? inputField.current.value : "";},
             min: minInputValue,
             max: maxInputValue,
             files: files,

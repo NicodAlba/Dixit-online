@@ -91,12 +91,12 @@ function AppNavbar() {
 
     return (
         <div>
-            <Navbar expand="md" style={{ backgroundColor: "#6b4024" }}>
-                <NavbarBrand href="/">
+            <Navbar dark expand="md" style={{ backgroundColor: "#6b4024" }}>
+                <NavbarBrand href="/" aria-label="Dixit home">
                     <img alt="logo" src={logo} style={{ height: 40, width: 40 }} />
                 </NavbarBrand>
-                <NavbarToggler onClick={toggleNavbar} className="ms-2" />
-                <Collapse isOpen={!collapsed} navbar>
+                <NavbarToggler onClick={toggleNavbar} className="ms-2" aria-controls="main-navigation" aria-expanded={!collapsed} />
+                <Collapse id="main-navigation" isOpen={!collapsed} navbar>
                     <Nav className="me-auto mb-2 mb-lg-0" navbar>
                         {userLinks}
                         {adminLinks}
