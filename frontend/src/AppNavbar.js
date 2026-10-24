@@ -7,7 +7,6 @@ import logo from "../src/static/images/dixit round.png"
 
 function AppNavbar() {
     const [roles, setRoles] = useState([]);
-    const [username, setUsername] = useState("");
     const [userId, setUserId] = useState("");
     const jwt = tokenService.getLocalAccessToken();
     const [collapsed, setCollapsed] = useState(true);
@@ -16,9 +15,9 @@ function AppNavbar() {
 
     useEffect(() => {
         if (jwt) {
-            setRoles(jwt_decode(jwt).authorities);
-            setUsername(jwt_decode(jwt).sub);
-            setUserId(jwt_decode(jwt).id);
+            const account = jwt_decode(jwt);
+            setRoles(account.authorities);
+            setUserId(account.id);
         }
     }, [jwt])
 

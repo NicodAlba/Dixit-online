@@ -174,3 +174,16 @@
         height: 240px;
     }
 }
+
+.chat-error {
+    padding: 8px 10px;
+    color: #ffe0e0;
+    background: #5a1f2c;
+    overflow-wrap: anywhere;
+}
+
+.chat-input-form button:disabled {
+    opacity: 0.6;
+    cursor: default;
+    transform: none;
+}

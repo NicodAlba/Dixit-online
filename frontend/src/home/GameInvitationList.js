@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from "react";
+import React, {useCallback, useRef, useState} from "react";
 import tokenService from "../services/token.service";
 import {Button, Table} from "reactstrap";
 import useFetchState from "../util/useFetchState";
@@ -13,7 +13,8 @@ export function GameInvitationList() {
 function AuthenticatedGameInvitationList({jwt}) {
     const [message, setMessage] = useState(null)
     const [visible, setVisible] = useState(false)
-    const [alerts, setAlerts] = useState([])
+    const [pending, setPending] = useState(false);
+    const pendingRef = useRef(false);
 
     const navigate = useNavigate()
 
@@ -26,7 +27,7 @@ function AuthenticatedGameInvitationList({jwt}) {
         return true;
     }, [jwt]);
 
-    const [invitations, setInvitations] = useFetchState(
+    const [invitations] = useFetchState(
         [],
         "/api/v1/games/invitations",
         jwt,
@@ -36,51 +37,45 @@ function AuthenticatedGameInvitationList({jwt}) {
         expireSession
     )
 
-    function handleAccept(invitation) {
-        fetch(`/api/v1/games/invitations/${invitation.id}/accept`, {
-            method: "PATCH",
-            headers: {
-                Authorization: `Bearer ${jwt}`,
-                Accept: "application/json",
-                "Content-Type": "application/json",
-            }
-        })
-            .then(async (response) => {
-                const data = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    if (response.status === 409) {
-                        setMessage(data.message || "Unable to join this game.");
-                        setVisible(true);
-                    } else if (response.status === 401) {
-                        expireSession({status: 401}, "/login");
-                    } else if (response.status === 404) {
-                        setMessage("Game not found.");
-                        setVisible(true);
-                    } else if (response.status === 403) {
-                        setMessage(data.message || "You are not invited to this game.");
-                        setVisible(true);
-                    } else {
-                        setMessage(data.message || "Error joining the game.");
-                        setVisible(true);
-                    }
-                    throw new Error(data.message);
+    async function handleAccept(invitation) {
+        if (pendingRef.current) return;
+        pendingRef.current = true;
+        setPending(true);
+        setVisible(false);
+        try {
+            const response = await fetch(`/api/v1/games/invitations/${invitation.id}/accept`, {
+                method: "PATCH",
+                headers: {
+                    Authorization: `Bearer ${jwt}`,
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
                 }
-                navigate(`/games/${invitation.gameId}`);
-            })
-            .catch((error) => console.error("Join error:", error.message));
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                if (response.status === 401 && expireSession({status: 401}, "/login")) return;
+                const fallback = response.status === 404 ? "Game not found."
+                    : response.status === 403 ? "You are not invited to this game."
+                    : "Unable to join this game.";
+                throw new Error(data.message || fallback);
+            }
+            navigate(`/games/${invitation.gameId}`);
+        } catch (error) {
+            setMessage(error.message || "Unable to join this game.");
+            setVisible(true);
+        } finally {
+            pendingRef.current = false;
+            setPending(false);
+        }
     }
 
     const invitationList =
         invitations.map((i) => {
             return (
-                <tbody className="ls" style={{paddingTop:30}}>
-                <tr key={i.id} style={{flex:1, alignSelf:"center", gap:20, background:"transparent"}}>
+                <tr key={i.id}>
                     <td className="text-center">{i.inviter}: {i.gameId}</td>
+                    <td><Button color="primary" disabled={pending} onClick={() => handleAccept(i)}>Accept</Button></td>
                 </tr>
-                <Button color="primary" onClick={() => {
-                    handleAccept(i)
-                }}>Accept</Button>
-                </tbody>
             );
         });
 
