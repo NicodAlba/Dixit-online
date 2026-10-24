@@ -1,5 +1,5 @@
 import AppNavbar from "./AppNavbar";
-import { render, screen } from "./test-utils";
+import { fireEvent, render, screen } from "./test-utils";
 import tokenService from "./services/token.service";
 
 jest.mock("./services/token.service", () => ({
@@ -21,7 +21,7 @@ describe("AppNavbar", () => {
     test("renders the public documentation and home links", () => {
         render(<AppNavbar />);
         expectLink("Docs", "/docs");
-        expectLink("logo", "/");
+        expectLink("Dixit home", "/");
     });
 
     test("offers registration and login to visitors without private links", () => {
@@ -31,6 +31,17 @@ describe("AppNavbar", () => {
         expect(screen.queryByRole("link", { name: "Your profile" })).not.toBeInTheDocument();
         expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
         expect(screen.queryByRole("link", { name: "Logout" })).not.toBeInTheDocument();
+    });
+
+    test("the mobile menu exposes and toggles its expanded state", () => {
+        render(<AppNavbar />);
+        const toggle = screen.getByRole("button", {name: "Toggle navigation"});
+        expect(toggle).toHaveAttribute("aria-controls", "main-navigation");
+        expect(toggle).toHaveAttribute("aria-expanded", "false");
+        fireEvent.click(toggle);
+        expect(toggle).toHaveAttribute("aria-expanded", "true");
+        fireEvent.click(toggle);
+        expect(toggle).toHaveAttribute("aria-expanded", "false");
     });
 
     test("offers account and game links to a player", () => {

@@ -10,19 +10,17 @@ import useGameTurnState from "../hooks/useGameTurnState";
 import usePlayerNames from "../hooks/usePlayerNames";
 import TurnStatusPanel from "./componentsSpectate/TurnStatusPanel";
 import "../static/css/game/Game.css"
-import useFetchState from "../util/useFetchState";
+import GameLayout from "./components/GameLayout";
 import { Button } from "reactstrap";
 import { useNavigate } from "react-router-dom";
 
-const jwt = tokenService.getLocalAccessToken();
-
 export default function Spectate() {
+    const jwt = tokenService.getLocalAccessToken();
     const [message, setMessage] = useState(null)
     const [visible, setVisible] = useState(false)
     const gameId = getIdFromUrl(2);
     const playerId = getIdFromUrl(4);
-    const {game, turn, players, storyteller} = useGameTurnState({gameId, jwt, setMessage, setVisible, perspectivePlayerId: playerId});
-    console.log(playerId)
+    const {game, turn, players, storyteller, refresh, loading, connection} = useGameTurnState({gameId, jwt, setMessage, setVisible, perspectivePlayerId: playerId});
 
     const usernamesById = usePlayerNames(players, jwt);
     const navigate = useNavigate();
@@ -49,23 +47,29 @@ export default function Spectate() {
     };
     const spectatingPlayer = players.find((player) => player?.id === Number(playerId))
     const spectatingUser = spectatingPlayer?.user
-    console.log(spectatingPlayer)
-    console.log(players)
     const isStoryteller = storyteller?.id  === spectatingPlayer?.id;
 
     return (
-        <div className="game-page-container">
-            {visible && message && <div role="alert">{message}</div>}
-            {game.cancelled && <div role="alert">Game cancelled. The game history has been preserved.</div>}
-            {game.deleted && <div role="alert">This game has been deleted.</div>}
-            <Button  className= "leave-game" style={{position: "absolute", top: 10, left:30}} onClick={() => navigate("/")}>Leave game</Button>
-            <TurnStatusPanel game={game} turn={game.cancelled?{...turn,state:"CANCELLED"}:turn} currentPlayer={spectatingPlayer} getPlayerName={getPlayerName}/>
-            <RenderSpectatingPlayer currentPlayer={spectatingPlayer} spectatingUser={spectatingUser} isStoryteller={isStoryteller} getPlayerName={getPlayerName}/>
-            <RenderLeftPlayer currentPlayer={spectatingPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller}/>
-            <RenderRightPlayer currentPlayer={spectatingPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller}/>
-            <RenderTopPlayer currentPlayer={spectatingPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller}/>
-        </div>
-        
+        <GameLayout gameId={gameId} game={game} loading={loading} connection={connection}
+            storytellerName={getPlayerName(storyteller)} role={`Spectating ${getPlayerName(spectatingPlayer)}`}
+            message={visible ? message : null} onDismiss={() => setVisible(false)} onRetry={refresh}
+            toolbar={<>
+                <label className="perspective-picker">Perspective
+                    <select value={playerId} onChange={event => navigate(`/games/${gameId}/spectate/${event.target.value}`)}>
+                        {players.map(player => <option key={player.id} value={player.id}>{getPlayerName(player)}</option>)}
+                    </select>
+                </label>
+                <Button className="leave-game" onClick={() => navigate("/")}>Leave game</Button>
+            </>}
+            opponents={<>
+                <RenderLeftPlayer currentPlayer={spectatingPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller}/>
+                <RenderTopPlayer currentPlayer={spectatingPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller}/>
+                <RenderRightPlayer currentPlayer={spectatingPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller}/>
+            </>}
+            hand={<RenderSpectatingPlayer currentPlayer={spectatingPlayer} spectatingUser={spectatingUser} isStoryteller={isStoryteller} getPlayerName={getPlayerName}/>}
+        >
+            <TurnStatusPanel game={game} turn={game.cancelled ? {...turn,state:"CANCELLED"} : turn} currentPlayer={spectatingPlayer}
+                storyteller={storyteller} isStoryteller={isStoryteller} getPlayerName={getPlayerName}/>
+        </GameLayout>
     );
 }
-

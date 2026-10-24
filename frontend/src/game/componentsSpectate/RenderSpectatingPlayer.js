@@ -1,28 +1,19 @@
 import React from "react";
-import {Button, List, ListInlineItem} from "reactstrap";
-import fairy from "../../static/images/icons/Fairy.png"
-import "../../static/css/game/Game.css"
-export function RenderSpectatingPlayer({currentPlayer, spectatingUser, isStoryteller, getPlayerName}) {
 
-        const cardsList = (currentPlayer?.cards || []).map((c) => {
-            const image = `/Cards/${c.image?.id}.png`
-            return (
-                <ListInlineItem key={c.id}>
-                    <img className= "card" src = {image} alt="Card" style={{width:"50px"}}/>
-                </ListInlineItem>
-            );
-        });
-        return (
-            <div className="owned-cards-container">
-                <List>
-                    <ListInlineItem><h4>{getPlayerName(currentPlayer) || spectatingUser?.username || ""}</h4></ListInlineItem>
-                    {isStoryteller && 
-                    <ListInlineItem>
-                        <img src = {fairy} alt="st" style={{width:"30px"}}/>
-                    </ListInlineItem>}
-                    <h5>{currentPlayer?.points} pts</h5>
-                </List>
-                <List>{cardsList}</List>
+export function RenderSpectatingPlayer({currentPlayer, spectatingUser, isStoryteller, getPlayerName}) {
+    const cards = currentPlayer?.cards || [];
+    return (
+        <section className="owned-cards-container" aria-label="Observed hand">
+            <div className="hand-heading">
+                <div><strong>{getPlayerName(currentPlayer) || spectatingUser?.username || ""}</strong> · {currentPlayer?.points} pts</div>
+                <span>{cards.length} cards · {isStoryteller ? "Storyteller’s perspective" : "Spectator view"}</span>
             </div>
-        )
-    }
+            <ul className="game-card-list hand-cards">
+                {cards.map(card => <li key={card.id}><div className="card-button">
+                    <img className="card" src={`/Cards/${card.image?.id}.png`} alt="Card" />
+                </div></li>)}
+            </ul>
+            <p className="game-help">You are watching this player’s authorized perspective. Actions are available to participants only.</p>
+        </section>
+    );
+}

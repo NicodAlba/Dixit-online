@@ -1,218 +1,100 @@
 .game-page-container {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    --card-width: clamp(32px, 4.5vw, 46px);
-    --card-height: calc(var(--card-width) * 1.45);
-    --opponent-card-width: clamp(24px, 3vw, 34px);
-    --opponent-card-height: calc(var(--opponent-card-width) * 1.45);
-
-    background-image: url('../../images/GameBackground.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-
-    overflow: hidden;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 11px;
-    color: #e0e0e0;
+    --card-width: clamp(78px, 6.8vw, 110px);
+    --table-card-width: clamp(96px, 8vw, 128px);
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 16px 22px;
+    background: linear-gradient(#080d1d60, #080d1d88), url('../../images/GameBackground.png') center / cover fixed;
+    font: 16px/1.45 'Segoe UI', Tahoma, sans-serif;
+    color: #f3f0e8;
+    overflow-wrap: anywhere;
 }
+.game-header {display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; max-width: 1500px; margin: 0 auto 14px;}
+.game-header h1 {font-size: 1.35rem; margin: 2px 0;}
+.game-header p {font-size: .875rem; margin: 0; color: #e7dfd0;}
+.game-overline {font-size: .8rem; color: #ffdc76; font-weight: 600;}
+.game-toolbar {display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; max-width: 380px;}
+.game-toolbar .game-help {flex-basis: 100%; text-align: right; margin: 0;}
+.game-layout {display: grid; gap: 16px; max-width: 1500px; margin: auto;}
+.game-layout.with-chat {grid-template-columns: minmax(0, 1fr) 260px;}
+.game-board {display: grid; gap: 12px; min-width: 0; align-content: start;}
+.game-opponents {display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;}
+.player-panel, .owned-cards-container, .game-turn-panel {
+    background: rgba(18, 23, 37, .93);
+    border: 1px solid #786b4b70;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px #0005;
+    min-width: 0;
+}
+.player-panel {display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 14px;}
+.opponent-name, .opponent-points, .opponent-role {display: block;}
+.opponent-name {font-size: .95rem;}
+.opponent-points {font-size: .8rem; color: #e7dfd0;}
+.opponent-role {font-size: .8rem; color: #ffe599;}
+.opponent-backs {display: flex; flex-shrink: 0; padding-left: 9px;}
+.game-page-container .opponent-backs img.card {width: 20px; height: 30px; margin-left: -9px; border-radius: 3px; border: 1px solid #8a8272;}
+.game-turn-panel {padding: 14px; text-align: center;}
+.game-turn-panel h2 {font-size: 1.3rem; margin: 2px 0 8px;}
+.clue {font-weight: 600; color: #ffe599; margin: 0 0 5px; white-space: pre-wrap;}
+.game-help {font-size: .82rem; color: #e7dfd0; margin: 8px 0 0;}
+.game-turn-panel > .game-help {margin: 6px 0 10px;}
+.game-card-list {display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; list-style: none; padding: 0; margin: 0;}
+.game-card-list > li {margin: 0 !important; max-width: 100%;}
+.card-button {display: inline-flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px; border: 1px solid #c4ac7080; border-radius: 9px; background: #272b37; color: #f3f0e8; font: inherit; max-width: 100%;}
+.game-page-container .card-button img.card {width: var(--card-width); height: auto; aspect-ratio: 100 / 145; object-fit: cover; border-radius: 5px;}
+.game-page-container .table-cards img.card {width: var(--table-card-width);}
+.card-button > span {font-size: .75rem; max-width: var(--table-card-width);}
+.card-clickable {cursor: pointer; transition: transform .15s ease;}
+.card-clickable:hover {transform: translateY(-3px); outline: 2px solid #ffdf83;}
+.card-button:disabled {cursor: default; opacity: 1;}
+.card-own {border: 2px solid #e3bf69;}
+.card-answer {outline: 2px solid #e3bf69;}
+.card-result {display: flex; flex-direction: column; font-size: .85rem; margin-top: 6px;}
+.owned-cards-container {position: relative; padding: 12px 14px; text-align: center;}
+.hand-heading {display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; text-align: left; font-size: .9rem;}
+.hand-heading strong {color: #ffe599;}
+.hand-heading > span {color: #e7dfd0; font-size: .85rem;}
+.storyteller-icon {width: 26px; height: 26px; margin-bottom: 6px;}
+.clue-form {max-width: 550px; margin: 14px auto; text-align: left;}
+.clue-form-row {display: flex; gap: 10px;}
+.clue-form input {min-width: 0; font-size: 16px;}
+.clue-form button {flex-shrink: 0;}
+.game-notice {display: flex; align-items: center; flex-wrap: wrap; gap: 10px; max-width: 1500px; margin: 0 auto 12px; padding: 10px 14px; background: #4e3721; border: 1px solid #c59a56; border-radius: 8px; font-size: .9rem;}
+.game-error {background: #5a1f2c; color: #ffe0e0; border-color: #b77785;}
+.game-notice button {background: #272b37; color: white; border: 1px solid #b5ad9e; border-radius: 6px; padding: 5px 10px;}
+.game-action-status {color: #ffe599; margin: 0 0 10px;}
+.game-toolbar .leave-game {background: #632d36; border: 1px solid #ac6b72; color: #ffe9e4; padding: 9px 15px;}
+.game-toolbar .leave-game:hover {background: #773944;}
+.perspective-picker {display: grid; gap: 4px; font-size: .8rem;}
+.perspective-picker select {background: #272b37; color: white; border: 1px solid #b5ad9e; border-radius: 6px; padding: 7px; font-size: 16px; max-width: 220px;}
+.game-page-container :is(button, input, select, summary):focus-visible {outline: 3px solid #ffe99b; outline-offset: 3px;}
+@media (max-width: 1100px) {.opponent-backs {display: none;}}
+@media (max-width: 900px) {
+    .game-layout.with-chat {grid-template-columns: minmax(0, 1fr);}
+    .game-page-container {padding: 12px; --card-width: 92px; --table-card-width: 112px;}
+}
+@media (max-width: 560px) {
+    .game-page-container {padding: 12px 10px;}
+    .game-header {gap: 10px;}
+    .game-header h1 {font-size: 1.15rem;}
+    .game-toolbar {max-width: 155px;}
+    .game-toolbar .leave-game {padding: 8px 10px; font-size: .85rem;}
+    .game-opponents {grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)); gap: 6px;}
+    .player-panel {padding: 8px; display: block;}
+    .opponent-name {font-size: .85rem;}
+    .opponent-points, .opponent-role {font-size: .75rem;}
+    .game-turn-panel {padding: 12px 8px;}
+    .game-turn-panel h2 {font-size: 1.15rem;}
+    .hand-heading {display: block;}
+    .hand-heading > span {display: block; margin-top: 3px;}
+    .hand-cards {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;}
+    .hand-cards .card-button {width: 100%;}
+    .game-page-container .hand-cards img.card {width: 100%; max-width: 110px;}
+    .clue-form-row {flex-direction: column;}
+    .perspective-picker select {max-width: 150px;}
+}
+@media (prefers-reduced-motion: reduce) {.card-clickable {transition: none;}.card-clickable:hover {transform: none;}}
 
-/* Base Glass Style */
-.owned-cards-container,
-.right-player-container,
-.left-player-container,
-.top-player-container,
-.center-container {
-    background-color: rgba(20, 20, 30, 0.75);
-    /* Dark blue-black tint */
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    /* Safari support */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-    border-radius: 8px;
-    padding: 0.5rem 0.6rem;
-    transition: all 0.3s ease;
-}
-
-.owned-cards-container {
-    position: absolute;
-    display: flex;
-    bottom: 20px;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-}
-
-.right-player-container {
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.left-player-container {
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.center-container {
-    position: absolute;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 2rem;
-    min-width: 300px;
-    min-height: 200px;
-}
-
-.player-panel {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 0.2rem;
-    padding: 0.25rem;
-}
-
-.opponent-info {
-    text-align: center;
-    font-weight: 600;
-    color: #ffd700;
-    /* Gold for names */
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    margin-bottom: 4px;
-}
-
-.opponent-name {
-    display: block;
-    font-size: 1em;
-    letter-spacing: 0.5px;
-}
-
-.opponent-points {
-    font-size: 0.8em;
-    color: #ccc;
-    font-weight: 400;
-}
-
-.opponent-card-column {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.28rem;
-    padding: 0.2rem;
-}
-
-.opponent-card-slot {
-    display: flex;
-    justify-content: center;
-    background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 8px;
-    padding: 3px;
-    border: 1px dashed rgba(255, 255, 255, 0.2);
-    rotate: 90deg;
-}
-.top-card-slot {
-    display: flex;
-    justify-content: center;
-    background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 8px;
-    padding: 3px;
-    border: 1px dashed rgba(255, 255, 255, 0.2);
-    rotate: 180deg;
-}
-
-.opponent-card-slot img.card,
-.top-player-cards img.card {
-    width: var(--opponent-card-width);
-    height: var(--opponent-card-height);
-}
-
-.top-player-container {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.top-player-cards {
-    display: flex;
-    gap: 0.28rem;
-}
-
-/* Clue style */
-.clue {
-    display: inline-block;
-    margin: 0.25rem auto;
-    padding: 0.4rem 0.8rem;
-    text-align: center;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    font-weight: 700;
-    color: #f5f5f5;
-    letter-spacing: 0.5px;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    background: rgba(0, 0, 0, 0.35);
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-}
-
-.card{
-    width: 50px;
-}
-
-.card-button {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    padding: 6px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.25));
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
-    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
-}
-
-.card-button .card {
-    pointer-events: none;
-}
-
-.card-clickable {
-    cursor: pointer;
-}
-
-.card-clickable:hover {
-    transform: translateY(-4px) scale(1.04);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
-    filter: brightness(1.05);
-}
-
-.card-disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-    filter: grayscale(80%);
-    box-shadow: none;
-}
-
-.card-own {
-    filter: grayscale(90%) brightness(0.7);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-}
-
-.hand-locked {
-    opacity: 0.9;
-    filter: grayscale(40%);
-}
-
-.leave-game{
-    background-color: rgba(255, 0, 0, 0.3) !important;
-}
+.game-page-container * {font-family: inherit;}
+.game-toolbar .leave-game, .clue-form button {min-height: 44px;}
