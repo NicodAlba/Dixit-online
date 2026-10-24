@@ -1,27 +1,64 @@
 import AppNavbar from "./AppNavbar";
 import { render, screen } from "./test-utils";
+import tokenService from "./services/token.service";
 
-describe('AppNavbar', () => {
+jest.mock("./services/token.service", () => ({
+    getLocalAccessToken: jest.fn(),
+}));
 
-    test('renders public links correctly', () => {
+function signInAs(role) {
+    const payload = btoa(JSON.stringify({ authorities: [role], sub: "dixit-player", id: 42 }));
+    tokenService.getLocalAccessToken.mockReturnValue(`header.${payload}.signature`);
+}
+
+function expectLink(name, href) {
+    expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+}
+
+describe("AppNavbar", () => {
+    beforeEach(() => tokenService.getLocalAccessToken.mockReturnValue(null));
+
+    test("renders the public documentation and home links", () => {
         render(<AppNavbar />);
-        const linkDocsElement = screen.getByRole('link', { name: 'Docs' });
-        expect(linkDocsElement).toBeInTheDocument();
-
-        const linkPlansElement = screen.getByRole('link', { name: 'Pricing Plans' });
-        expect(linkPlansElement).toBeInTheDocument();
-
-        const linkHomeElement = screen.getByRole('link', { name: 'logo PetClinic' });
-        expect(linkHomeElement).toBeInTheDocument();
+        expectLink("Docs", "/docs");
+        expectLink("logo", "/");
     });
 
-    test('renders not user links correctly', () => {
+    test("offers registration and login to visitors without private links", () => {
         render(<AppNavbar />);
-        const linkDocsElement = screen.getByRole('link', { name: 'Register' });
-        expect(linkDocsElement).toBeInTheDocument();
-
-        const linkPlansElement = screen.getByRole('link', { name: 'Login' });
-        expect(linkPlansElement).toBeInTheDocument();
+        expectLink("Register", "/register");
+        expectLink("Login", "/login");
+        expect(screen.queryByRole("link", { name: "Your profile" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Logout" })).not.toBeInTheDocument();
     });
 
+    test("offers account and game links to a player", () => {
+        signInAs("PLAYER");
+        render(<AppNavbar />);
+        expectLink("Docs", "/docs");
+        expectLink("Your profile", "/users/42");
+        expectLink("Achievements", "/users/42/achievements");
+        expectLink("Statistics", "/stats");
+        expectLink("Friends", "/friends");
+        expectLink("Logout", "/logout");
+        expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "History" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Login" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Register" })).not.toBeInTheDocument();
+    });
+
+    test("offers administration links to an administrator", () => {
+        signInAs("ADMIN");
+        render(<AppNavbar />);
+        expectLink("Users", "/users");
+        expectLink("History", "/games/History");
+        expectLink("Your profile", "/users/42");
+        expectLink("Docs", "/docs");
+        expectLink("Logout", "/logout");
+        expect(screen.queryByRole("link", { name: "Friends" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Achievements" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Statistics" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Register" })).not.toBeInTheDocument();
+    });
 });
