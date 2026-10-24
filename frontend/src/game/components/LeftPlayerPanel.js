@@ -1,42 +1,9 @@
-import { List, ListInlineItem } from "reactstrap";
-import fairy from "../../static/images/icons/Fairy.png"
-import "../../static/css/game/Game.css"
+import React from "react";
+import OpponentPanel from "./OpponentPanel";
 
 export default function LeftPlayerPanel({currentPlayer, players, getPlayerName, storyteller, getPlayerHandCards}) {
-        if (!currentPlayer?.id || players.length < 2) {
-            return null;
-        }
-        const fullGame = players.length === 4
-        const playerToPut = fullGame?3:2
-        const indexPlayer = players.findIndex((player) => player.id === currentPlayer.id)
-        if (indexPlayer === -1) {
-            return null;
-        }
-        const firstPlayer = indexPlayer === 0
-        const previousPlayer = players[firstPlayer?playerToPut:indexPlayer-1]
-        const previousPlayerCards = getPlayerHandCards ? getPlayerHandCards(previousPlayer) : Array.from({length: previousPlayer?.handSize || 0}, (_, index) => ({id: `back-${index}`}));
-        const cardsList = previousPlayerCards?.map((c) => {
-            const image = `/Cards/card_reversed.png`
-            return (
-                <div key={c.id} className="opponent-card-slot">
-                    <img className="card" src={image} alt="Card" />
-                </div>
-            );
-        });
-        const isStoryteller = previousPlayer?.id === storyteller?.id
-        return (
-            <div className="left-player-container player-panel">
-                <List className="opponent-info">
-                    <ListInlineItem className="opponent-name">{getPlayerName(previousPlayer)}</ListInlineItem>
-                    {isStoryteller && 
-                    <ListInlineItem>
-                        <img src = {fairy} alt="st" style={{width:"30px"}}/>
-                    </ListInlineItem>}
-                    <h3 className="opponent-points">{previousPlayer?.points} pts</h3>
-                </List>
-                <div className="opponent-card-column">
-                    {cardsList}
-                </div>
-            </div>
-        )
-    }
+    const index = players.findIndex(player => player.id === currentPlayer?.id);
+    if (index < 0 || players.length < 2) return null;
+    const player = players[(index - 1 + players.length) % players.length];
+    return <OpponentPanel position="left" player={player} storyteller={storyteller} getPlayerName={getPlayerName} cards={getPlayerHandCards?.(player)} />;
+}

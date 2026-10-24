@@ -1,11 +1,14 @@
-import { render, screen, testRenderList } from "../../test-utils";
+import { render, screen, waitFor } from "../../test-utils";
 import userEvent from "@testing-library/user-event";
 import UserListAdmin from "./UserListAdmin";
 
 describe('UserListAdmin', () => {
     test('renders correctly', async () => {
         render(<UserListAdmin />);
-        testRenderList('users');
+        expect(screen.getByRole('heading', { name: 'Users' })).toBeInTheDocument();
+        expect(screen.getByRole('table', { name: 'users' })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'add-user' })).toHaveAttribute('href', '/users/new');
+        expect(screen.getAllByRole('row')).toHaveLength(1);
     });
 
     test('renders users correctly', async () => {
@@ -28,15 +31,17 @@ describe('UserListAdmin', () => {
 
     test('delete user correct', async () => {
         const user = userEvent.setup();
-        const jsdomConfirm = window.confirm;
-        window.confirm = () => { return true };
-        render(<UserListAdmin />);
-
-        const user1Delete = await screen.findByRole('button', { 'name': 'delete-1' });
-        await user.click(user1Delete);
-        const alert = await screen.findByRole('alert');
-        expect(alert).toBeInTheDocument();
-
-        window.confirm = jsdomConfirm;
+        const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+        try {
+            render(<UserListAdmin />);
+            const user1Delete = await screen.findByRole('button', { 'name': 'delete-1' });
+            await user.click(user1Delete);
+            expect(confirm).toHaveBeenCalledTimes(1);
+            expect(await screen.findByRole('alert')).toBeInTheDocument();
+            await waitFor(() => expect(screen.queryByRole('cell', { name: 'admin1' })).not.toBeInTheDocument());
+            expect(screen.getByRole('cell', { name: 'owner1' })).toBeInTheDocument();
+        } finally {
+            confirm.mockRestore();
+        }
     });
 });

@@ -1,9 +1,10 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import "../static/css/lobby/Lobby.css";
 import {useNavigate, useParams} from 'react-router-dom';
 import tokenService from "../services/token.service";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
+import {Modal, ModalBody, ModalFooter, ModalHeader} from "reactstrap";
 import {InviteFriendList} from "./InviteFriendList";
 
 export default function Lobby() {
@@ -12,6 +13,11 @@ export default function Lobby() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showLeaveModal, setShowLeaveModal] = useState(false);
+    const [pending, setPending] = useState(false);
+    const pendingRef = useRef(false);
+    const [actionError, setActionError] = useState(null);
+    const [connection, setConnection] = useState("connecting");
+    const reloadRef = useRef(() => {});
 
     const jwt = tokenService.getLocalAccessToken();
 
@@ -21,6 +27,9 @@ export default function Lobby() {
     useEffect(() => {
         let cancelled = false;
         let revision = 0;
+        setLoading(true);
+        setError(null);
+        setConnection("connecting");
         if (!gameId) {
             setError("No se encontró el ID de la partida en la URL.");
             setLoading(false);
@@ -46,6 +55,7 @@ export default function Lobby() {
                 const data = await response.json();
                 if (cancelled || requestRevision !== revision) return;
                 setGameData(data);
+                setError(null);
 
                 if(data.startDate) {
                     // We change to the lobby if the game started
@@ -60,6 +70,7 @@ export default function Lobby() {
                 if (!cancelled && requestRevision === revision) setLoading(false);
             }
         }
+        reloadRef.current = fetchGame;
         fetchGame();
 
         const stompClient = new Client({
@@ -68,6 +79,7 @@ export default function Lobby() {
             reconnectDelay: 5000,
             onConnect: () => {
                 if (cancelled) return;
+                setConnection("connected");
                 stompClient.subscribe(`/topic/game/${gameId}`, (message) => {
                     if (cancelled) return;
                     try {
@@ -86,8 +98,9 @@ export default function Lobby() {
                 // Recover changes made between the initial GET and subscription.
                 fetchGame();
             },
-            onStompError: (frame) => {
-                console.error('Error en WebSocket:', frame.headers['message']);
+            onWebSocketClose: () => {if (!cancelled) setConnection("reconnecting");},
+            onStompError: () => {
+                if (!cancelled) {setConnection("error"); setActionError("Unable to connect to this lobby. Check your session.");}
             }
         });
 
@@ -102,9 +115,14 @@ export default function Lobby() {
     }, [gameId, jwt, navigate]);
 
     const maxPlayers = 4;
-    if (loading) return <div>Cargando partida...</div>;
-    if (error) return <div>Error: {error}</div>;
-    if (!gameData) return <div>No se encontraron datos de la partida.</div>;
+    if (loading || !gameData || error) return <main className="lobby-page-container">
+        <div className="lobby-lobby-card">
+            <h1>Lobby</h1>
+            {loading ? <p role="status">Loading game…</p> : <p role="alert">{error || "Game not found."}</p>}
+            <button className="lobby-btn leave" onClick={() => navigate("/")}>Back home</button>
+            {!loading && <button className="lobby-btn start enough" onClick={() => reloadRef.current()}>Retry</button>}
+        </div>
+    </main>;
 
     const players = gameData.players || [];
     const playerCount = players.length;
@@ -114,12 +132,13 @@ export default function Lobby() {
     const currentUsername = user?.username ?? null;
     const isLeader = gameData.leader?.username === currentUsername;
 
-    console.log(gameData)
     const handleLeave = () => {
         setShowLeaveModal(true);
     };
 
     const confirmLeave = async () => {
+        if (pendingRef.current) return;
+        pendingRef.current = true; setPending(true); setActionError(null);
         try {
             const response = await fetch(
                 `/api/v1/games/${gameId}/leave`,
@@ -138,10 +157,9 @@ export default function Lobby() {
             }
             navigate("/");
         } catch (error) {
-            console.error("Error al salir de la partida:", error);
-            alert(`No se pudo salir de la partida: ${error.message}`);
+            setActionError(error.message || "Unable to leave this lobby.");
             setShowLeaveModal(false);
-        }
+        } finally {pendingRef.current = false; setPending(false);}
     };
 
     const cancelLeave = () => {
@@ -149,7 +167,8 @@ export default function Lobby() {
     };
 
     const handleStart = async () => {
-        if (!enoughPlayers) return
+        if (!enoughPlayers || pendingRef.current) return
+        pendingRef.current = true; setPending(true); setActionError(null);
 
         try{
             const response = await fetch(
@@ -171,36 +190,28 @@ export default function Lobby() {
             setGameData(updatedGameData);
             navigate(`/games/${gameId}/game`);
         } catch (error){
-            console.error("Error al iniciar la partida:", error);
-            alert(`No se pudo iniciar la partida: ${error.message}`);
-        }
+            setActionError(error.message || "Unable to start this game.");
+        } finally {pendingRef.current = false; setPending(false);}
     };
 
     return (
         <div className="lobby-page-container">
-            {showLeaveModal && (
-                <div className="modal-overlay">
-                    <div className="modal-box">
-                        <h3 className="modal-text">Are you sure you are leaving the game?</h3>
-
-                        {isLeader && (
-                            <p className="modal-warning">
-                                You are the leader, if you leave the lobby, it will be deleted.
-                            </p>
-                        )}
-
-                        <div className="modal-buttons">
-                            <button className="btn-cancel" onClick={cancelLeave}>Cancel</button>
-                            <button className="btn-confirm" onClick={confirmLeave}>
-                                Yes, leave
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <Modal isOpen={showLeaveModal} toggle={pending ? undefined : cancelLeave} labelledBy="leave-lobby-title" returnFocusAfterClose>
+                <ModalHeader id="leave-lobby-title">Leave this lobby?</ModalHeader>
+                <ModalBody>
+                    {isLeader ? "You are the host. Leaving deletes this lobby for everyone." : "You can return while there is space in the lobby."}
+                </ModalBody>
+                <ModalFooter>
+                    <button className="btn-cancel" onClick={cancelLeave} disabled={pending}>Cancel</button>
+                    <button className="btn-confirm" onClick={confirmLeave} disabled={pending}>{pending ? "Leaving…" : "Yes, leave"}</button>
+                </ModalFooter>
+            </Modal>
 
             <div className="lobby-lobby-card">
-                <h2 className="lobby-lobby-title">Lobby</h2>
+                <h1 className="lobby-lobby-title">Lobby</h1>
+                {connection !== "connected" && <p className="lobby-status" role="status">{connection === "reconnecting" ? "Reconnecting… The lobby will refresh automatically." : connection === "error" ? "Connection unavailable." : "Connecting…"}</p>}
+                {actionError && <p className="lobby-error" role="alert">{actionError}</p>}
+                {pending && <p role="status">Please wait…</p>}
 
                 <div className="lobby-info-id">ID: <span>{gameData.id}</span></div>
                 <div
@@ -212,30 +223,28 @@ export default function Lobby() {
                 </div>
 
                 <ul className="lobby-player-list">
-                    <li key={0} className="lobby-player-item">
-                        {gameData.leader?.username || "Jugador desconocido"}
-                        <span className="leader-indicator">(L)</span>
-                    </li>
-                    {players.slice(1).map((p, index) => (
-                        <li key={index + 1} className="lobby-player-item">
-                            {p.user?.username || "Jugador desconocido"}
+                    {players.map((player, index) => (
+                        <li key={player.id ?? index} className="lobby-player-item">
+                            {player.user?.username || "Unknown player"}
+                            {player.user?.username === gameData.leader?.username && <span className="leader-indicator">Host</span>}
                         </li>
                     ))}
-                    {Array.from({ length: maxPlayers - playerCount }).map((_, i) => (
+                    {Array.from({ length: Math.max(0, maxPlayers - playerCount) }).map((_, i) => (
                         <li key={`empty-${i}`} className="lobby-player-empty">
                             Waiting for player...
                         </li>
                     ))}
                 </ul>
 
+                <p className="lobby-help">{enoughPlayers ? isLeader ? "Ready to start. Everyone will enter the game together." : "Ready. Waiting for the host to start." : "At least three players are needed to start."}</p>
                 <div className="lobby-button-container" style={{ justifyContent: isLeader ? "space-between" : "center" }}>
-                    <button className="lobby-btn leave" onClick={handleLeave}>
+                    <button className="lobby-btn leave" disabled={pending} onClick={handleLeave}>
                         Leave
                     </button>
                     {isLeader && (
                         <button
                             className={`lobby-btn start ${enoughPlayers ? "enough" : "not-enough"}`}
-                            disabled={!enoughPlayers}
+                            disabled={!enoughPlayers || pending}
                             onClick={handleStart}
                         >
                             Start
@@ -243,7 +252,7 @@ export default function Lobby() {
                     )}
                 </div>
             </div>
-            <div>
+            <div className="lobby-friends">
                 <InviteFriendList game={gameData}/>
             </div>
         </div>

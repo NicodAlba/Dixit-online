@@ -27,5 +27,6 @@ test("a failed leave remains visible and does not navigate",async()=>{
 test("cancellation locks the hand without labelling it as a completed game or erasing cards",()=>{
  mockState={...mockState,game:{...mockState.game,endDate:"2026-10-23",cancelled:true}};
  global.fetch=jest.fn();render(<Game/>);expect(screen.getByRole("alert")).toHaveTextContent("Game cancelled");
+ expect(screen.getByText("This game is cancelled. Your hand and score are preserved.")).toBeInTheDocument();
  expect(screen.queryByText("GAME FINISHED")).not.toBeInTheDocument();fireEvent.click(screen.getByAltText("Card").parentElement);expect(global.fetch).not.toHaveBeenCalled();
 });

@@ -10,7 +10,7 @@ const next={...first,turns:[{id:31,state:'FINISHED'},{id:32,state:'WAITING_STORY
 let client,callbacks;
 function StateHarness({token='token',perspective=null}={}){
  const state=useGameTurnState({gameId:42,jwt:token,perspectivePlayerId:perspective,setMessage:showMessage,setVisible:showVisible});
- return <div data-testid="state">{JSON.stringify({game:state.game,turnId:state.turnId})}</div>;
+ return <div data-testid="state">{JSON.stringify({game:state.game,turnId:state.turnId,loading:state.loading,connection:state.connection})}</div>;
 }
 const reply=data=>({ok:true,json:async()=>data});
 const originalFetch=global.fetch;
@@ -37,7 +37,7 @@ test('shared payload cannot install a foreign hand; an invalidation reloads REST
 });
 test('reconnect reloads missed state without replaying actions',async()=>{
  render(React.createElement(StateHarness));await waitFor(()=>expect(current().turnId).toBe(31));
- await act(async()=>client.onConnect());client.onWebSocketClose();
+ await act(async()=>client.onConnect());act(()=>client.onWebSocketClose());
  global.fetch.mockResolvedValue(reply(next));
  await act(async()=>client.onConnect());await waitFor(()=>expect(current().turnId).toBe(32));
  expect(fetch.mock.calls.every(([,options])=>!options.method||options.method==='GET')).toBe(true);
@@ -65,4 +65,21 @@ test('real permission and network failures retain feedback',async()=>{
  global.fetch.mockResolvedValue({ok:false,status:403,json:async()=>({message:'Not a participant'})});
  render(React.createElement(StateHarness));await waitFor(()=>expect(showMessage).toHaveBeenCalledWith('Not a participant'));
  expect(showVisible).toHaveBeenCalledWith(true);
+});
+
+test('reconnecting remains visible until the recovered authorized view has loaded', async () => {
+ render(React.createElement(StateHarness));
+ await waitFor(()=>expect(current().loading).toBe(false));
+ await act(async()=>client.onConnect());
+ expect(current().connection).toBe('connected');
+ act(()=>{client.connected=false; client.onWebSocketClose();});
+ expect(current().connection).toBe('reconnecting');
+ let finish;
+ global.fetch.mockReturnValueOnce(new Promise(resolve=>{finish=resolve;}));
+ act(()=>{client.connected=true; client.onConnect();});
+ expect(current().connection).toBe('refreshing');
+ await act(async()=>finish(reply(next)));
+ expect(current().connection).toBe('connected');
+ expect(current().turnId).toBe(32);
+ expect(fetch.mock.calls.every(([,options])=>!options.method||options.method==='GET')).toBe(true);
 });
