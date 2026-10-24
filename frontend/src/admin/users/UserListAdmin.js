@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, ButtonGroup, Table } from "reactstrap";
-import { FaPenFancy, FaTrashAlt, FaChevronLeft, FaChevronRight, FaFeather } from "react-icons/fa";
+import { FaTrashAlt, FaChevronLeft, FaChevronRight, FaFeather } from "react-icons/fa";
 import tokenService from "../../services/token.service";
 import "../../static/css/admin/adminPage.css";
 import deleteFromList from "../../util/deleteFromList";
