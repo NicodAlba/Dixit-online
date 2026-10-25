@@ -104,3 +104,12 @@ test("switching authenticated sessions hides the previous account while new invi
     expect(await screen.findByText("new-host: 43")).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledTimes(2);
 });
+
+
+test("a lobby closure notice is integrated, dismissible and requires no visitor requests", async () => {
+    render(<MemoryRouter initialEntries={[{pathname: "/", state: {notice: "The host left the lobby."}}]}><Home /></MemoryRouter>);
+    expect(screen.getByRole("status")).toHaveTextContent("The host left the lobby.");
+    fireEvent.click(screen.getByRole("button", {name: "Dismiss notification"}));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+});

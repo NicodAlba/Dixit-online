@@ -4,7 +4,7 @@ import '../static/css/home/home.css'
 import logo from '../static/images/Logo dixit.webp'
 import tokenService from "../services/token.service"
 import jwt_decode from "jwt-decode";
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { Button, Form, Input, Label } from 'reactstrap';
 import { GameInvitationList } from "./GameInvitationList";
 
@@ -32,6 +32,13 @@ export default function Home() {
     const [game, setGame] = useState(emptyGame)
 
     const navigate = useNavigate()
+    const location = useLocation();
+    const [notice, setNotice] = useState(location.state?.notice || null);
+    useEffect(() => {
+        if (!location.state?.notice) return;
+        setNotice(location.state.notice);
+        navigate(location.pathname, {replace: true, state: {...location.state, notice: null}});
+    }, [location.pathname, location.state, navigate]);
 
     function handleSubmitCreate(event) {
         event.preventDefault()
@@ -188,6 +195,7 @@ export default function Home() {
     return (
         <div className="home-page-container">
             <div className="hero-div">
+                {notice && <div role="status" className="home-notice">{notice} <button onClick={() => setNotice(null)} aria-label="Dismiss notification">×</button></div>}
                 <img src={logo} alt="logo" />
                 {roles.includes("ADMIN") ? (
                     <h3>Welcome to the admin page</h3>

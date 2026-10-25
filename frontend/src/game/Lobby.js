@@ -18,6 +18,16 @@ export default function Lobby() {
     const [actionError, setActionError] = useState(null);
     const [connection, setConnection] = useState("connecting");
     const reloadRef = useRef(() => {});
+    const exitRef = useRef(() => {});
+    const closedRef = useRef(false);
+    const leavingAsHost = useRef(false);
+    const [showInitialConnection, setShowInitialConnection] = useState(false);
+
+    useEffect(() => {
+        if (connection !== "connecting") {setShowInitialConnection(false); return;}
+        const timer = setTimeout(() => setShowInitialConnection(true), 800);
+        return () => clearTimeout(timer);
+    }, [connection]);
 
     const jwt = tokenService.getLocalAccessToken();
 
@@ -27,33 +37,54 @@ export default function Lobby() {
     useEffect(() => {
         let cancelled = false;
         let revision = 0;
+        let foundLobby = false;
+        const requests = new Set();
+        closedRef.current = false;
+        leavingAsHost.current = false;
+        const abortRequests = () => {requests.forEach(request => request.abort()); requests.clear();};
+        exitRef.current = (notice) => {
+            if (closedRef.current || cancelled) return;
+            closedRef.current = true;
+            revision++;
+            abortRequests();
+            if (notice) navigate("/", {replace: true, state: {notice}});
+            else navigate("/");
+        };
         setLoading(true);
         setError(null);
         setConnection("connecting");
         if (!gameId) {
-            setError("No se encontró el ID de la partida en la URL.");
+            setError("No game ID was provided.");
             setLoading(false);
             return;
         }
         async function fetchGame() {
+            if (closedRef.current || cancelled) return;
             const requestRevision = ++revision;
+            const controller = new AbortController();
+            requests.add(controller);
             try {
                 const response = await fetch(
                     `/api/v1/games/${gameId}`,
                     {
                         method: "GET",
+                        signal: controller.signal,
                         headers: {
                             Authorization: `Bearer ${jwt}`,
                             Accept: "application/json",
                         },
                     }
                 );
+                if (cancelled || closedRef.current || requestRevision !== revision) return;
                 if (!response.ok) {
-                    throw new Error(`Error HTTP: ${response.status}`);
+                    if (response.status === 404) throw new Error(foundLobby ? "This lobby is no longer available." : "Lobby not found. Check the game ID.");
+                    if (response.status === 401 || response.status === 403) throw new Error("You cannot access this lobby. Check your session.");
+                    throw new Error("Unable to load this lobby. Please try again.");
                 }
 
                 const data = await response.json();
-                if (cancelled || requestRevision !== revision) return;
+                if (cancelled || closedRef.current || requestRevision !== revision) return;
+                foundLobby = true;
                 setGameData(data);
                 setError(null);
 
@@ -63,10 +94,10 @@ export default function Lobby() {
                     return;
                 }
             } catch (error) {
-                if (cancelled || requestRevision !== revision) return;
-                console.error("Error al obtener los datos de la partida:", error);
+                if (cancelled || closedRef.current || requestRevision !== revision) return;
                 setError(error.message);
             } finally {
+                requests.delete(controller);
                 if (!cancelled && requestRevision === revision) setLoading(false);
             }
         }
@@ -78,16 +109,14 @@ export default function Lobby() {
             connectHeaders: {Authorization: `Bearer ${jwt}`},
             reconnectDelay: 5000,
             onConnect: () => {
-                if (cancelled) return;
+                if (cancelled || closedRef.current) return;
                 setConnection("connected");
                 stompClient.subscribe(`/topic/game/${gameId}`, (message) => {
-                    if (cancelled) return;
+                    if (cancelled || closedRef.current) return;
                     try {
                         const event = JSON.parse(message.body);
                         if (event.type === "DELETED" && event.gameId === Number(gameId)) {
-                            revision++;
-                            alert("The leader deleted the game");
-                            navigate("/");
+                            exitRef.current(leavingAsHost.current ? null : "The host left the lobby.");
                         } else if (event.type === "GAME_UPDATED" && event.gameId === Number(gameId)) {
                             fetchGame();
                         }
@@ -109,6 +138,7 @@ export default function Lobby() {
         return () => {
             cancelled = true;
             revision++;
+            abortRequests();
             stompClient.deactivate();
         };
 
@@ -139,6 +169,7 @@ export default function Lobby() {
     const confirmLeave = async () => {
         if (pendingRef.current) return;
         pendingRef.current = true; setPending(true); setActionError(null);
+        leavingAsHost.current = isLeader;
         try {
             const response = await fetch(
                 `/api/v1/games/${gameId}/leave`,
@@ -155,8 +186,10 @@ export default function Lobby() {
                 const errorData = await response.json();
                 throw new Error(errorData.message || `Error HTTP: ${response.status}`);
             }
-            navigate("/");
+            exitRef.current();
         } catch (error) {
+            if (closedRef.current) return;
+            leavingAsHost.current = false;
             setActionError(error.message || "Unable to leave this lobby.");
             setShowLeaveModal(false);
         } finally {pendingRef.current = false; setPending(false);}
@@ -190,6 +223,7 @@ export default function Lobby() {
             setGameData(updatedGameData);
             navigate(`/games/${gameId}/game`);
         } catch (error){
+            if (closedRef.current) return;
             setActionError(error.message || "Unable to start this game.");
         } finally {pendingRef.current = false; setPending(false);}
     };
@@ -209,7 +243,7 @@ export default function Lobby() {
 
             <div className="lobby-lobby-card">
                 <h1 className="lobby-lobby-title">Lobby</h1>
-                {connection !== "connected" && <p className="lobby-status" role="status">{connection === "reconnecting" ? "Reconnecting… The lobby will refresh automatically." : connection === "error" ? "Connection unavailable." : "Connecting…"}</p>}
+                {connection !== "connected" && (connection !== "connecting" || showInitialConnection) && <p className="lobby-status" role="status">{connection === "reconnecting" ? "Reconnecting… The lobby will refresh automatically." : connection === "error" ? "Connection unavailable." : "Connecting…"}</p>}
                 {actionError && <p className="lobby-error" role="alert">{actionError}</p>}
                 {pending && <p role="status">Please wait…</p>}
 

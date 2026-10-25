@@ -2,7 +2,7 @@ import React from "react";
 import {fireEvent, render, screen} from "@testing-library/react";
 import Home from "./index";
 const mockNavigate = jest.fn();
-jest.mock("react-router-dom", () => ({useNavigate: () => mockNavigate}));
+jest.mock("react-router-dom", () => ({useNavigate: () => mockNavigate, useLocation: () => ({state: null})}));
 jest.mock("../services/token.service", () => ({getLocalAccessToken: () => "token"}));
 jest.mock("jwt-decode", () => () => ({authorities: ["PLAYER"]}));
 jest.mock("./GameInvitationList", () => ({GameInvitationList: () => null}));
