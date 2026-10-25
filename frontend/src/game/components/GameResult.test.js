@@ -33,6 +33,7 @@ test("cancellation is not a defeat or a completed game and preserves scores",()=
  const {container}=render(<GameResult game={{...completed,cancelled:true}} currentPlayer={players[2]}/>);
  expect(screen.getByRole("region",{name:"Cancelled game scores"})).toBeInTheDocument();
  expect(screen.getByText("Game cancelled")).toBeInTheDocument();
+ expect(screen.getByRole("heading",{name:"Until the next story"})).toBeInTheDocument();
  expect(screen.getByRole("table",{name:"Scores so far"})).toHaveTextContent("Fox16Owl10Bear9");
  expect(screen.queryByText("Winner: Fox")).not.toBeInTheDocument();expect(container.querySelector(".result-sparks")).toBeNull();
 });

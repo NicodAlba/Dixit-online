@@ -11,7 +11,7 @@ export default function GameResult({game,currentPlayer,readOnly=false}) {
     if(!game.endDate && !game.cancelled)return null;
     const winners=game.cancelled?[]:game.winners||[];
     const won=!readOnly && winners.some(player=>player.user?.id!=null && player.user.id===currentPlayer?.user?.id);
-    const title=game.cancelled?"This story is on pause":readOnly?"A story to remember":won?(winners.length>1?"A shared victory!":"Your imagination shines!"):"Every story leaves a spark";
+    const title=game.cancelled?"Until the next story":readOnly?"A story to remember":won?(winners.length>1?"A shared victory!":"Your imagination shines!"):"Every story leaves a spark";
     const Icon=game.cancelled?FiCompass:won?FiAward:readOnly?FiStar:FiHeart;
     const standings=[...(game.players||[])].sort((a,b)=>(b.points||0)-(a.points||0));
     return <section className={`game-result result-${game.cancelled?"cancelled":readOnly?"spectator":won?"winner":"player"}`} aria-label={game.cancelled?"Cancelled game scores":"Final results"}>
