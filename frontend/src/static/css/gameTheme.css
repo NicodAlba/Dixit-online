@@ -22,3 +22,10 @@
 
 .navbar :is(button, a):focus-visible {outline-color: #ffe89a;}
 .navbar .dixit-tooltip-text {left: auto; right: 0; transform: none;}
+.home-choice-dialog .modal-header {display: flex; align-items: center; justify-content: space-between; gap: 12px;}
+.home-choice-dialog .modal-header > .dixit-tooltip {margin-left: auto;}
+.home-choice-dialog .modal-header .dixit-tooltip-text {left: auto; right: 0; transform: none;}
+.home-choice-dialog .modal-body {display: block;}
+.dixit-modal-close {display: grid; place-items: center; width: 44px; min-height: 44px; border: 0; border-radius: 7px; background: transparent; color: #3c291c; font-size: 22px;}
+.dixit-modal-close:hover {background: #94622b20;}
+.dixit-modal-close:focus-visible {outline: 3px solid #925812; outline-offset: 3px;}

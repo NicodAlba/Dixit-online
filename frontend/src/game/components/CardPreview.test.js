@@ -26,3 +26,9 @@ test("public rival hand sizes never create inspection controls or actual illustr
  expect(screen.queryByRole("button",{name:/Inspect/})).not.toBeInTheDocument();
  screen.getAllByAltText("Card").forEach(image=>expect(image).toHaveAttribute("src","/Cards/card_reversed.png"));
 });
+
+test("image zero is a valid illustration and remains available for inspection",async()=>{
+ render(<OwnPlayerPanel currentPlayer={player} handCards={[{id:110,image:{id:0}}]} turn={{state:"SHOWING_CARDS"}} getPlayerName={p=>p.user.username} selectCard={jest.fn()}/>);
+ fireEvent.click(screen.getByRole("button",{name:"Inspect hand card 1"}));
+ expect(await screen.findByAltText("Enlarged illustration: hand card 1")).toHaveAttribute("src","/Cards/0.png");
+});

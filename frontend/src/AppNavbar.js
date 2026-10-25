@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Collapse, Nav, Navbar, NavbarBrand, NavbarText, NavbarToggler, NavItem, NavLink } from 'reactstrap';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import tokenService from './services/token.service';
 import jwt_decode from "jwt-decode";
 import {FiLogIn, FiUserPlus, FiAward, FiBarChart2} from "react-icons/fi";
@@ -12,6 +12,8 @@ function AppNavbar() {
     const [userId, setUserId] = useState("");
     const jwt = tokenService.getLocalAccessToken();
     const [collapsed, setCollapsed] = useState(true);
+    const {pathname} = useLocation();
+    useEffect(() => setCollapsed(true), [pathname]);
 
     const toggleNavbar = () => setCollapsed(!collapsed);
 
@@ -98,7 +100,7 @@ function AppNavbar() {
                     <img alt="logo" src={logo} style={{ height: 40, width: 40 }} />
                 </NavbarBrand>
                 <NavbarToggler onClick={toggleNavbar} className="ms-2" aria-controls="main-navigation" aria-expanded={!collapsed} />
-                <Collapse id="main-navigation" isOpen={!collapsed} navbar>
+                <Collapse id="main-navigation" isOpen={!collapsed} navbar onClick={event => {if (event.target.closest?.("a[href]")) setCollapsed(true);}}>
                     <Nav className="me-auto mb-2 mb-lg-0" navbar>
                         {userLinks}
                         {adminLinks}

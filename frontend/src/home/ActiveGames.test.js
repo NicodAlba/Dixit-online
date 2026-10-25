@@ -70,3 +70,14 @@ test("a pending return cannot navigate after its account has unmounted", async (
     expect(screen.getByRole("heading", {name:"Public home"})).toBeInTheDocument();
     expect(screen.queryByRole("heading", {name:"Wrong account game"})).not.toBeInTheDocument();
 });
+
+test("dismissing a pending choice restores focus and ignores its eventual navigation",async()=>{
+ let finish;global.fetch=jest.fn().mockResolvedValueOnce(reply([lobby,{...lobby,id:43}])).mockReturnValueOnce(new Promise(resolve=>{finish=resolve;}));
+ open();const trigger=await screen.findByRole("button",{name:"Return to game"});trigger.focus();fireEvent.click(trigger);
+ const dialog=await screen.findByRole("dialog",{name:"Choose a game"});
+ const choice=screen.getByRole("button",{name:/Game 42/});choice.focus();fireEvent.click(choice);
+ expect(screen.getByRole("button",{name:"Close",exact:true})).toHaveFocus();
+ fireEvent.keyUp(dialog,{key:"Escape",keyCode:27});await waitFor(()=>expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+ expect(trigger).toHaveFocus();await act(async()=>finish(reply(lobby)));
+ expect(screen.queryByRole("heading",{name:"Existing lobby"})).not.toBeInTheDocument();expect(trigger).toBeInTheDocument();
+});

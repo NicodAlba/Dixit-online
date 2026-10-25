@@ -2,6 +2,7 @@ import React, {useEffect, useRef, useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {Modal, ModalBody, ModalHeader} from "reactstrap";
 import {FiArrowRightCircle, FiRefreshCw} from "react-icons/fi";
+import ModalClose from "../components/ui/ModalClose";
 
 const active = game => !game.endDate && !game.cancelled;
 
@@ -13,6 +14,7 @@ export default function ActiveGames({jwt}) {
     const [choosing, setChoosing] = useState(false);
     const [pending, setPending] = useState(false);
     const pendingRef = useRef(false);
+    const choiceClose = useRef(null);
     const navigate = useNavigate();
     const epoch = useRef(0);
     const [reload, setReload] = useState(0);
@@ -31,8 +33,13 @@ export default function ActiveGames({jwt}) {
         return () => {ignore = true; epoch.current++;};
     }, [jwt, reload]);
 
+    function closeChoice() {
+        epoch.current++; pendingRef.current = false; setPending(false); setChoosing(false);
+    }
+
     async function returnTo(game) {
         if (pendingRef.current) return;
+        if (choosing) choiceClose.current?.focus();
         const requestEpoch = epoch.current;
         pendingRef.current = true; setPending(true); setError(null);
         try {
@@ -59,8 +66,8 @@ export default function ActiveGames({jwt}) {
         {games.length > 0 && <button className="home-primary" disabled={pending} onClick={() => games.length === 1 ? returnTo(games[0]) : setChoosing(true)}>
             <FiArrowRightCircle aria-hidden="true" /> {pending ? "Opening game…" : "Return to game"}
         </button>}
-        <Modal isOpen={choosing} toggle={() => setChoosing(false)} labelledBy="active-games-title" returnFocusAfterClose>
-            <ModalHeader id="active-games-title" toggle={() => setChoosing(false)}>Choose a game</ModalHeader>
+        <Modal isOpen={choosing} toggle={closeChoice} className="home-choice-dialog" labelledBy="active-games-title" returnFocusAfterClose>
+            <ModalHeader close={<ModalClose buttonRef={choiceClose} onClick={closeChoice} />}><span id="active-games-title">Choose a game</span></ModalHeader>
             <ModalBody>
                 {error && <p role="alert">{error}</p>}
                 <ul className="game-choice-list">{games.map(game => <li key={game.id}>

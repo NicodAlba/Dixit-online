@@ -11,6 +11,7 @@ import {FiPlay, FiPlusCircle, FiLogIn, FiUserPlus, FiKey, FiArrowLeft} from "rea
 import {GameInvitationList} from "./GameInvitationList";
 import Tooltip from "../components/ui/Tooltip";
 import ActiveGames from "./ActiveGames";
+import ModalClose from "../components/ui/ModalClose";
 
 export default function Home() {
     const jwt = tokenService.getLocalAccessToken();
@@ -75,8 +76,8 @@ export default function Home() {
             </>}
         </section>
         <GameInvitationList />
-        <Modal isOpen={showAuth} toggle={() => setShowAuth(false)} labelledBy="play-auth-title" returnFocusAfterClose>
-            <ModalHeader id="play-auth-title" toggle={() => setShowAuth(false)}>Join the story</ModalHeader>
+        <Modal isOpen={showAuth} toggle={() => setShowAuth(false)} className="home-choice-dialog" labelledBy="play-auth-title" returnFocusAfterClose>
+            <ModalHeader close={<ModalClose onClick={() => setShowAuth(false)} />}><span id="play-auth-title">Join the story</span></ModalHeader>
             <ModalBody><p>Log in or create an account to play.</p><div className="home-auth-choices">
                 <button className="home-primary" onClick={() => navigate("/login")}><FiLogIn aria-hidden="true" /> Log in</button>
                 <button className="home-primary" onClick={() => navigate("/register")}><FiUserPlus aria-hidden="true" /> Create account</button>
