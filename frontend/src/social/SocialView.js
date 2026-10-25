@@ -1,19 +1,11 @@
-import React from "react"
-import {FriendList} from "./FriendList";
-import {FriendRequestList} from "./FriendRequestList";
-import "../../src/static/css/social/social.css"
-import {SearchUser} from "./SearchUser";
+import React, {useEffect} from "react";
+import {useSocial} from "./SocialContext";
+import Home from "../home";
 
+// Keep old bookmarks while using the same integrated panel as navigation and the board.
 export default function SocialView() {
-    return (
-        <div>
-            <div className="center-container">
-                <div  style={{display: "flex", gap:20}}>
-                    <FriendList/>
-                    <FriendRequestList/>
-                    <SearchUser/>
-                </div>
-            </div>
-        </div>
-    )
+    const social = useSocial();
+    const open = social?.openPanel;
+    useEffect(() => {open?.();}, [open]);
+    return <Home />;
 }

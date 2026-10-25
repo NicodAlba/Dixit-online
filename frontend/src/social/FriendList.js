@@ -1,91 +1,42 @@
 import React, {useState} from "react";
-import tokenService from "../services/token.service";
-import {Button, Table} from "reactstrap";
-import useFetchState from "../util/useFetchState";
-import "../../src/static/css/social/social.css"
-import deleteFromList from "../util/deleteFromList";
-import {useNavigate} from 'react-router-dom';
+import {useNavigate} from "react-router-dom";
+import {FiEye, FiMail, FiUserMinus} from "react-icons/fi";
+import {useSocial} from "./SocialContext";
 
 export function FriendList() {
-    const jwt = tokenService.getLocalAccessToken()
-    const [message, setMessage] = useState(null)
-    const [visible, setVisible] = useState(false)
-    const [alerts, setAlerts] = useState([])
-
-    const [friends, setFriends] = useFetchState(
-        [],
-        "/api/v1/friends",
-        jwt,
-        setMessage,
-        setVisible
-        )
-    
+    const social = useSocial();
     const navigate = useNavigate();
-
-    const handleRemoveFriend = async (user) => {
-        deleteFromList(
-            `/api/v1/friends/${user.id}/remove`,
-            user.id,
-            [friends, setFriends],
-            [alerts, setAlerts],
-            setMessage,
-            setVisible
-        )
+    const [removing, setRemoving] = useState(null);
+    const [inviting, setInviting] = useState(null);
+    const [lobbies, setLobbies] = useState([]);
+    const [selected, setSelected] = useState("");
+    async function spectate(friend) {
+        const game = friend.spectatableGame;
+        const accepted = await social.perform(() => social.request(`/api/v1/games/${game.id}/spectate/${game.playerId}`, "PATCH"), "Spectator access confirmed.");
+        if (accepted) navigate(`/games/${game.id}/spectate/${game.playerId}`);
     }
-
-    const handleSpectate = async (lastGame, player) => {
-        try{
-            const response = await fetch(
-                `/api/v1/games/${lastGame.id}/spectate/${player.id}`,
-                {
-                    method: "PATCH",
-                    headers: {
-                        Authorization: `Bearer ${jwt}`,
-                        Accept: "application/json",
-                    },
-                }
-            );
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || `Error HTTP: ${response.status}`);
-            }
-
-            navigate(`/games/${lastGame.id}/spectate/${player.id}`);
-        } catch (error){
-            console.error("Error when trying to spectate", error);
-            alert(`You cannot spectate this match: ${error.message}`);
-        }
-    };
-
-    const friendList =
-        friends.map((u) => {
-            const gameToSpectate = u.spectatableGame;
-            const lastPlayer = gameToSpectate ? {id: gameToSpectate.playerId} : null;
-            return (
-                <tbody className="ls" style={{paddingTop:30}}>
-                    <tr key={u.id} style={{flex:1, alignSelf:"center", backgroundColor:"transparent"}}>
-                        <td className="text-center">{u.username}</td>
-                    </tr>
-                    {gameToSpectate && <Button color="warning" onClick={() => {
-                        handleSpectate(gameToSpectate, lastPlayer)
-                    }}>Spectate</Button>}
-                    <Button color="danger" onClick={() => {
-                        handleRemoveFriend(u)
-                    }}>Remove</Button>
-                </tbody>
-            );
-        });
-
-    return (
-        <div className="ls-container">
-            <h3 className="text-center">Friends</h3>
-            <div>
-                <Table aria-label="friends" className="text-center">
-                    <tbody>{friends.length >= 1 ? friendList : "You have no friends"}</tbody>
-                </Table>
+    async function chooseLobby(friend) {
+        const loaded = await social.perform(async () => {
+            const games = await social.request("/api/v1/games/my");
+            setLobbies(games.filter(game => !game.startDate && !game.endDate && !game.cancelled));
+            setSelected(""); setInviting(friend.id);
+        }, "Choose a lobby to invite your friend.");
+        return loaded;
+    }
+    return <section aria-label="Friends list"><h3>Your friends</h3>
+        {!social.friends.length && <p>No friends yet. Find someone to share a story with.</p>}
+        <ul className="social-list">{social.friends.map(friend => <li key={friend.id} className="social-person">
+            <strong>{friend.username}</strong>
+            <div className="social-person-actions">
+                {friend.spectatableGame && <button disabled={social.pending} onClick={() => spectate(friend)}><FiEye aria-hidden="true" /> Spectate</button>}
+                <button disabled={social.pending} onClick={() => chooseLobby(friend)}><FiMail aria-hidden="true" /> Invite to lobby</button>
+                <button disabled={social.pending} onClick={() => setRemoving(friend.id)}><FiUserMinus aria-hidden="true" /> Remove</button>
             </div>
-        </div>
-    );
-
+            {removing === friend.id && <div className="social-confirm"><p>Remove {friend.username} from your friends?</p><button disabled={social.pending} onClick={async () => {if (await social.removeFriend(friend.id)) setRemoving(null);}}>Remove friend</button><button onClick={() => setRemoving(null)}>Cancel</button></div>}
+            {inviting === friend.id && <form className="social-invite" onSubmit={async event => {event.preventDefault(); if (selected && await social.perform(() => social.request(`/api/v1/games/${selected}/invite`, "POST", {invited: friend.id}), "Invitation sent.")) setInviting(null);}}>
+                {lobbies.length ? <><label htmlFor={`invite-lobby-${friend.id}`}>Choose a lobby</label><select required id={`invite-lobby-${friend.id}`} value={selected} onChange={event => setSelected(event.target.value)}><option value="">Select a lobby</option>{lobbies.map(game => <option key={game.id} value={game.id}>Game {game.id}</option>)}</select><button disabled={!selected || social.pending}>Send invitation</button></> : <p>You have no open lobbies. Create or join a lobby first.</p>}
+                <button type="button" onClick={() => setInviting(null)}>Cancel</button>
+            </form>}
+        </li>)}</ul>
+    </section>;
 }

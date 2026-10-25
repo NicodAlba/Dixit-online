@@ -5,12 +5,12 @@ import useFetchState from "../util/useFetchState";
 import "../../src/static/css/social/social.css"
 import {useNavigate} from "react-router-dom";
 
-export function GameInvitationList() {
+export function GameInvitationList({emptyMessage, refreshToken}) {
     const jwt = tokenService.getLocalAccessToken();
-    return jwt ? <AuthenticatedGameInvitationList key={jwt} jwt={jwt} /> : null;
+    return jwt ? <AuthenticatedGameInvitationList key={jwt} jwt={jwt} emptyMessage={emptyMessage} refreshToken={refreshToken} /> : null;
 }
 
-function AuthenticatedGameInvitationList({jwt}) {
+function AuthenticatedGameInvitationList({jwt, emptyMessage, refreshToken}) {
     const [message, setMessage] = useState(null)
     const [visible, setVisible] = useState(false)
     const [pending, setPending] = useState(false);
@@ -27,13 +27,13 @@ function AuthenticatedGameInvitationList({jwt}) {
         return true;
     }, [jwt]);
 
-    const [invitations] = useFetchState(
+    const [invitations, , status] = useFetchState(
         [],
         "/api/v1/games/invitations",
         jwt,
         setMessage,
         setVisible,
-        null,
+        refreshToken ?? null,
         expireSession
     )
 
@@ -82,6 +82,8 @@ function AuthenticatedGameInvitationList({jwt}) {
     return (
         <div>
             {visible && message && <div role="alert">{message}</div>}
+            {emptyMessage && status?.loading && <p role="status">Loading invitations…</p>}
+            {emptyMessage && !status?.loading && !invitations.length && !visible && <p>{emptyMessage}</p>}
             { invitations.length > 0 &&
                 <div className="ls-container">
                     <h3 className="text-center">Invitations</h3>

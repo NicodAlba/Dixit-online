@@ -1,107 +1,37 @@
-import React, {useEffect, useState} from "react"
-import tokenService from "../services/token.service";
-import {Button, Input, Table} from "reactstrap";
-import "../../src/static/css/social/social.css"
-import getErrorModal from "../util/getErrorModal";
-
-const jwt = tokenService.getLocalAccessToken();
+import React, {useEffect, useRef, useState} from "react";
+import {useSocial} from "./SocialContext";
 
 export function SearchUser() {
-    const [message, setMessage] = useState(null);
-    const [visible, setVisible] = useState(false);
-    const [searchText, setSearchText] = useState("");
+    const social = useSocial();
+    const [text, setText] = useState("");
+    const [query, setQuery] = useState("");
     const [page, setPage] = useState(0);
-    const [users, setUsers] = useState([])
-
-    const fetchPlayers = async () => {
-        try{
-            const response = await fetch(
-                `api/v1/users/players?page=${page}&size=5&username=${searchText}`,
-                {
-                    method: "GET",
-                    headers: {
-                        Authorization: `Bearer ${jwt}`,
-                        Accept: "application/json",
-                        "Content-Type": "application/json",
-                    }
-                }
-            );
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || `Error HTTP: ${response.status}`);
-            }
-            const usersData = await response.json();
-            setUsers(usersData.content)
-        } catch (error){
-            console.error("Error when searching users:", error);
-            alert(`Users couldn't be found: ${error.message}`);
-        }
+    const [results, setResults] = useState(null);
+    const [pending, setPending] = useState(false);
+    const [error, setError] = useState(null);
+    const revision = useRef(0);
+    useEffect(() => () => {revision.current++;}, []);
+    async function search(event, requestedPage = 0, requestedQuery = text.trim()) {
+        event?.preventDefault();
+        if (!requestedQuery) return;
+        const current = ++revision.current;
+        setPending(true); setError(null);
+        try {
+            const data = await social.request(`/api/v1/users/players?page=${requestedPage}&size=5&username=${encodeURIComponent(requestedQuery)}`);
+            if (current !== revision.current) return;
+            setResults(data); setPage(requestedPage); setQuery(requestedQuery);
+        } catch (error) {if (current === revision.current) setError(error.message);}
+        finally {if (current === revision.current) setPending(false);}
     }
-
-    const handleSendRequest = async (user) => {
-        try{
-            const response = await fetch(
-                `api/v1/friends/addFriend/${user.id}`,
-                {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${jwt}`,
-                        Accept: "application/json",
-                        "Content-Type": "application/json",
-                    }
-                }
-            );
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || `Error HTTP: ${response.status}`);
-            } else {
-                alert("Request sent successfully!")
-                setUsers(users.filter((u) => u.id !== user.id))
-            }
-        } catch (error) {
-            console.error("Error when trying to send request:", error);
-            alert(`Request couldn't be sent: ${error.message}`);
-        }
-    }
-
-    const userList =
-        users.map((u) => {
-            return (
-                <div>
-                    <Table>
-                        <tbody className="ls">
-                        <tr key={u.id} style={{flex:1, alignSelf:"center", backgroundColor:"transparent"}}>
-                            <td className="text-center" style={{background:"transparent"}}>{u.username}</td>
-                        </tr>
-                        <Button size="sm" onClick={() => {
-                            handleSendRequest(u)
-                        }}>Send</Button>
-                        </tbody>
-                    </Table>
-                </div>
-            );
-    });
-
-    function handleChange(event) {
-        const target = event.target
-        const value = target.value
-        setSearchText(value || " ")
-    }
-
-    return (
-        <div className="ls-container">
-            <h3 className="text-center">Add friends</h3>
-            <div className="search-bar">
-                <Input name="searchText" id="searchText" placeholder="Search.." style={{height:32.5}}
-                       value={searchText}
-                       onChange={handleChange}/>
-                <Button className= "align-middle" style={{height:32.5}} color="warning" size="sm" onClick={fetchPlayers}>Done</Button>
-            </div>
-            <div>
-                {userList}
-            </div>
-        </div>
-    );
-
-
+    return <section><h3>Find a friend</h3>
+        <form className="social-search" onSubmit={search}><label htmlFor="friend-search">Player name</label><input id="friend-search" placeholder="Search players" value={text} onChange={event => setText(event.target.value)} /><button disabled={!text.trim() || pending}>{pending ? "Searching…" : "Search players"}</button></form>
+        {error && <p role="alert" className="social-error">{error}</p>}
+        {results && <><ul className="social-list">{results.content?.map(account => {
+            const relationship = social.relation(account.id);
+            return <li key={account.id} className="social-person"><strong>{account.username}</strong>
+                {account.id === social.selfId ? <span>You</span> : relationship?.status === "FRIEND" ? <span>Already friends</span> : relationship?.status === "OUTGOING" ? <span>Request sent</span> : relationship?.status === "INCOMING" ? <button disabled={social.pending} onClick={() => social.acceptRequest(relationship.requestId)}>Accept request</button> : <button disabled={social.pending || !social.loaded} onClick={() => social.sendRequest(account.id)}>Add friend</button>}
+            </li>;
+        })}</ul>{!results.content?.length && <p>No players found.</p>}
+        <div className="social-pagination"><button disabled={pending || page === 0} onClick={() => search(null, page - 1, query)}>Previous</button><span>Page {page + 1}</span><button disabled={pending || results.last !== false} onClick={() => search(null, page + 1, query)}>Next</button></div></>}
+    </section>;
 }

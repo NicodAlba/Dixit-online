@@ -3,8 +3,8 @@ import { Collapse, Nav, Navbar, NavbarBrand, NavbarText, NavbarToggler, NavItem,
 import { Link } from 'react-router-dom';
 import tokenService from './services/token.service';
 import jwt_decode from "jwt-decode";
-import {FiLogIn, FiUserPlus, FiUsers, FiAward, FiBarChart2} from "react-icons/fi";
-import Tooltip from "./components/ui/Tooltip";
+import {FiLogIn, FiUserPlus, FiAward, FiBarChart2} from "react-icons/fi";
+import SocialToggle from "./social/SocialToggle";
 import logo from "../src/static/images/dixit round.png"
 
 function AppNavbar() {
@@ -84,7 +84,7 @@ function AppNavbar() {
                 </NavItem>
                 {!roles.includes("ADMIN") && (
                     <NavItem>
-                        <Tooltip text="Friends"><NavLink style={{ color: "white" }} id="friends" tag={Link} to="/friends" aria-label="Friends"><FiUsers aria-hidden="true" size={22} /></NavLink></Tooltip>
+                        <SocialToggle />
                     </NavItem>
                 )}
             </>

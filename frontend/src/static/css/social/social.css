@@ -1,19 +1,3 @@
-.center-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 100%;
-    width: 100%;
-    justify-content: center;
-    align-items: center;
-    background-image: url("../../images/SocialBackground.png");
-    background-size: cover;        
-    background-position: center;
-    background-attachment: fixed; 
-}
-
 .ls-container{
     width: 330px;
     padding-top: 8px;
@@ -38,3 +22,46 @@
     padding-right:8px;
     align-items:center;
 }
+
+.social-toggle {position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: 1px solid #d5bd8b88; border-radius: 10px; background: #fff4dd12; color: #fff3dd; padding: 8px;}
+.social-toggle:hover {background: #fff4dd2b; box-shadow: 0 3px 10px #211b1855;}
+.social-dot {position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border-radius: 50%; background: #ffd477; border: 1px solid #392919;}
+.social-shell .social-drawer {position: absolute; right: 18px; top: 78px; width: min(440px, calc(100% - 36px)); margin: 0; max-width: none; height: calc(100svh - 96px);}
+.social-drawer .modal-content {height: 100%; max-height: 100%; background: linear-gradient(#fff6e9f5, #fff1dbf5), url('../../images/SocialBackground.png') center / cover; color: #37261b;}
+.social-drawer .modal-body {display: block; overflow-y: auto; overscroll-behavior: contain; padding: 16px;}
+.social-drawer .modal-header {flex: none; border-bottom-color: #c6a577;}
+.social-drawer h3 {font-size: 1.1rem; margin: 18px 0 12px;}
+.social-drawer p {font-size: .9rem;}
+.social-drawer button, .social-drawer select {font: inherit; min-height: 44px; border: 1px solid #ae8b5d; border-radius: 8px; color: #3b291c; background: #fff7e8; padding: 8px 10px; transition: background-color .15s, box-shadow .15s;}
+.social-drawer button:hover {background: #f5dca8; box-shadow: 0 3px 8px #51361b22;}
+.social-drawer :is(button, input, select):focus-visible, .social-toggle:focus-visible {outline: 3px solid #b77813; outline-offset: 3px;}
+.social-drawer button:disabled {opacity: .6; cursor: wait;}
+.social-sections {display: grid; grid-template-columns: 1fr 1fr; gap: 6px;}
+.social-sections button {display: flex; gap: 7px; align-items: center; justify-content: center; font-size: .85rem;}
+.social-sections button[aria-pressed="true"] {background: #6b4024; color: #fff5df; border-color: #6b4024; box-shadow: inset 0 -3px #d8ac50;}
+.social-refresh {display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: .8rem;}
+.social-refresh button {padding: 5px 8px; border: 0; background: transparent; text-decoration: underline;}
+.social-error, .social-feedback {padding: 10px 12px; border-radius: 8px; margin: 12px 0;}
+.social-error {background: #ffebdf; color: #8b2430; border-left: 3px solid #ac3347;}
+.social-feedback {background: #e1efdd; color: #2f5433; border-left: 3px solid #4f7950;}
+.social-list {list-style: none; padding: 0; display: grid; gap: 12px;}
+.social-person {display: grid; gap: 8px; padding: 12px; border: 1px solid #c8a679; border-radius: 12px; background: #fff9eddd; overflow-wrap: anywhere;}
+.social-person-actions {display: flex; flex-wrap: wrap; gap: 6px;}
+.social-person-actions button {font-size: .8rem;}
+.social-confirm, .social-invite {display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid #c8a679; padding-top: 10px;}
+.social-confirm p, .social-invite label {width: 100%; margin: 0;}
+.social-invite select {width: 100%; font-size: 16px;}
+.social-search {display: grid; gap: 10px;}
+.social-search input {min-height: 44px; border: 1px solid #ae8b5d; border-radius: 8px; padding: 8px 10px; background: #fffaf1; color: #37261b; font-size: 16px;}
+.social-pagination {display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .85rem;}
+.social-drawer .ls-container {width: 100%; background: transparent;}
+@media (max-width: 600px) {
+    .social-shell .social-drawer {top: 0; right: 0; width: min(100%, 440px); height: 100svh;}
+    .social-drawer .modal-content {border-radius: 16px 0 0 16px;}
+}
+@media (prefers-reduced-motion: reduce) {.social-drawer *, .social-toggle {transition: none !important; animation: none !important;}}
+
+.social-drawer .modal-title {margin: 0; color: #37261b; font-size: 1.2rem;}
+.social-drawer .modal-header .dixit-tooltip-text {left: auto; right: 0; transform: none;}
+.social-drawer .modal-header > .dixit-tooltip {margin-left: auto;}
+.social-drawer .modal-header button {min-width: 44px;}
