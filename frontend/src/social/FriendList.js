@@ -1,10 +1,13 @@
 import React, {useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {FiEye, FiMail, FiUserMinus} from "react-icons/fi";
+import {usePresenceData} from "../presence/PresenceContext";
+import {ConnectionBadge} from "../presence/ParticipantPresence";
 import {useSocial} from "./SocialContext";
 
 export function FriendList() {
     const social = useSocial();
+    const presence = usePresenceData();
     const navigate = useNavigate();
     const [removing, setRemoving] = useState(null);
     const [inviting, setInviting] = useState(null);
@@ -24,9 +27,10 @@ export function FriendList() {
         return loaded;
     }
     return <section aria-label="Friends list"><h3>Your friends</h3>
+        {presence.error && <p className="presence-error" role="status">{presence.error} <a href="/login">Log in</a></p>}
         {!social.friends.length && <p>No friends yet. Find someone to share a story with.</p>}
         <ul className="social-list">{social.friends.map(friend => <li key={friend.id} className="social-person">
-            <strong>{friend.username}</strong>
+            <div className="social-person-name"><strong>{friend.username}</strong><ConnectionBadge accountId={friend.id} presence={presence} /></div>
             <div className="social-person-actions">
                 {friend.spectatableGame && <button disabled={social.pending} onClick={() => spectate(friend)}><FiEye aria-hidden="true" /> Spectate</button>}
                 <button disabled={social.pending} onClick={() => chooseLobby(friend)}><FiMail aria-hidden="true" /> Invite to lobby</button>

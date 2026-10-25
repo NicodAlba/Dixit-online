@@ -30,6 +30,13 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Set;
+import java.util.concurrent.*;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import org.springframework.web.socket.messaging.SessionConnectedEvent;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import es.us.dp1.lx_xy_24_25.dixit.presence.AccountPresence;
+import es.us.dp1.lx_xy_24_25.dixit.configuration.services.UserDetailsImpl;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -37,9 +44,13 @@ import java.util.regex.Pattern;
 /** JWT remains private to this connection; HTTP is the only action transport. */
 @Component
 public class StompAccess {
-    private record Session(String token, String username, Map<String,String> subscriptions) {}
+    private record Session(String token, String username, Integer accountId, Map<String,String> subscriptions) {}
     private static final Pattern TOPIC = Pattern.compile("/topic/(game|turn)/([1-9][0-9]*)");
     private final Map<String,Session> sessions = new ConcurrentHashMap<>();
+    private final AccountPresence accountPresence;
+    private final ScheduledExecutorService expiry = Executors.newSingleThreadScheduledExecutor(task -> {
+        Thread thread=new Thread(task,"authenticated-session-cleanup");thread.setDaemon(true);return thread;
+    });
     private final JwtUtils jwt;
     private final ObjectMapper mapper;
     private final ObjectProvider<MessageChannel> outbound;
@@ -49,8 +60,8 @@ public class StompAccess {
     private final TurnRepository turns;
     private final es.us.dp1.lx_xy_24_25.dixit.game.GamePresence presence;
 
-    public StompAccess(JwtUtils jwt, UserDetailsServiceImpl users, UserService accounts, GameService games, TurnRepository turns, ObjectMapper mapper, @Qualifier("clientOutboundChannel") ObjectProvider<MessageChannel> outbound, es.us.dp1.lx_xy_24_25.dixit.game.GamePresence presence) {
-        this.jwt=jwt;this.users=users;this.accounts=accounts;this.games=games;this.turns=turns;this.mapper=mapper;this.outbound=outbound;this.presence=presence;
+    public StompAccess(JwtUtils jwt, UserDetailsServiceImpl users, UserService accounts, GameService games, TurnRepository turns, ObjectMapper mapper, @Qualifier("clientOutboundChannel") ObjectProvider<MessageChannel> outbound, es.us.dp1.lx_xy_24_25.dixit.game.GamePresence presence, AccountPresence accountPresence) {
+        this.jwt=jwt;this.users=users;this.accounts=accounts;this.games=games;this.turns=turns;this.mapper=mapper;this.outbound=outbound;this.presence=presence;this.accountPresence=accountPresence;
     }
     public ChannelInterceptor inbound() {
         return new ExecutorChannelInterceptor() {
@@ -87,7 +98,8 @@ public class StompAccess {
                     String username=jwt.getUserNameFromJwtToken(token);
                     var details=users.loadUserByUsername(username);
                     headers.setUser(new UsernamePasswordAuthenticationToken(details,null,details.getAuthorities()));
-                    sessions.put(id,new Session(token,username,new ConcurrentHashMap<>()));
+                    if(sessions.putIfAbsent(id,new Session(token,username,((UserDetailsImpl)details).getId(),new ConcurrentHashMap<>()))!=null)
+                        throw new AccessDeniedException("STOMP session already authenticated.");
                     return message;
                 }
                 if(headers.getCommand()==StompCommand.DISCONNECT) return message;
@@ -134,9 +146,14 @@ public class StompAccess {
     }
     private Session authenticated(String id) {
         Session session=id==null?null:sessions.get(id);
-        if(session==null || !jwt.validateJwtToken(session.token())) throw new AccessDeniedException("STOMP authentication expired or missing.");
+        if(session==null) throw new AccessDeniedException("STOMP authentication expired or missing.");
+        if(!jwt.validateJwtToken(session.token())) {
+            rejectSession(id,session);
+            throw new AccessDeniedException("STOMP authentication expired or missing.");
+        }
         // Recheck account existence/authority from the database, not client JWT role claims.
-        users.loadUserByUsername(session.username());
+        try {users.loadUserByUsername(session.username());}
+        catch(UsernameNotFoundException deleted) {rejectSession(id,session);throw deleted;}
         return session;
     }
     private Integer authorize(Session session,String destination) {
@@ -167,5 +184,50 @@ public class StompAccess {
         }catch(Exception invalid){return null;}
     }
 
-    @EventListener public void disconnected(SessionDisconnectEvent event) { sessions.remove(event.getSessionId());presence.disconnected(event.getSessionId()); }
+    @EventListener public void connected(SessionConnectedEvent event) {
+        String id=SimpMessageHeaderAccessor.getSessionId(event.getMessage().getHeaders());
+        try {
+            Session session=authenticated(id);
+            accountPresence.connected(id,session.accountId());
+            if(sessions.get(id)!=session)accountPresence.disconnected(id);
+        }catch(AccessDeniedException | UsernameNotFoundException invalid){ /* No confirmed authenticated connection. */ }
+    }
+    private void dropSession(String id,Session expected) {
+        if(expected!=null && sessions.remove(id,expected)) {
+            try {presence.disconnected(id);} finally {accountPresence.disconnected(id);}
+        }
+    }
+    private void rejectSession(String id,Session expected) {
+        dropSession(id,expected);
+        try {
+            var error=StompHeaderAccessor.create(StompCommand.ERROR);
+            error.setSessionId(id);error.setMessage("Connection authentication expired or rejected.");
+            outbound.getObject().send(MessageBuilder.createMessage(new byte[0],error.getMessageHeaders()));
+        }catch(RuntimeException closing) {
+            org.slf4j.LoggerFactory.getLogger(StompAccess.class).debug("Rejected transport was already closing");
+        }
+    }
+    @EventListener public void disconnected(SessionDisconnectEvent event) {
+        dropSession(event.getSessionId(),sessions.get(event.getSessionId()));
+    }
+    private void expireSessions() {
+        sessions.forEach((id,session)-> {
+            try {authenticated(id);}
+            catch(AccessDeniedException | UsernameNotFoundException invalid){dropSession(id,session);}
+        });
+    }
+    public Set<Integer> onlineAccountIds() {
+        // Revalidate before every authorized REST snapshot, even without broker traffic.
+        expireSessions();
+        return accountPresence.onlineAccounts();
+    }
+    @PostConstruct void startSessionCleanup() {
+        expiry.scheduleWithFixedDelay(()-> {
+            try {expireSessions();}
+            catch(RuntimeException temporaryFailure) {
+                org.slf4j.LoggerFactory.getLogger(StompAccess.class).warn("Unable to refresh connection authentication",temporaryFailure);
+            }
+        },5,5,TimeUnit.SECONDS);
+    }
+    @PreDestroy void stopSessionCleanup(){expiry.shutdownNow();}
 }

@@ -75,7 +75,7 @@ export default function useGameTurnState({gameId, jwt, setMessage, setVisible, p
         const client = new Client({
             webSocketFactory: () => new SockJS("/ws"),
             connectHeaders: {Authorization: `Bearer ${jwt}`},
-            reconnectDelay: 1000, heartbeatIncoming: 2000, heartbeatOutgoing: 2000,
+            reconnectDelay: 1000, heartbeatIncoming: 2000, heartbeatOutgoing: 2000, heartbeatStrategy: "worker",
         });
         const subscribeTurn = () => {
             turnSubscriptionRef.current?.unsubscribe();

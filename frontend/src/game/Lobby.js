@@ -5,6 +5,8 @@ import tokenService from "../services/token.service";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import {Modal, ModalBody, ModalFooter, ModalHeader} from "reactstrap";
+import {usePresenceData} from "../presence/PresenceContext";
+import {ConnectionBadge} from "../presence/ParticipantPresence";
 import {InviteFriendList} from "./InviteFriendList";
 
 export default function Lobby() {
@@ -30,6 +32,7 @@ export default function Lobby() {
     }, [connection]);
 
     const jwt = tokenService.getLocalAccessToken();
+    const presence = usePresenceData(gameId);
 
     const navigate = useNavigate();
 
@@ -108,6 +111,7 @@ export default function Lobby() {
             webSocketFactory: () => new SockJS("/ws"),
             connectHeaders: {Authorization: `Bearer ${jwt}`},
             reconnectDelay: 5000,
+            heartbeatIncoming: 10000, heartbeatOutgoing: 10000, heartbeatStrategy: "worker",
             onConnect: () => {
                 if (cancelled || closedRef.current) return;
                 setConnection("connected");
@@ -259,7 +263,7 @@ export default function Lobby() {
                 <ul className="lobby-player-list">
                     {players.map((player, index) => (
                         <li key={player.id ?? index} className="lobby-player-item">
-                            {player.user?.username || "Unknown player"}
+                            <span className="lobby-person">{player.user?.username || "Unknown player"} <ConnectionBadge accountId={player.user?.id} presence={presence} /></span>
                             {player.user?.username === gameData.leader?.username && <span className="leader-indicator">Host</span>}
                         </li>
                     ))}
