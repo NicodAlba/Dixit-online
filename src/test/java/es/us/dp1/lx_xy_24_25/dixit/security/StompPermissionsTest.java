@@ -162,6 +162,9 @@ class StompPermissionsTest extends SecurityHttpSupport {
         Thread.sleep(Math.max(0,expiry.getTime()-System.currentTimeMillis())+150);
         publisher.convertAndSend("/topic/game/"+id,GameEvent.changed(id));
         assertNotNull(currentEvents.poll(5,TimeUnit.SECONDS));assertNull(expiredEvents.poll(400,TimeUnit.MILLISECONDS));
-        expiring.session().subscribe("/topic/game/"+id,new Signals());assertNotNull(expiring.signals().errors.poll(5,TimeUnit.SECONDS));
+        assertNotNull(expiring.signals().errors.poll(5,TimeUnit.SECONDS));
+        long closedBy=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+        while(expiring.session().isConnected()&&System.nanoTime()<closedBy)Thread.sleep(20);
+        assertFalse(expiring.session().isConnected(),"Expired authentication must close the transport.");
     }
 }

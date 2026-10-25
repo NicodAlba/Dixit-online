@@ -17,6 +17,7 @@ import UserEditPlayer from "./admin/users/UserEditPlayer";
 import SwaggerDocs from "./public/swagger";
 import History from "./admin/history/History";
 import Game from "./game/Game";
+import {PresenceProvider} from "./presence/PresenceContext";
 import {SocialProvider} from "./social/SocialContext";
 import SocialView from "./social/SocialView";
 import AchievementList from "./achievements/achievementList";
@@ -119,7 +120,8 @@ function App() {
       </ErrorBoundary>
     </div>
   );
-  return jwt && roles.includes("PLAYER") ? <SocialProvider key={jwt} jwt={jwt}>{content}</SocialProvider> : content;
+  const accountContent = jwt && roles.includes("PLAYER") ? <SocialProvider key={jwt} jwt={jwt}>{content}</SocialProvider> : content;
+  return jwt ? <PresenceProvider key={jwt} jwt={jwt}>{accountContent}</PresenceProvider> : accountContent;
 }
 
 export default App;

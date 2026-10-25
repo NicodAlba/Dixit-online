@@ -1,4 +1,5 @@
 import React from "react";
+import {ParticipantPresence} from "../../presence/ParticipantPresence";
 import SocialToggle from "../../social/SocialToggle";
 
 export default function GameLayout({gameId, game, loading, connection = "connected", storytellerName, role, message, onDismiss, onRetry, toolbar, opponents, hand, chat, children}) {
@@ -12,6 +13,7 @@ export default function GameLayout({gameId, game, loading, connection = "connect
     }[connection];
     return (
         <main className="game-page-container">
+            <ParticipantPresence gameId={gameId} players={game.players}>
             <header className="game-header">
                 <div>
                     <div className="game-overline">DIXIT · Game {gameId}</div>
@@ -37,6 +39,7 @@ export default function GameLayout({gameId, game, loading, connection = "connect
                 </div>
                 {chat}
             </div>
+            </ParticipantPresence>
         </main>
     );
 }
