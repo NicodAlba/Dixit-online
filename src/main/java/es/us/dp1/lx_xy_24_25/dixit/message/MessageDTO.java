@@ -8,9 +8,11 @@ import lombok.Setter;
 public class MessageDTO {
     private String text;
     private String username;
+    private Integer accountId;
     
     public MessageDTO(Message message) {
         this.text = message.getText();
+        this.accountId = message.getPlayer().getUser().getId();
         this.username = message.getPlayer().getUser().getUsername();
     }
 }

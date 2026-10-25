@@ -18,3 +18,4 @@
 
 .presence-error a {color: inherit; text-decoration: underline; padding: 4px;}
 .presence-error a:focus-visible {outline: 3px solid #ffdc76; outline-offset: 3px;}
+.hand-heading .presence-tooltip .dixit-tooltip-text {left: auto; right: 0;}

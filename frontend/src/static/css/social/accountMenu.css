@@ -1,0 +1,18 @@
+.account-menu-trigger {display: inline-flex; align-items: center; gap: 3px; border: 0; border-radius: 5px; background: transparent; color: inherit; font: inherit; font-weight: 700; text-align: inherit; padding: 3px 2px; max-width: 100%; overflow-wrap: anywhere; min-height: 30px;}
+.account-menu-trigger:hover {background: #f5d38b25; box-shadow: 0 0 0 1px #e2c27d;}
+.account-menu-trigger svg {flex-shrink: 0;}
+.account-menu-tooltip {max-width: 100%;}
+.account-menu-tooltip .dixit-tooltip-text {left: 0; transform: none;}
+.modal-dialog.account-menu-dialog {max-width: 360px;}
+.account-menu-dialog .modal-header {display: flex; align-items: center; justify-content: space-between; gap: 12px;}
+.account-menu-dialog .modal-header > .dixit-tooltip {margin-left: auto;}
+.account-menu-dialog .modal-header .dixit-tooltip-text {left: auto; right: 0; transform: none;}
+.account-menu-dialog .modal-title {overflow-wrap: anywhere; font-size: 1.2rem;}
+.account-menu-dialog .modal-body {display: block; text-align: left; padding: 18px;}
+.account-menu-dialog :is(button):focus-visible {outline: 3px solid #925812; outline-offset: 3px;}
+.account-menu-dialog .modal-body button, .account-menu-dialog .modal-footer button {border: 1px solid #967343; border-radius: 9px; background: #f5d28f; color: #3f2a1d; padding: 8px 14px; min-height: 44px;}
+.account-menu-dialog .account-friend-action {display: inline-flex; align-items: center; gap: 8px;}
+.account-menu-dialog button:disabled {opacity: .75; cursor: default;}
+.account-menu-dialog .modal-header .account-menu-close {min-width: 44px; background: transparent; border: 0; font-size: 24px; color: #3f2a1d;}
+@media (max-width: 560px) {.account-menu-trigger {min-height: 44px;}}
+.right-player-container .account-menu-tooltip .dixit-tooltip-text {left: auto; right: 0;}
