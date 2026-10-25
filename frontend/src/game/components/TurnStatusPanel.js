@@ -1,10 +1,12 @@
 import React from "react";
+import CardPreview from "./CardPreview";
+import GameResult from "./GameResult";
 import {Button, Form, Input, Label} from "reactstrap";
 
-export default function TurnStatusPanel({game, turn, currentPlayer, isStoryteller, storyteller, handleChange, handleSendClue, voteCard, getPlayerName, busy = false, readOnly = false}) {
+export default function TurnStatusPanel({game, turn, currentPlayer, isStoryteller, storyteller, handleChange, handleSendClue, voteCard, busy = false, readOnly = false}) {
     const state = turn?.state;
     const closed = state === "FINISHED";
-    if (game.cancelled || game.deleted) return <p>Actions are unavailable. The game history has been preserved.</p>;
+    if (game.cancelled || game.deleted) return <><GameResult game={game} currentPlayer={currentPlayer} readOnly={readOnly} /><p>Actions are unavailable. The game history has been preserved.</p></>;
     if (!state) return <p>Waiting for the game state…</p>;
     const isNarrator = isStoryteller ?? storyteller?.id === currentPlayer?.id;
     const tableVisible = ["SHOWING_CARDS", "VOTING", "FINISHED"].includes(state);
@@ -14,13 +16,10 @@ export default function TurnStatusPanel({game, turn, currentPlayer, isStorytelle
     if (state === "WAITING_PLAYER_CARDS") instruction = !readOnly && !isNarrator && !turn.hasPlayed ? "Select your card" : "Waiting for other players to choose their card";
     if (tableVisible) instruction = closed ? "Round result" : readOnly || isNarrator || turn.hasVoted ? "Wait until everyone has voted" : "Vote for the storyteller’s card";
     return (
-        <>
-            {game.endDate && !game.cancelled && <div className="game-result">
-                <h2>GAME FINISHED</h2>
-                <p>Winners: {(game.winners || []).map(getPlayerName).join(", ")}</p>
-            </div>}
+        <div className="turn-scene" key={`${turn.id}:${state}`}>
+            <GameResult game={game} currentPlayer={currentPlayer} readOnly={readOnly} />
             {turn.clue != null && <p className="clue">Clue: {turn.clue}</p>}
-            <h2>{instruction}</h2>
+            <h2 aria-live="polite">{instruction}</h2>
             {state === "WAITING_STORYTELLER_CLUE" && isNarrator && !readOnly && <Form className="clue-form" onSubmit={handleSendClue}>
                 <Label for="clue">Clue</Label>
                 <div className="clue-form-row">
@@ -42,12 +41,13 @@ export default function TurnStatusPanel({game, turn, currentPlayer, isStorytelle
                                 <span>{answer ? "Storyteller’s card" : card.isOwn ? "Your card" : `Card ${index + 1}`}</span>
                                 {ownVote && <span className="vote-label">✓ {voteLabel}</span>}
                             </button>
+                            <CardPreview card={card} label={`table card ${index + 1}`} />
                             {closed && <div className="card-result"><strong>{card.votes?.length || 0} votes</strong>{card.user?.username && <span>{card.user.username}</span>}</div>}
                         </li>;
                     })}
                 </ul>
             </>}
             {!closed && <p className="game-help">Players keep their place if they leave temporarily. A turn may wait for their return.</p>}
-        </>
+        </div>
     );
 }
