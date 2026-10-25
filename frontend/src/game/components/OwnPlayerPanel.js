@@ -1,5 +1,6 @@
 import React from "react";
 import AccountMenu from "../../social/AccountMenu";
+import CardPreview from "./CardPreview";
 import {ConnectionBadge} from "../../presence/ParticipantPresence";
 import { List, ListInlineItem } from "reactstrap";
 import fairy from "../../static/images/icons/Fairy.png";
@@ -32,6 +33,7 @@ export function OwnPlayerPanel({ currentPlayer, currentUser, isStoryteller, turn
                 <button type="button" className={cardClasses} disabled={!clickable} onClick={handleClick} aria-label={`Select card ${index + 1}`}>
                     <img className="card" src={image} alt="Card" />
                 </button>
+                <CardPreview card={card} label={`hand card ${index + 1}`} />
             </ListInlineItem>
         );
     });
