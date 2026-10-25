@@ -127,6 +127,7 @@ test("the public play dialog closes with Escape and restores focus to Play game"
     await user.click(play);
     const dialog = await screen.findByRole("dialog", {name: "Join the story"});
     expect(dialog).toContainElement(document.activeElement);
+    expect(document.getElementById(dialog.getAttribute("aria-labelledby"))).toHaveTextContent(/^Join the story$/);
     fireEvent.keyUp(dialog, {key: "Escape", keyCode: 27, which: 27});
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(play).toHaveFocus();

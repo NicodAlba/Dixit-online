@@ -73,3 +73,11 @@ describe("AppNavbar", () => {
         expect(screen.queryByRole("link", { name: "Create account" })).not.toBeInTheDocument();
     });
 });
+
+test("choosing a destination closes the mobile navigation, including the current route",()=>{
+ tokenService.getLocalAccessToken.mockReturnValue(null);render(<AppNavbar/>);
+ const toggle=screen.getByRole("button",{name:"Toggle navigation"});
+ fireEvent.click(toggle);expect(toggle).toHaveAttribute("aria-expanded","true");
+ fireEvent.click(screen.getByRole("link",{name:"Docs"}));expect(toggle).toHaveAttribute("aria-expanded","false");
+ fireEvent.click(toggle);fireEvent.click(screen.getByRole("link",{name:"Docs"}));expect(toggle).toHaveAttribute("aria-expanded","false");
+});
