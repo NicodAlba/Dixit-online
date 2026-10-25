@@ -6,27 +6,22 @@ import tokenService from "../../services/token.service";
 
 const Logout = () => {
   function sendLogoutRequest() {
-    const jwt = window.localStorage.getItem("jwt");
-    if (jwt || typeof jwt === "undefined") {
-      tokenService.removeUser();
-      window.location.href = "/";
-    } else {
-      alert("There is no user logged in");
-    }
+    tokenService.removeUser();
+    window.location.href = "/";
   }
 
   return (
     <div className="auth-page-container">
-      <div className="auth-form-container">
+      <div className="auth-form-container login-card">
         <h2 className="text-center text-md">
           Are you sure you want to log out?
         </h2>
         <div className="options-row">
           <Link className="auth-button" to="/" style={{textDecoration: "none"}}>
-            No
+            Stay
           </Link>
           <button className="auth-button" onClick={() => sendLogoutRequest()}>
-            Yes
+            Log out
           </button>
         </div>
       </div>

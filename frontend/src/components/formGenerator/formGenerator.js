@@ -117,7 +117,7 @@ const FormGenerator = forwardRef((props, ref) => {
         ref={formElement}
         onSubmit={handleSubmit}
         onKeyDown={(event) => {
-          if (event.key === "Enter" && !props.listenEnterKey && event.target.tagName !== "BUTTON") event.preventDefault();
+          if (event.key === "Enter" && !props.listenEnterKey && !["BUTTON", "TEXTAREA"].includes(event.target.tagName)) event.preventDefault();
         }}
         style={
           props.numberOfColumns > 1

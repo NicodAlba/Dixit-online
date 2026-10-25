@@ -6,6 +6,7 @@ import '@splidejs/react-splide/css/sea-green';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import './static/css/gameTheme.css';
 import { BrowserRouter } from 'react-router-dom';
 
 

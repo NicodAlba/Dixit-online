@@ -2,14 +2,14 @@
 
 .auth-page-container {
   position: relative;
-  min-height: 100vh;
+  min-height: calc(100svh - 66px);
   width: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 2rem;
-  background: radial-gradient(circle at center, #241612 8%, #1e120e 100%); /* very dark brown */
+  background: linear-gradient(#241612aa, #1e120ec9), url('../../images/HomeBackground.png') center / cover;
 }
 
 .auth-form-container{
@@ -77,3 +77,10 @@
     margin: 10px 0;
   }
 }
+
+.auth-form-container.login-card {animation: dixit-panel-in .3s ease-out;}
+.auth-page-container [role="alert"] {color: #8b182a; border-left: 3px solid #ad3b43; padding: 10px; background: #ffe9d7;}
+.auth-page-container .auth-button {color: #fff3dd; min-height: 48px;}
+.auth-page-container a {color: #643810;}
+.auth-page-container .options-row a {color: #fff3dd;}
+@media (max-width: 560px) {.auth-page-container {padding: 28px 16px;}.login-card {padding: 24px;}}
