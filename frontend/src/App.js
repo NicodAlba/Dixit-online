@@ -17,6 +17,7 @@ import UserEditPlayer from "./admin/users/UserEditPlayer";
 import SwaggerDocs from "./public/swagger";
 import History from "./admin/history/History";
 import Game from "./game/Game";
+import {SocialProvider} from "./social/SocialContext";
 import SocialView from "./social/SocialView";
 import AchievementList from "./achievements/achievementList";
 import StatsDashboard from "./statistics/StatsDashboard";
@@ -102,7 +103,7 @@ function App() {
     )
   }
 
-  return (
+  const content = (
     <div>
       <ErrorBoundary FallbackComponent={ErrorFallback} >
         {!hideNavbar && <AppNavbar />}
@@ -118,6 +119,7 @@ function App() {
       </ErrorBoundary>
     </div>
   );
+  return jwt && roles.includes("PLAYER") ? <SocialProvider key={jwt} jwt={jwt}>{content}</SocialProvider> : content;
 }
 
 export default App;

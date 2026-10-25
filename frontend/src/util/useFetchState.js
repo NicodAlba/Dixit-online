@@ -13,9 +13,10 @@ import { useEffect, useState } from "react";
  * @param {string|null} [id=null] - Optional parameter to control fetch behavior. If `id` is `"new"`, the fetch request is skipped.
  * @param {function|null} [onError=null] - Optional caller policy; return true when the error has been handled.
  * 
- * @returns {[any, function]} - Returns an array with two elements:
+ * @returns {[any, function]} - Returns data, its setter, and optional request metadata:
  *   - `data`: The state variable holding the fetched data.
  *   - `setData`: A function to manually update the `data` state.
+ *   - `{loading}`: Whether the current request is pending; existing two-item consumers remain compatible.
  *
  * @example
  * const [data, setData] = useFetchState({}, 'https://api.example.com/data', jwtToken, setMessage, setVisible);
@@ -23,10 +24,12 @@ import { useEffect, useState } from "react";
 
 export default function useFetchState(initial, url, jwt, setMessage, setVisible, id = null, onError = null) {
     const [data, setData] = useState(initial);
+    const [loading, setLoading] = useState(Boolean(url && id !== "new"));
     useEffect(() => {
         if (url) {
             if (!id || id !== "new") {
                 let ignore = false;
+                setLoading(true);
                 fetch(
                     url,
                     jwt
@@ -74,7 +77,7 @@ export default function useFetchState(initial, url, jwt, setMessage, setVisible,
                         } else {
                             window.alert(error.message || "Failed to fetch data");
                         }
-                    });
+                    }).finally(() => {if (!ignore) setLoading(false);});
                 return () => {
                     ignore = true;
                 };
@@ -82,5 +85,5 @@ export default function useFetchState(initial, url, jwt, setMessage, setVisible,
 
         }
     }, [url, id, jwt, setMessage, setVisible, onError]);
-    return [data, setData];
+    return [data, setData, {loading}];
 }

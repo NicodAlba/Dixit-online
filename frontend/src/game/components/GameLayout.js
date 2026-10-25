@@ -1,4 +1,5 @@
 import React from "react";
+import SocialToggle from "../../social/SocialToggle";
 
 export default function GameLayout({gameId, game, loading, connection = "connected", storytellerName, role, message, onDismiss, onRetry, toolbar, opponents, hand, chat, children}) {
     const rounds = game.turns?.length || 0;
@@ -17,7 +18,7 @@ export default function GameLayout({gameId, game, loading, connection = "connect
                     <h1>{game.cancelled ? "Game cancelled" : game.endDate ? "Game finished" : rounds ? `Round ${rounds} of ${total}` : "Preparing the game"}</h1>
                     <p>{storytellerName && `Storyteller: ${storytellerName} · `}{role}</p>
                 </div>
-                <div className="game-toolbar">{toolbar}</div>
+                <div className="game-toolbar"><SocialToggle />{toolbar}</div>
             </header>
             {connectionText && <div className="game-notice" role="status">{connectionText}</div>}
             {loading && <div className="game-notice" role="status">Loading your game…</div>}

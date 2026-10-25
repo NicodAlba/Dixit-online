@@ -8,11 +8,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 
 @Service
 public class FriendRequestService {
 
     private final FriendRequestRepository friendRequestRepository;
+    @PersistenceContext private EntityManager entities;
 
     @Autowired
     public FriendRequestService(FriendRequestRepository friendRequestRepository) {
@@ -54,12 +58,31 @@ public class FriendRequestService {
         }).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<FriendshipView> relationships(User actor) {
+        Set<FriendRequest> requests = new LinkedHashSet<>(friendRequestRepository.findBySender(actor));
+        requests.addAll(friendRequestRepository.findByReceiver(actor));
+        return requests.stream().map(request -> {
+            boolean outgoing = Objects.equals(request.getSender().getId(), actor.getId());
+            User other = outgoing ? request.getReceiver() : request.getSender();
+            String status = request.getDateAccepted() != null ? "FRIEND" : outgoing ? "OUTGOING" : "INCOMING";
+            return new FriendshipView(other.getId(), other.getUsername(), status, request.getId());
+        }).toList();
+    }
+
     @Transactional
     public void sendFriendRequest(User sender, User receiver) {
-        if (getFriends(sender).contains(receiver)) {
-            throw new IllegalStateException("You are already friends");
-        } else if (sender.equals(receiver)) {
-            throw new IllegalArgumentException("Sender and receiver can't be the same");
+        if (Objects.equals(sender.getId(), receiver.getId())) throw new IllegalArgumentException("You cannot send yourself a friend request.");
+        // Serialize both directions of the same pair without changing the friendship model.
+        entities.find(User.class, Math.min(sender.getId(), receiver.getId()), LockModeType.PESSIMISTIC_WRITE);
+        entities.find(User.class, Math.max(sender.getId(), receiver.getId()), LockModeType.PESSIMISTIC_WRITE);
+        Optional<FriendRequest> existing = friendRequestRepository.findBySenderAndReceiver(sender, receiver)
+            .or(() -> friendRequestRepository.findBySenderAndReceiver(receiver, sender));
+        if (existing.isPresent()) {
+            FriendRequest request = existing.get();
+            if (request.getDateAccepted() != null) throw new IllegalStateException("You are already friends.");
+            throw new IllegalStateException(Objects.equals(request.getSender().getId(), sender.getId())
+                ? "Request already sent." : "You have a friend request from this player. Accept it instead.");
         }
         FriendRequest friendRequest = new FriendRequest();
         friendRequest.setSender(sender);
