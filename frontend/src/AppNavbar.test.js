@@ -26,8 +26,8 @@ describe("AppNavbar", () => {
 
     test("offers registration and login to visitors without private links", () => {
         render(<AppNavbar />);
-        expectLink("Register", "/register");
-        expectLink("Login", "/login");
+        expectLink("Create account", "/register");
+        expectLink("Log in", "/login");
         expect(screen.queryByRole("link", { name: "Your profile" })).not.toBeInTheDocument();
         expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
         expect(screen.queryByRole("link", { name: "Logout" })).not.toBeInTheDocument();
@@ -55,8 +55,8 @@ describe("AppNavbar", () => {
         expectLink("Logout", "/logout");
         expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
         expect(screen.queryByRole("link", { name: "History" })).not.toBeInTheDocument();
-        expect(screen.queryByRole("link", { name: "Login" })).not.toBeInTheDocument();
-        expect(screen.queryByRole("link", { name: "Register" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Log in" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Create account" })).not.toBeInTheDocument();
     });
 
     test("offers administration links to an administrator", () => {
@@ -70,6 +70,6 @@ describe("AppNavbar", () => {
         expect(screen.queryByRole("link", { name: "Friends" })).not.toBeInTheDocument();
         expect(screen.queryByRole("link", { name: "Achievements" })).not.toBeInTheDocument();
         expect(screen.queryByRole("link", { name: "Statistics" })).not.toBeInTheDocument();
-        expect(screen.queryByRole("link", { name: "Register" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: "Create account" })).not.toBeInTheDocument();
     });
 });

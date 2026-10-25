@@ -50,7 +50,7 @@ export default function Login() {
           <></>
         )}
 
-        <h1>Login</h1>
+        <h1>Log in</h1>
 
         <div className="auth-form-container login-card">
           <FormGenerator
@@ -60,7 +60,7 @@ export default function Login() {
             numberOfColumns={1}
             listenEnterKey
             disabled={pending}
-            buttonText={pending ? "Logging in…" : "Login"}
+            buttonText={pending ? "Logging in…" : "Log in"}
             buttonClassName="auth-button"
           />
         </div>

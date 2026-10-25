@@ -3,6 +3,8 @@ import { Collapse, Nav, Navbar, NavbarBrand, NavbarText, NavbarToggler, NavItem,
 import { Link } from 'react-router-dom';
 import tokenService from './services/token.service';
 import jwt_decode from "jwt-decode";
+import {FiLogIn, FiUserPlus, FiUsers, FiAward, FiBarChart2} from "react-icons/fi";
+import Tooltip from "./components/ui/Tooltip";
 import logo from "../src/static/images/dixit round.png"
 
 function AppNavbar() {
@@ -43,10 +45,10 @@ function AppNavbar() {
             ownerLinks = (
                 <>
                     <NavItem>
-                        <NavLink style={{ color: "white" }} tag={Link} to={"/users/" + userId + "/achievements"}>Achievements</NavLink>
+                        <NavLink style={{ color: "white" }} tag={Link} to={"/users/" + userId + "/achievements"}><FiAward aria-hidden="true" /> Achievements</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink style={{ color: "white" }} tag={Link} to="/stats">Statistics</NavLink>
+                        <NavLink style={{ color: "white" }} tag={Link} to="/stats"><FiBarChart2 aria-hidden="true" /> Statistics</NavLink>
                     </NavItem>
                 </>
             )
@@ -60,10 +62,10 @@ function AppNavbar() {
                     <NavLink style={{ color: "white" }} id="docs" tag={Link} to="/docs">Docs</NavLink>
                 </NavItem>
                 <NavItem>
-                    <NavLink style={{ color: "white" }} id="register" tag={Link} to="/register">Register</NavLink>
+                    <NavLink style={{ color: "white" }} id="register" tag={Link} to="/register"><FiUserPlus aria-hidden="true" /> Create account</NavLink>
                 </NavItem>
                 <NavItem>
-                    <NavLink style={{ color: "white" }} id="login" tag={Link} to="/login">Login</NavLink>
+                    <NavLink style={{ color: "white" }} id="login" className="nav-login" tag={Link} to="/login"><FiLogIn aria-hidden="true" /> Log in</NavLink>
                 </NavItem>
             </>
         )
@@ -82,7 +84,7 @@ function AppNavbar() {
                 </NavItem>
                 {!roles.includes("ADMIN") && (
                     <NavItem>
-                        <NavLink style={{ color: "white" }} id="friends" tag={Link} to="/friends">Friends</NavLink>
+                        <Tooltip text="Friends"><NavLink style={{ color: "white" }} id="friends" tag={Link} to="/friends" aria-label="Friends"><FiUsers aria-hidden="true" size={22} /></NavLink></Tooltip>
                     </NavItem>
                 )}
             </>

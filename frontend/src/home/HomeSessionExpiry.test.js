@@ -1,3 +1,4 @@
+jest.mock("./ActiveGames", () => () => null);
 import React from 'react';
 import {act,fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {MemoryRouter,Routes,Route} from 'react-router-dom';
@@ -19,6 +20,8 @@ test('rejected stored session is cleared and public home can reach login without
  expect(screen.queryByText('Full authentication is required to access this resource.')).not.toBeInTheDocument();
  view.unmount();render(home());
  fireEvent.click(screen.getByRole('button',{name:'Play game'}));
+ await screen.findByRole('dialog',{name:'Join the story'});
+ fireEvent.click(screen.getByRole('button',{name:'Log in',exact:true}));
  expect(screen.getByRole('heading',{name:'Login page'})).toBeInTheDocument();expect(fetch).toHaveBeenCalledTimes(1);
 });
 test('old 401 cannot clear a newer session',async()=>{

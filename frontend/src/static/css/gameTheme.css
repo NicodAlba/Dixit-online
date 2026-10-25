@@ -1,0 +1,24 @@
+:root {--parchment: #fff3dd; --dixit-gold: #f1c76a;}
+.dixit-ui :is(button, a), .navbar :is(button, a), .auth-page-container :is(button, a) {transition: box-shadow .15s, background-color .15s, border-color .15s;}
+.dixit-ui :is(button, a, input):focus-visible, .navbar :is(button, a):focus-visible, .auth-page-container :is(button, a, input):focus-visible {outline: 3px solid #925812; outline-offset: 4px;}
+.navbar {box-shadow: 0 3px 15px #271c1540;}
+.navbar .nav-link {border-radius: 9px; min-height: 44px; display: flex; align-items: center; gap: 7px;}
+.navbar .nav-link:hover, .navbar .nav-link:focus-visible {background: #ffffff22;}
+.navbar .nav-login {background: #f6d894; color: #382216 !important; border: 1px solid #ffe6ae; box-shadow: 0 3px 0 #46230d; margin-left: 8px;}
+.navbar .nav-login:hover {background: #ffe6ae;}
+.navbar-brand img {transition: transform .25s ease;}
+.navbar-brand:hover img, .navbar-brand:focus-visible img {transform: rotate(-18deg);}
+.dixit-tooltip {position: relative; display: inline-flex; align-items: center;}
+.dixit-tooltip-text {position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); padding: 6px 10px; border-radius: 6px; background: #211b18; color: #fff3dd; font: 13px/1.3 'american-typewriter', serif; z-index: 1200; white-space: nowrap; pointer-events: none; visibility: hidden; opacity: 0; transition: opacity .12s;}
+.dixit-tooltip:hover .dixit-tooltip-text, .dixit-tooltip:focus-within .dixit-tooltip-text {visibility: visible; opacity: 1;}
+.modal-content {border: 1px solid #c9a264; background: #fff6e5; color: #34261e; box-shadow: 0 20px 70px #18120d77; border-radius: 16px;}
+.modal-content button {min-height: 44px;}
+@keyframes dixit-panel-in {from {opacity: 0; transform: translateY(8px);} to {opacity: 1; transform: translateY(0);}}
+@media (max-width: 767px) {.navbar .nav-login {margin-left: 0; width: fit-content; padding-inline: 16px;}.dixit-tooltip-text {left: 0; transform: none;}}
+@media (prefers-reduced-motion: reduce) {
+    .dixit-ui *, .navbar *, .auth-page-container *, .modal * {animation: none !important; transition: none !important; scroll-behavior: auto !important;}
+    .navbar-brand:hover img, .navbar-brand:focus-visible img {transform: none;}
+}
+
+.navbar :is(button, a):focus-visible {outline-color: #ffe89a;}
+.navbar .dixit-tooltip-text {left: auto; right: 0; transform: none;}
