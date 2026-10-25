@@ -100,3 +100,4 @@
 
 .game-page-container * {font-family: inherit;}
 .game-toolbar .leave-game, .clue-form button {min-height: 44px;}
+.game-toolbar .dixit-tooltip-text {left: auto; right: 0; transform: none;}

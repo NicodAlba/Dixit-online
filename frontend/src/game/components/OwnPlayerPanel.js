@@ -1,4 +1,5 @@
 import React from "react";
+import AccountMenu from "../../social/AccountMenu";
 import {ConnectionBadge} from "../../presence/ParticipantPresence";
 import { List, ListInlineItem } from "reactstrap";
 import fairy from "../../static/images/icons/Fairy.png";
@@ -38,7 +39,7 @@ export function OwnPlayerPanel({ currentPlayer, currentUser, isStoryteller, turn
     return (
         <div className={`owned-cards-container ${handLocked ? "hand-locked" : ""}`}>
             <div className="hand-heading">
-                <div><strong>{getPlayerName(currentPlayer) || currentUser?.username || "You"}</strong> · {currentPlayer.points} pts <ConnectionBadge accountId={currentPlayer.user?.id || currentUser?.id} /></div>
+                <div><strong><AccountMenu accountId={currentPlayer.user?.id ?? currentUser?.id} username={getPlayerName(currentPlayer) || currentUser?.username || "You"} /></strong> · {currentPlayer.points} pts <ConnectionBadge accountId={currentPlayer.user?.id || currentUser?.id} /></div>
                 <span>{visibleHand.length} cards · {isStoryteller ? "Storyteller" : "Your private hand"}</span>
             </div>
             {isStoryteller && <img className="storyteller-icon" src={fairy} alt="Storyteller" />}
