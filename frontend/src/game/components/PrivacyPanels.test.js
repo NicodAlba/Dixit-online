@@ -32,3 +32,22 @@ test("already-played flag locks the hand even though anonymous cards lack owner 
  const selectCard=jest.fn();render(<OwnPlayerPanel currentPlayer={currentPlayer} handCards={[cards[1]]} turn={{state:"WAITING_PLAYER_CARDS",hasPlayed:true,playedCards:[]}} getPlayerName={props.getPlayerName} selectCard={selectCard}/>);
  fireEvent.click(screen.getByAltText("Card").parentElement);expect(selectCard).not.toHaveBeenCalled();
 });
+
+test("the persisted private choice marks Your vote after remount and does not allow changing it",()=>{
+ const turn={state:"SHOWING_CARDS",playedCards:cards,hasVoted:true,ownVotedCardId:2};
+ const first=render(<TurnStatusPanel {...props} turn={turn}/>);
+ expect(screen.getByRole("button",{name:"Your vote: card 2"})).toBeDisabled();
+ expect(screen.getByText("✓ Your vote")).toBeInTheDocument();
+ fireEvent.click(screen.getByRole("button",{name:"Your vote: card 2"}));expect(props.voteCard).not.toHaveBeenCalled();
+ first.unmount();render(<TurnStatusPanel {...props} turn={{...turn}}/>);
+ expect(screen.getByText("✓ Your vote")).toBeInTheDocument();
+ expect(screen.queryByText(/\d votes/)).not.toBeInTheDocument();
+});
+test("another perspective has no vote marker; an authorized spectator is labeled explicitly",()=>{
+ const turn={state:"SHOWING_CARDS",playedCards:cards,hasVoted:false};
+ const {rerender}=render(<TurnStatusPanel {...props} turn={turn}/>);
+ expect(screen.queryByText(/Your vote/)).not.toBeInTheDocument();
+ rerender(<SpectatorStatus {...props} turn={{...turn,hasVoted:true,ownVotedCardId:2}}/>);
+ expect(screen.getByText("✓ Perspective vote")).toBeInTheDocument();
+ expect(screen.getByRole("button",{name:"Perspective vote: card 2"})).toBeDisabled();
+});

@@ -20,7 +20,7 @@ public record GameView(Integer id, Date startDate, Date endDate, boolean cancell
     public record PlayedCard(Integer id,Image image,boolean isOwn,Person owner,Account user,List<Person> votes) {}
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Round(Integer id,TurnState state,String clue,Person storyteller,PlayedCard answer,
-                        List<PlayedCard> playedCards,int playedCardCount,boolean hasPlayed,boolean hasVoted) {}
+                        List<PlayedCard> playedCards,int playedCardCount,boolean hasPlayed,boolean hasVoted,Integer ownVotedCardId) {}
     public record Catalog(Integer id,Date startDate,Date endDate,boolean cancelled,Account leader,boolean hasPassword,
                           List<Person> players,List<Person> winners) {}
 
@@ -45,11 +45,13 @@ public record GameView(Integer id, Date startDate, Date endDate, boolean cancell
         boolean tableVisible=revealed || turn.getState()==TurnState.SHOWING_CARDS || turn.getState()==TurnState.VOTING;
         boolean storyteller=perspective!=null && turn.getStoryteller()!=null && Objects.equals(perspective.getId(),turn.getStoryteller().getId());
         boolean hasPlayed=perspective!=null && turn.getPlayedCards().stream().anyMatch(c->card(c,perspective,false).isOwn());
-        boolean hasVoted=perspective!=null && turn.getPlayedCards().stream().flatMap(c->c.getVotes().stream()).anyMatch(p->Objects.equals(p.getId(),perspective.getId()));
+        Integer ownVotedCardId=perspective==null?null:turn.getPlayedCards().stream()
+            .filter(c->c.getVotes().stream().anyMatch(p->Objects.equals(p.getId(),perspective.getId())))
+            .map(Card::getId).findFirst().orElse(null);
         List<Card> visible=turn.getPlayedCards().stream().filter(c->tableVisible || (perspective!=null && card(c,perspective,false).isOwn())).toList();
         List<PlayedCard> table=visible.stream().sorted(Comparator.comparing(c->order(turn,c))).map(c->card(c,perspective,revealed)).toList();
         return new Round(turn.getId(),turn.getState(),turn.getClue(),person(turn.getStoryteller()),
-            revealed || storyteller?card(turn.getAnswer(),perspective,revealed):null,table,turn.getPlayedCards().size(),hasPlayed,hasVoted);
+            revealed || storyteller?card(turn.getAnswer(),perspective,revealed):null,table,turn.getPlayedCards().size(),hasPlayed,ownVotedCardId!=null,ownVotedCardId);
     }
     private static String order(Turn turn,Card card){
         // Legacy finished rounds need no secret and are never rewritten just for serialization.

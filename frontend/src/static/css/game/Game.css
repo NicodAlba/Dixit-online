@@ -50,6 +50,8 @@
 .card-button:disabled {cursor: default; opacity: 1;}
 .card-own {border: 2px solid #e3bf69;}
 .card-answer {outline: 2px solid #e3bf69;}
+.card-voted {border: 3px solid #7fdaa0; background: #203b2c;}
+.card-voted .vote-label {color: #dcffe8; font-weight: 700;}
 .card-result {display: flex; flex-direction: column; font-size: .85rem; margin-top: 6px;}
 .owned-cards-container {position: relative; padding: 12px 14px; text-align: center;}
 .hand-heading {display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; text-align: left; font-size: .9rem;}
