@@ -35,21 +35,23 @@ const FormInput = forwardRef(({ tag, name, type, defaultValue, values, isRequire
 
     useEffect(() => {
         if(type !== "interval" && type !== "files"){
-            inputField.current.addEventListener("change", () => {
+            const field = inputField.current;
+            const handleChange = () => {
                 let errors = [];
                 validators.forEach((validator) => {
-                    if(!validator.validate(inputField.current.value)){
+                    if(!validator.validate(field.value)){
                         errors.push(validator.message);
                     }
                 });
                 setInputErrors(errors);
                 if(onChange!==null){
-                    onChange({value: inputField.current.value});
+                    onChange({value: field.value});
                 }
-            });
+            };
+            field.addEventListener("change", handleChange);
+            return () => field.removeEventListener("change", handleChange);
         }
-        // eslint-disable-next-line
-    }, []);
+    }, [type, validators, onChange]);
 
     switch(type){
 
@@ -118,7 +120,7 @@ const FormInput = forwardRef(({ tag, name, type, defaultValue, values, isRequire
                         allowReorder={true}
                         maxFiles={10}
                         name={name} /* sets the file input name, it's filepond by default */
-                        labelIdle='Arrastra tus archivos o <span class="filepond--label-action">Selecciona</span>'
+                        labelIdle='Drag your files or <span class="filepond--label-action">Browse</span>'
                         credits={false}
                     />
                 </div>
