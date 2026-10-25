@@ -1,33 +1,15 @@
-.list-achievements {
-    height: 100%;
-    width: 90%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    margin: auto;
-}
-
-.completed {
-    justify-content: center;
-    align-items: center;
-    background-color: transparent;
-    border-radius: 10px;
-}
-
-.completed td {
-    background-color: rgba(255, 255, 255, 0.5) !important;
-}
-
-.background {
-    background-image: url("../../images/Achievements/AchievementsBackground.png");
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-}
-
-.head {
-    background-color: transparent !important;
-    text-align: center;
-    font-size: 30px;
-}
+.achievement-section {margin-bottom: 20px;}
+.achievements-page .achievement-section h2 {color: #ffe3a1; font-size: 1.3rem; margin: 0 0 18px;}
+.achievement-section h2 span {font-size: .9rem; color: #f6e5bd;}
+.achievement-grid {display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 16px; margin: 0; padding: 0; list-style: none;}
+.achievement-card {display: flex; align-items: flex-start; gap: 16px; padding: 18px; background: #29344bc9; border: 1px solid #ba9c6480; border-radius: 12px; height: 100%; box-shadow: 0 4px 14px #0003; transition: border-color .18s,box-shadow .18s;}
+.achievement-card:hover, .achievement-card:focus-within {border-color: #ffe09a; box-shadow: 0 7px 22px #0006;}
+.achievement-card img {object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 4px 6px #0005); transition: transform .2s;}
+.achievement-card:hover img, .achievement-card:focus-within img {transform: rotate(-5deg) scale(1.05);}
+.achievement-card h3 {font-size: 1rem; color: #ffe3a1; margin: 3px 0 8px;}
+.achievement-card p {font-size: .8rem; margin: 0 0 10px; color: #f7ebd1;}
+.achievement-card .achievement-status {font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: #e8cd8f; margin: 0;}
+.achievement-card summary {display: list-item; width: fit-content; min-height: 44px; padding: 10px 5px; color: #ffe3a1; font-size: .8rem; cursor: pointer; border-radius: 5px;}
+.achievement-card dl {font-size: .8rem; margin: 0;}
+.achievement-card dd {color: #fff1ca; margin: 0 0 8px;}
+@media(max-width:600px){.achievement-grid {grid-template-columns: 1fr;}.achievement-card {gap: 12px; padding: 14px;}.achievement-card img {width: 64px; height: 64px;}}
