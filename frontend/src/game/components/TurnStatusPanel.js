@@ -34,10 +34,13 @@ export default function TurnStatusPanel({game, turn, currentPlayer, isStorytelle
                     {(turn.playedCards || []).map((card, index) => {
                         const canVote = !readOnly && !isNarrator && !card.isOwn && !turn.hasVoted && !closed && !busy;
                         const answer = closed && card.id === turn.answer?.id;
+                        const ownVote = card.id === turn.ownVotedCardId;
+                        const voteLabel = readOnly ? "Perspective vote" : "Your vote";
                         return <li key={card.id}>
-                            <button type="button" className={`card-button ${canVote ? "card-clickable" : "card-disabled"} ${card.isOwn ? "card-own" : ""} ${answer ? "card-answer" : ""}`} disabled={!canVote} onClick={() => voteCard(card)} aria-label={canVote ? `Vote for card ${index + 1}` : card.isOwn ? `Your card ${index + 1}` : `Card ${index + 1}`}>
+                            <button type="button" className={`card-button ${canVote ? "card-clickable" : "card-disabled"} ${card.isOwn ? "card-own" : ""} ${answer ? "card-answer" : ""} ${ownVote ? "card-voted" : ""}`} disabled={!canVote} onClick={() => voteCard(card)} aria-label={ownVote ? `${voteLabel}: card ${index + 1}` : canVote ? `Vote for card ${index + 1}` : card.isOwn ? `Your card ${index + 1}` : `Card ${index + 1}`}>
                                 <img className="card" src={`/Cards/${card.image.id}.png`} alt="Card" />
                                 <span>{answer ? "Storyteller’s card" : card.isOwn ? "Your card" : `Card ${index + 1}`}</span>
+                                {ownVote && <span className="vote-label">✓ {voteLabel}</span>}
                             </button>
                             {closed && <div className="card-result"><strong>{card.votes?.length || 0} votes</strong>{card.user?.username && <span>{card.user.username}</span>}</div>}
                         </li>;

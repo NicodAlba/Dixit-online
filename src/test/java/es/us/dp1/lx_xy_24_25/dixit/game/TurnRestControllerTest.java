@@ -59,7 +59,7 @@ public class TurnRestControllerTest {
     @Test
     @WithMockUser("test")
     void testGetTurnSuccess() throws Exception {
-        when(views.turn(turnId,null)).thenReturn(new GameView.Round(turnId,TurnState.WAITING_STORYTELLER_CARD,null,null,null,java.util.List.of(),0,false,false));
+        when(views.turn(turnId,null)).thenReturn(new GameView.Round(turnId,TurnState.WAITING_STORYTELLER_CARD,null,null,null,java.util.List.of(),0,false,false,null));
 
         mockMvc.perform(get(BASE_URL + "/{id}", turnId)).andExpect(status().isOk());
         verify(views).turn(turnId,null);
