@@ -47,3 +47,18 @@
     .hero-logo-back img {width: 100px; height: 100px;}
     .home-actions, .home-auth-choices {flex-direction: column; width: 100%;}
 }
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-logo {perspective: none;}
+    .hero-logo .hero-logo-inner, .hero-logo.is-flipped .hero-logo-inner {
+        transform: none;
+        transform-style: flat;
+        transition: none;
+    }
+    .hero-logo .hero-logo-front, .hero-logo .hero-logo-back {
+        transform: none;
+        backface-visibility: visible;
+    }
+    .hero-logo .hero-logo-back, .hero-logo.is-flipped .hero-logo-front {display: none;}
+    .hero-logo.is-flipped .hero-logo-back {display: flex;}
+}
