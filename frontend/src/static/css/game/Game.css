@@ -58,10 +58,6 @@
 .hand-heading strong {color: #ffe599;}
 .hand-heading > span {color: #e7dfd0; font-size: .85rem;}
 .storyteller-icon {width: 26px; height: 26px; margin-bottom: 6px;}
-.clue-form {max-width: 550px; margin: 14px auto; text-align: left;}
-.clue-form-row {display: flex; gap: 10px;}
-.clue-form input {min-width: 0; font-size: 16px;}
-.clue-form button {flex-shrink: 0;}
 .game-notice {display: flex; align-items: center; flex-wrap: wrap; gap: 10px; max-width: 1500px; margin: 0 auto 12px; padding: 10px 14px; background: #4e3721; border: 1px solid #c59a56; border-radius: 8px; font-size: .9rem;}
 .game-error {background: #5a1f2c; color: #ffe0e0; border-color: #b77785;}
 .game-notice button {background: #272b37; color: white; border: 1px solid #b5ad9e; border-radius: 6px; padding: 5px 10px;}
@@ -96,13 +92,12 @@
     .hand-cards {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;}
     .hand-cards .card-button {width: 100%;}
     .game-page-container .hand-cards img.card {width: 100%; max-width: 110px;}
-    .clue-form-row {flex-direction: column;}
     .perspective-picker select {max-width: 150px;}
 }
 @media (prefers-reduced-motion: reduce) {.card-clickable {transition: none;}.card-clickable:hover {transform: none;}}
 
 .game-page-container * {font-family: inherit;}
-.game-toolbar .leave-game, .clue-form button {min-height: 44px;}
+.game-toolbar .leave-game {min-height: 44px;}
 .game-toolbar .dixit-tooltip-text {left: auto; right: 0; transform: none;}
 /* Stable action areas; only illustrations and decoration move. */
 .card-button {overflow: hidden; transition: box-shadow .18s, border-color .18s;}
@@ -127,9 +122,9 @@
 .player-panel {transition: border-color .18s, box-shadow .18s; animation: dixit-panel-in .25s ease-out;}
 .player-panel:hover, .player-panel:focus-within {border-color: #d3b975; box-shadow: 0 6px 24px #0007;}
 .turn-scene {animation: dixit-panel-in .22s ease-out;}
-.game-toolbar button, .clue-form button, .chat-input-form button {transition: background-color .15s, box-shadow .15s;}
-.game-toolbar button:hover, .clue-form button:hover, .chat-input-form button:hover {box-shadow: 0 3px 0 #111522;}
-.game-toolbar button:active, .clue-form button:active, .chat-input-form button:active {box-shadow: inset 0 2px 4px #0006;}
+.game-toolbar button, .chat-input-form button {transition: background-color .15s, box-shadow .15s;}
+.game-toolbar button:hover, .chat-input-form button:hover {box-shadow: 0 3px 0 #111522;}
+.game-toolbar button:active, .chat-input-form button:active {box-shadow: inset 0 2px 4px #0006;}
 .chat-container summary {transition: background-color .15s;}
 .chat-container summary:hover, .chat-container summary:focus-visible {background: #d2b45d1c;}
 .game-result {position: relative; overflow: hidden; isolation: isolate; padding: 20px 12px; margin-bottom: 16px; border: 1px solid #bfa05c; border-radius: 12px; background: radial-gradient(ellipse at top, #65502f88, #1b2339); animation: result-arrive .5s ease-out;}

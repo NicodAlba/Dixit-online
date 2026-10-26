@@ -2,13 +2,16 @@ import React from "react";
 import CardPreview from "./CardPreview";
 import GameResult from "./GameResult";
 import {Button, Form, Input, Label} from "reactstrap";
+import {FiFeather, FiSend} from "react-icons/fi";
+import "../../static/css/game/ClueComposer.css";
 
-export default function TurnStatusPanel({game, turn, currentPlayer, isStoryteller, storyteller, handleChange, handleSendClue, voteCard, busy = false, readOnly = false}) {
+export default function TurnStatusPanel({game, turn, currentPlayer, isStoryteller, storyteller, handleChange, handleSendClue, voteCard, busy = false, readOnly = false, cluePending = false, clueError = null}) {
     const state = turn?.state;
     const closed = state === "FINISHED";
     if (game.cancelled || game.deleted) return <><GameResult game={game} currentPlayer={currentPlayer} readOnly={readOnly} /><p>Actions are unavailable. The game history has been preserved.</p></>;
     if (!state) return <p>Waiting for the game state…</p>;
     const isNarrator = isStoryteller ?? storyteller?.id === currentPlayer?.id;
+    const canComposeClue = state === "WAITING_STORYTELLER_CLUE" && isNarrator && !readOnly;
     const tableVisible = ["SHOWING_CARDS", "VOTING", "FINISHED"].includes(state);
     let instruction = "Waiting for the storyteller to choose a card and give a clue.";
     if (state === "WAITING_STORYTELLER_CARD" && isNarrator && !readOnly) instruction = "Choose a card from your hand";
@@ -18,14 +21,17 @@ export default function TurnStatusPanel({game, turn, currentPlayer, isStorytelle
     return (
         <div className="turn-scene" key={`${turn.id}:${state}`}>
             <GameResult game={game} currentPlayer={currentPlayer} readOnly={readOnly} />
-            {turn.clue != null && <p className="clue">Clue: {turn.clue}</p>}
+            {turn.clue != null && !canComposeClue && <p className="clue">Clue: {turn.clue}</p>}
             <h2 aria-live="polite">{instruction}</h2>
-            {state === "WAITING_STORYTELLER_CLUE" && isNarrator && !readOnly && <Form className="clue-form" onSubmit={handleSendClue}>
-                <Label for="clue">Clue</Label>
-                <div className="clue-form-row">
-                    <Input type="text" required name="clue" id="clue" value={turn.clue || ""} onChange={handleChange} disabled={busy} />
-                    <Button color="success" type="submit" disabled={busy || !turn.clue?.trim()}>Set clue</Button>
+            {canComposeClue && <Form className="clue-composer" aria-label="Storyteller clue" aria-busy={cluePending} onSubmit={handleSendClue}>
+                <div className="clue-composer-heading"><FiFeather aria-hidden="true" /><Label for="clue">Your clue</Label></div>
+                <p className="clue-composer-hint" id="clue-help">Let the illustration inspire your words.</p>
+                <div className="clue-composer-row">
+                    <Input type="text" required name="clue" id="clue" placeholder="Write a clue…" value={turn.clue || ""} onChange={handleChange} disabled={busy}
+                        invalid={Boolean(clueError)} aria-describedby={clueError ? "clue-help clue-error" : "clue-help"} />
+                    <Button className="clue-submit" type="submit" disabled={busy || !turn.clue?.trim()}><FiSend aria-hidden="true" />{cluePending ? "Sending clue…" : "Set clue"}</Button>
                 </div>
+                {clueError && <p className="clue-composer-error" id="clue-error" role="alert">{clueError}</p>}
             </Form>}
             {tableVisible && <>
                 {!closed && <p className="game-help">{readOnly ? "Spectator view · voting is available to participants only." : isNarrator ? "The storyteller does not vote." : turn.hasVoted ? "Your vote has been sent." : "Your own card is marked. You cannot vote for it."}</p>}

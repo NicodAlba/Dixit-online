@@ -1,0 +1,63 @@
+.clue-composer {
+    max-width: 620px;
+    margin: 16px auto;
+    padding: 18px;
+    text-align: left;
+    border: 1px solid #a88e55;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b3541, #202b41);
+    box-shadow: inset 0 1px 0 #ffe4a51a, 0 8px 24px #0004;
+    scroll-margin-block: 20px;
+}
+.clue-composer-heading {display: flex; align-items: center; gap: 9px; color: #ffe599;}
+.clue-composer-heading > svg {flex-shrink: 0; font-size: 22px;}
+.clue-composer .clue-composer-heading label {margin: 0; color: inherit; font-size: 1rem; font-weight: 600;}
+.clue-composer-hint {margin: 7px 0 14px; color: #e7dfd0; font-size: .85rem;}
+.clue-composer-row {display: flex; align-items: stretch; gap: 10px;}
+.clue-composer input.form-control {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 48px;
+    padding: 11px 13px;
+    border: 1px solid #a79876;
+    border-radius: 8px;
+    background: #131d30;
+    color: #fff4db;
+    font: inherit;
+    font-size: 16px;
+    box-shadow: inset 0 2px 5px #0004;
+    scroll-margin-block: 20px;
+}
+.clue-composer input::placeholder {color: #c2bdba; opacity: 1;}
+.clue-composer input.form-control:focus {border-color: #ffe599; outline: 3px solid #ffe599; outline-offset: 3px; box-shadow: none;}
+.clue-composer input.form-control[aria-invalid="true"] {border-color: #ffb5ac;}
+.clue-composer input.form-control:disabled {background: #1c2638; color: #d5cec1; opacity: .8;}
+.clue-composer .clue-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: 0 0 164px;
+    min-height: 48px;
+    padding: 10px 14px;
+    border: 1px solid #f2d392;
+    border-radius: 8px;
+    background: linear-gradient(#f2cf7c, #dab05d);
+    color: #302216;
+    font: inherit;
+    font-weight: 600;
+    box-shadow: 0 3px 0 #8d662c;
+    transition: background-color .15s, box-shadow .15s;
+}
+.clue-composer .clue-submit:hover:not(:disabled) {background: #ffe2a0; color: #302216; box-shadow: 0 3px 0 #8d662c, 0 5px 14px #0004;}
+.clue-composer .clue-submit:active:not(:disabled) {box-shadow: inset 0 2px 4px #6a471855;}
+.clue-composer .clue-submit:focus-visible {outline: 3px solid #ffe599; outline-offset: 3px;}
+.clue-composer .clue-submit:disabled {background: #a89875; color: #30291e; border-color: #bdae8a; box-shadow: none; opacity: .8;}
+.clue-composer-error {margin: 12px 0 0; color: #ffb5ac; font-size: .9rem; overflow-wrap: anywhere;}
+@media (max-width: 560px) {
+    .clue-composer {padding: 14px 12px;}
+    .clue-composer-row {flex-direction: column; gap: 12px;}
+    .clue-composer input.form-control {flex-basis: auto;}
+    .clue-composer .clue-submit {flex-basis: auto; width: 100%;}
+}
+@media (prefers-reduced-motion: reduce) {.clue-composer * {transition: none !important;}}

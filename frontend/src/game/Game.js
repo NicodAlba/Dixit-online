@@ -23,6 +23,7 @@ export default function Game() {
     const [visible, setVisible] = useState(false);
     const [pendingPlayedCardIds, setPendingPlayedCardIds] = useState([]);
     const [clueDraft, setClueDraft] = useState("");
+    const [clueError, setClueError] = useState(null);
     const gameId = getIdFromUrl(2);
     const { game, turn: serverTurn, turnId, refresh, players, storyteller, loading = false, connection = "connected" } = useGameTurnState({
         gameId,
@@ -151,13 +152,14 @@ export default function Game() {
         } finally {finishAction();}
     };
 
-    useEffect(() => {setClueDraft("");}, [turnId]);
+    useEffect(() => {setClueDraft("");setClueError(null);}, [turnId]);
 
-    function handleChange(event) {setClueDraft(event.target.value);}
+    function handleChange(event) {setClueDraft(event.target.value);setClueError(null);}
 
     async function handleSendClue(event) {
         event.preventDefault();
-        if (!turnId || !clueDraft.trim() || !ready || game.endDate || !beginAction("Sending clue…")) return;
+        if (!turnId || !isStoryteller || turn?.state !== "WAITING_STORYTELLER_CLUE" || !clueDraft.trim() || !ready || game.endDate || game.cancelled || game.deleted || !beginAction("Sending clue…")) return;
+        setClueError(null);
         try {
             const response = await fetch(`/api/v1/turns/${turnId}/clue`, {
                 method: "PUT",
@@ -167,7 +169,7 @@ export default function Game() {
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.message || `Unable to set clue (${response.status}).`);
             await refresh();
-        } catch (error) {setMessage(error.message);setVisible(true);}
+        } catch (error) {setClueError(error.message || "Unable to send your clue. Please try again.");}
         finally {finishAction();}
     }
 
@@ -227,7 +229,8 @@ export default function Game() {
             {action && <p role="status" className="game-action-status">{action}</p>}
             <TurnStatusPanel game={game} turn={turn?.state === "WAITING_STORYTELLER_CLUE" ? {...turn, clue: clueDraft} : turn}
                 currentPlayer={currentPlayer} isStoryteller={isStoryteller} storyteller={storyteller} handleChange={handleChange}
-                handleSendClue={handleSendClue} voteCard={voteCard} getPlayerName={getPlayerName} busy={busy} />
+                handleSendClue={handleSendClue} voteCard={voteCard} getPlayerName={getPlayerName} busy={busy}
+                cluePending={action === "Sending clue…"} clueError={clueError} />
         </GameLayout>
     );
 }
