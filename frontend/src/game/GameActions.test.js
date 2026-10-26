@@ -1,6 +1,7 @@
 jest.mock("../social/SocialToggle", () => () => null);
 import React from "react";
 import {act, fireEvent, render, screen} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import Game from "./Game";
 let mockState;
 jest.mock("react-router-dom", () => ({useNavigate: () => jest.fn()}));
@@ -45,5 +46,123 @@ test("reconnection keeps the hand and blocks actions until a fresh view is avail
     expect(screen.getAllByAltText("Card").some(img => img.getAttribute("src") === "/Cards/2.png")).toBe(true);
     mockState = {...mockState, connection: "connected"}; rerender(<Game />);
     expect(screen.getByRole("button", {name: "Vote for card 2"})).toBeEnabled();
+    expect(global.fetch).not.toHaveBeenCalled();
+});
+
+function narratorWritingClue() {
+    mockState = {...mockState, storyteller: mockState.players[0],
+        turn: {id: 31, state: "WAITING_STORYTELLER_CLUE", clue: null, playedCards: []}};
+    global.fetch = jest.fn();
+}
+
+test("the narrator sends the unchanged single-line clue contract with Enter", async () => {
+    narratorWritingClue();
+    global.fetch.mockResolvedValue({ok: true, json: async () => ({})});
+    render(<Game />);
+    const field = screen.getByRole("textbox", {name: "Your clue"});
+    expect(field).toHaveAttribute("type", "text");
+    expect(field).not.toHaveAttribute("maxlength");
+    await userEvent.type(field, "An unexpected journey{enter}");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledWith("/api/v1/turns/31/clue", expect.objectContaining({method: "PUT", body: "An unexpected journey"}));
+    expect(mockState.refresh).toHaveBeenCalledTimes(1);
+});
+
+test("a pending clue is disabled and duplicate form submission sends only once", async () => {
+    narratorWritingClue();
+    let complete;
+    global.fetch.mockReturnValue(new Promise(resolve => {complete = resolve;}));
+    render(<Game />);
+    fireEvent.change(screen.getByRole("textbox", {name: "Your clue"}), {target: {value: "Beyond the clouds"}});
+    const form = screen.getByRole("form", {name: "Storyteller clue"});
+    fireEvent.submit(form); fireEvent.submit(form);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(form).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("textbox", {name: "Your clue"})).toBeDisabled();
+    expect(screen.getByRole("button", {name: "Sending clue…"})).toBeDisabled();
+    await act(async () => complete({ok: true, json: async () => ({})}));
+    expect(form).toHaveAttribute("aria-busy", "false");
+    expect(mockState.refresh).toHaveBeenCalledTimes(1);
+});
+
+test("a rejected clue keeps its draft and associates the error with the field for retry", async () => {
+    narratorWritingClue();
+    global.fetch.mockResolvedValueOnce({ok: false, json: async () => ({message: "Unable to save the clue. Please try again."})});
+    render(<Game />);
+    const field = screen.getByRole("textbox", {name: "Your clue"});
+    fireEvent.change(field, {target: {value: "A secret door"}});
+    fireEvent.click(screen.getByRole("button", {name: "Set clue"}));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unable to save the clue. Please try again.");
+    expect(field).toHaveValue("A secret door");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(/Unable to save the clue/);
+    expect(mockState.refresh).not.toHaveBeenCalled();
+    global.fetch.mockResolvedValue({ok: true, json: async () => ({})});
+    fireEvent.click(screen.getByRole("button", {name: "Set clue"}));
+    await act(async () => {});
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch.mock.calls[1][1].body).toBe("A secret door");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+test("a network error keeps the clue and editing clears the obsolete error", async () => {
+    narratorWritingClue();
+    global.fetch.mockRejectedValue(new Error("Connection lost. Please try again."));
+    render(<Game />);
+    const field = screen.getByRole("textbox", {name: "Your clue"});
+    fireEvent.change(field, {target: {value: "A distant light"}});
+    fireEvent.click(screen.getByRole("button", {name: "Set clue"}));
+    await screen.findByRole("alert");
+    expect(field).toHaveValue("A distant light");
+    fireEvent.change(field, {target: {value: "A distant lighthouse"}});
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(field).toHaveAttribute("aria-invalid", "false");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+});
+
+test("fresh game snapshots and reconnection preserve the draft for the same round", () => {
+    narratorWritingClue();
+    const {rerender} = render(<Game />);
+    fireEvent.change(screen.getByRole("textbox", {name: "Your clue"}), {target: {value: "Between sky and sea"}});
+    mockState = {...mockState, game: {...mockState.game}, turn: {...mockState.turn, clue: null}, players: [...mockState.players]};
+    rerender(<Game />);
+    expect(screen.getByRole("textbox", {name: "Your clue"})).toHaveValue("Between sky and sea");
+    expect(screen.queryByText("Clue: Between sky and sea")).not.toBeInTheDocument();
+    mockState = {...mockState, connection: "reconnecting"}; rerender(<Game />);
+    expect(screen.getByRole("textbox", {name: "Your clue"})).toBeDisabled();
+    mockState = {...mockState, connection: "connected"}; rerender(<Game />);
+    expect(screen.getByRole("textbox", {name: "Your clue"})).toHaveValue("Between sky and sea");
+    expect(screen.getByRole("button", {name: "Set clue"})).toBeEnabled();
+    expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test("a new round clears the previous clue without sending it", () => {
+    narratorWritingClue();
+    const {rerender} = render(<Game />);
+    fireEvent.change(screen.getByRole("textbox", {name: "Your clue"}), {target: {value: "An old story"}});
+    mockState = {...mockState, turnId: 32, turn: {...mockState.turn, id: 32}};
+    rerender(<Game />);
+    expect(screen.getByRole("textbox", {name: "Your clue"})).toHaveValue("");
+    expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test("a blank or whitespace-only clue cannot be sent", () => {
+    narratorWritingClue(); render(<Game />);
+    expect(screen.getByRole("button", {name: "Set clue"})).toBeDisabled();
+    fireEvent.change(screen.getByRole("textbox", {name: "Your clue"}), {target: {value: "   "}});
+    fireEvent.submit(screen.getByRole("form", {name: "Storyteller clue"}));
+    expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test("only the narrator in the clue phase has a clue form", () => {
+    narratorWritingClue();
+    const {rerender} = render(<Game />);
+    expect(screen.getByRole("textbox", {name: "Your clue"})).toBeInTheDocument();
+    mockState = {...mockState, storyteller: mockState.players[1]}; rerender(<Game />);
+    expect(screen.queryByRole("textbox", {name: "Your clue"})).not.toBeInTheDocument();
+    mockState = {...mockState, storyteller: mockState.players[0], turn: {...mockState.turn, state: "WAITING_PLAYER_CARDS"}}; rerender(<Game />);
+    expect(screen.queryByRole("form", {name: "Storyteller clue"})).not.toBeInTheDocument();
+    mockState = {...mockState, turn: {...mockState.turn, state: "WAITING_STORYTELLER_CLUE"}, game: {...mockState.game, cancelled: true}}; rerender(<Game />);
+    expect(screen.queryByRole("textbox", {name: "Your clue"})).not.toBeInTheDocument();
     expect(global.fetch).not.toHaveBeenCalled();
 });

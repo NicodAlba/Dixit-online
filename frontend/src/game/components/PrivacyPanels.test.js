@@ -51,3 +51,9 @@ test("another perspective has no vote marker; an authorized spectator is labeled
  expect(screen.getByText("✓ Perspective vote")).toBeInTheDocument();
  expect(screen.getByRole("button",{name:"Perspective vote: card 2"})).toBeDisabled();
 });
+
+test("an authorized storyteller perspective does not give the spectator a clue form",()=>{
+ render(<SpectatorStatus {...props} isStoryteller turn={{id:31,state:"WAITING_STORYTELLER_CLUE",clue:null,playedCards:[]}}/>);
+ expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+ expect(screen.queryByRole("button",{name:"Set clue"})).not.toBeInTheDocument();
+});
