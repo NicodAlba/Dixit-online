@@ -53,3 +53,9 @@
   background-color: var(--main-red-color) !important;
   box-shadow: 0px 15px 20px rgba(229, 46, 46, 0.4);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-button, .auth-button-secondary {transition: none !important;}
+  .auth-button:hover, .auth-button:active,
+  .auth-button-secondary:hover, .auth-button-secondary:active {transform: none;}
+}
