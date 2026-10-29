@@ -50,7 +50,7 @@ export default function Spectate() {
     const isStoryteller = storyteller?.id  === spectatingPlayer?.id;
 
     return (
-        <GameLayout gameId={gameId} game={game} loading={loading} connection={connection}
+        <GameLayout gameId={gameId} game={game} perspectiveId={spectatingPlayer?.id} loading={loading} connection={connection}
             storytellerName={getPlayerName(storyteller)} role={`Spectating ${getPlayerName(spectatingPlayer)}`}
             message={visible ? message : null} onDismiss={() => setVisible(false)} onRetry={refresh}
             toolbar={<>

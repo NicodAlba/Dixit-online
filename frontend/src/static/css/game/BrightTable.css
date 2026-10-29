@@ -86,3 +86,38 @@
     .table-piles {gap: 24px;}
     .game-page-container {background-attachment: scroll;}
 }
+
+/* Transient decoration follows confirmed snapshots; hit areas remain fixed. */
+.game-motion-cue {position: absolute; left: calc(50% - 19px); top: 40%; z-index: 2; pointer-events: none;}
+.game-motion-cue img {width: 38px; height: 55px; border: 2px solid #fff6e4; border-radius: 5px; box-shadow: 0 4px 12px #72522e44;}
+.cue-card-played {animation: anonymous-card-arrive .65s ease-out both;}
+.cue-new-round, .cue-deal {animation: table-deal .85s ease-out both;}
+.cue-reveal, .cue-round-result, .cue-phase {display: none;}
+.motion-reveal .table-cards > li {animation: table-reveal .45s ease-out both;}
+.motion-reveal .table-cards > li:nth-child(2) {animation-delay: .05s;}
+.motion-reveal .table-cards > li:nth-child(3) {animation-delay: .1s;}
+.motion-reveal .table-cards > li:nth-child(4) {animation-delay: .15s;}
+.motion-round-result .card-answer {animation: storyteller-reveal .8s ease-out;}
+.motion-phase .game-turn-panel h2 {animation: phase-confirm .45s ease-out;}
+.card-arriving {animation: hand-deal .65s ease-out both;}
+.confirmed-card-flight {position: absolute; top: 40px; left: calc(50% - 38px); pointer-events: none; z-index: 3; animation: own-card-play .7s ease-out both;}
+.confirmed-card-flight img {width: 76px; height: 110px; object-fit: cover; border: 3px solid #fff6e4; border-radius: 8px; box-shadow: 0 5px 16px #76552e55;}
+.round-recap {margin: 16px auto 4px; max-width: 400px; background: #fff9ec; border: 1px solid #d8bc8a; border-radius: 12px; text-align: left;}
+.round-recap summary {padding: 10px 12px; min-height: 44px; cursor: pointer; color: #75501e;}
+.round-recap-content {display: flex; align-items: center; gap: 16px; padding: 12px;}
+.round-recap-content > img {width: 64px; height: 93px; object-fit: cover; border-radius: 6px;}
+.round-recap-content p {margin: 6px 0; white-space: pre-wrap;}
+@keyframes own-card-play {from {opacity: .9; transform: translateY(0) scale(.9);} to {opacity: 0; transform: translateY(-170px) scale(.6);}}
+@keyframes anonymous-card-arrive {from {opacity: 0; transform: translateY(24px) scale(.8);} 30% {opacity: .9;} to {opacity: 0; transform: translateY(-8px);}}
+@keyframes table-deal {from {opacity: .9; transform: translateY(0) rotate(-7deg);} to {opacity: 0; transform: translateY(90px) rotate(0);}}
+@keyframes hand-deal {from {opacity: .3; transform: translateY(-24px) scale(.9);} to {opacity: 1; transform: none;}}
+@keyframes table-reveal {from {opacity: .3; transform: scale(.94);} to {opacity: 1; transform: none;}}
+@keyframes storyteller-reveal {40% {box-shadow: 0 0 0 7px #d8ac4e66;} to {box-shadow: 0 3px 7px #78562e26;}}
+@keyframes phase-confirm {from {opacity: .4;} to {opacity: 1;}}
+@media(prefers-reduced-motion: reduce) {
+    .game-motion-cue, .confirmed-card-flight {display: none;}
+    .game-page-container .card-arriving, .game-page-container .motion-reveal .table-cards > li {transform: none; opacity: 1; animation: none;}
+}
+.cue-vote {display: none;}
+.motion-vote .card-voted {animation: vote-confirm .5s ease-out;}
+@keyframes vote-confirm {40% {box-shadow: 0 0 0 6px #5b9e6666;} to {box-shadow: 0 3px 7px #78562e26;}}

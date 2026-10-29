@@ -166,3 +166,20 @@ test("only the narrator in the clue phase has a clue form", () => {
     expect(screen.queryByRole("textbox", {name: "Your clue"})).not.toBeInTheDocument();
     expect(global.fetch).not.toHaveBeenCalled();
 });
+
+test("card presentation waits for acceptance and a rejected play retains the card",async()=>{
+ mockState={...mockState,turn:{id:31,state:"WAITING_PLAYER_CARDS",playedCards:[]}};
+ let finish;global.fetch=jest.fn(()=>new Promise(resolve=>{finish=resolve;}));
+ const {container}=render(<Game />);
+ fireEvent.click(screen.getByRole("button",{name:"Select card 1"}));
+ expect(container.querySelector('.confirmed-card-flight')).toBeNull();
+ expect(screen.getByRole("button",{name:"Select card 1"}).querySelector("img")).toHaveAttribute("src","/Cards/2.png");
+ await act(async()=>finish({ok:false,json:async()=>({message:"Card rejected"})}));
+ expect(screen.getByRole("alert")).toHaveTextContent("Card rejected");
+ expect(screen.getByRole("button",{name:"Select card 1"})).toBeEnabled();
+ expect(container.querySelector('.confirmed-card-flight')).toBeNull();
+ global.fetch.mockResolvedValue({ok:true,json:async()=>({})});
+ fireEvent.click(screen.getByRole("button",{name:"Select card 1"}));await act(async()=>{});
+ expect(container.querySelector('.confirmed-card-flight img')).toHaveAttribute("src","/Cards/2.png");
+ expect(mockState.refresh).toHaveBeenCalledTimes(1);
+});
