@@ -2,12 +2,22 @@ import React, {createContext, useCallback, useContext, useEffect, useRef, useSta
 import {useLocation, useNavigate} from "react-router-dom";
 import tokenService from "../services/token.service";
 import SocialPanel from "./SocialPanel";
+import {useApplicationConnection} from "../presence/PresenceContext";
+import SocialNotifications from "./SocialNotifications";
+import {socialChanges} from "./socialChanges";
 
 const SocialContext = createContext(null);
 export const useSocial = () => useContext(SocialContext);
 
 export function SocialProvider({jwt, children}) {
     const [open, setOpen] = useState(false);
+    const [section, setSection] = useState("friends");
+    const [notifications, setNotifications] = useState([]);
+    const baseline = useRef(null);
+    const seen = useRef(new Set());
+    const connection = useApplicationConnection();
+    const connectionState = connection?.state;
+    const generation = connection?.generation;
     const [friends, setFriends] = useState([]);
     const [relationships, setRelationships] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -34,18 +44,30 @@ export function SocialProvider({jwt, children}) {
         const revision = ++requestRevision.current;
         setLoading(true);
         try {
-            const [friends, relationships] = await Promise.all([request("/api/v1/friends"), request("/api/v1/friends/relationships")]);
+            const [[friends, relationships], invitationResult] = await Promise.all([
+                Promise.all([request("/api/v1/friends"), request("/api/v1/friends/relationships")]),
+                request("/api/v1/games/invitations").then(data => ({data}), () => ({data: null})),
+            ]);
             if (!alive.current || revision !== requestRevision.current) return;
+            if (![friends, relationships].every(Array.isArray)) throw new Error("Unable to load social updates. Please try again.");
+            // Invitation failure must not disable friendship actions. Its section retains its own error feedback.
+            if (Array.isArray(invitationResult.data)) {
+                const snapshot = {relationships, invitations: invitationResult.data};
+                const changes = socialChanges(baseline.current, snapshot, seen.current);
+                baseline.current = snapshot;
+                if (changes.length) setNotifications(previous => [...previous, ...changes].slice(-3));
+            } else baseline.current = null;
             setFriends(friends); setRelationships(relationships); setError(null); setLoaded(true);
-        } catch (error) {if (alive.current && revision === requestRevision.current) setError(error.message);}
+        } catch (error) {if (alive.current && revision === requestRevision.current) {baseline.current = null; setError(error.message);}}
         finally {if (alive.current && revision === requestRevision.current) setLoading(false);}
     }, [request]);
     useEffect(() => {
-        if (!open) return;
+        baseline.current = null;
+        if (connectionState && connectionState !== "connected") return;
         refresh();
         const timer = setInterval(refresh, 10000);
         return () => {clearInterval(timer); invalidateRequests();};
-    }, [open, refresh, invalidateRequests]);
+    }, [connectionState, generation, refresh, invalidateRequests]);
 
     const perform = useCallback(async (action, success) => {
         if (pendingRef.current) return false;
@@ -57,19 +79,19 @@ export function SocialProvider({jwt, children}) {
         } catch (error) {if (alive.current) setError(error.message || "Unable to complete this action."); return false;}
         finally {pendingRef.current = false; if (alive.current) setPending(false);}
     }, [refresh]);
-    const openPanel = useCallback(() => setOpen(true), []);
+    const openPanel = useCallback((target) => {if (typeof target === "string") setSection(target); setOpen(true);}, []);
     const closePanel = () => {
         setOpen(false);
         if (location.pathname === "/friends") navigate("/", {replace: true});
     };
     const relation = accountId => relationships.find(item => item.accountId === accountId);
     const context = {
-        open, openPanel, closePanel, friends, relationships, loading, loaded, error, feedback, pending,
+        open, openPanel, closePanel, section, setSection, notifications, dismissNotification: id => setNotifications(previous => previous.filter(item => item.id !== id)), friends, relationships, loading, loaded, error, feedback, pending,
         refresh, request, perform, relation, selfId: tokenService.getUser()?.id,
         sendRequest: accountId => perform(() => request(`/api/v1/friends/addFriend/${accountId}`, "POST"), "Friend request sent."),
         acceptRequest: requestId => perform(() => request(`/api/v1/friends/${requestId}/accept`, "PATCH"), "Friend request accepted."),
         denyRequest: requestId => perform(() => request(`/api/v1/friends/${requestId}/deny`, "DELETE"), "Friend request declined."),
         removeFriend: accountId => perform(() => request(`/api/v1/friends/${accountId}/remove`, "DELETE"), "Friend removed."),
     };
-    return <SocialContext.Provider value={context}>{children}<SocialPanel /></SocialContext.Provider>;
+    return <SocialContext.Provider value={context}>{children}<SocialNotifications /><SocialPanel /></SocialContext.Provider>;
 }

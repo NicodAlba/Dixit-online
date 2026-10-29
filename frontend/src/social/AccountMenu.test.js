@@ -13,7 +13,7 @@ let relationships;
 beforeEach(()=>{
  relationships=[];
  global.fetch=jest.fn(async(url,options)=>{
-  if(url==="/api/v1/friends")return ok([]);
+  if(url==="/api/v1/friends" || url==="/api/v1/games/invitations")return ok([]);
   if(url==="/api/v1/friends/relationships")return ok(relationships);
   throw new Error(`Unexpected request ${url}`);
  });
@@ -23,14 +23,15 @@ const wrap=children=><MemoryRouter><SocialProvider jwt="token">{children}</Socia
 test("participant actions use User.id, guard duplicate clicks and recover outgoing state from the server",async()=>{
  let finish;
  global.fetch.mockImplementation(async(url,options)=>{
-  if(url==="/api/v1/friends")return ok([]);
+  if(url==="/api/v1/friends" || url==="/api/v1/games/invitations")return ok([]);
   if(url==="/api/v1/friends/relationships")return ok(relationships);
   if(url==="/api/v1/friends/addFriend/72")return new Promise(resolve=>{finish=resolve;});
   throw new Error(`Unexpected request ${url}`);
  });
  const player={id:901,user:{id:72,username:"Owl"},points:0,handSize:6};
  const view=()=>wrap(<OpponentPanel position="left" player={player} storyteller={{id:903}} getPlayerName={p=>p.user.username}/>);
- const first=render(view());expect(global.fetch).not.toHaveBeenCalled();
+ const first=render(view());await act(async()=>{});
+ expect(global.fetch.mock.calls.every(([url, options])=>options.method === "GET" && ["/api/v1/friends", "/api/v1/friends/relationships", "/api/v1/games/invitations"].includes(url))).toBe(true);
  fireEvent.click(screen.getByRole("button",{name:"Owl: player options"}));
  const add=await screen.findByRole("button",{name:"Add friend"});await waitFor(()=>expect(add).toBeEnabled());
  add.focus();fireEvent.click(add);fireEvent.click(add);
@@ -55,9 +56,11 @@ test("incoming request is accepted by its request ID and an accepted friend cann
  expect(await screen.findByRole("button",{name:"Already friends"})).toBeDisabled();
  expect(global.fetch).toHaveBeenCalledWith("/api/v1/friends/417/accept",expect.objectContaining({method:"PATCH"}));
 });
-test("self and missing identity are plain names with no friendship action or private query",()=>{
+test("self and missing identity trigger no friendship action beyond authorized background reads",async()=>{
  render(wrap(<><AccountMenu accountId={71} username="You"/><AccountMenu username="Legacy"/></>));
- expect(screen.queryByRole("button",{name:/player options/})).not.toBeInTheDocument();expect(global.fetch).not.toHaveBeenCalled();
+ await act(async()=>{});
+ expect(screen.queryByRole("button",{name:/player options/})).not.toBeInTheDocument();
+ expect(global.fetch.mock.calls.every(([url,options])=>options.method === "GET" && ["/api/v1/friends", "/api/v1/friends/relationships", "/api/v1/games/invitations"].includes(url))).toBe(true);
 });
 test("chat opens the same action using the author's account ID even when its name equals the reader's",async()=>{
  render(wrap(<Chat gameId={42}/>));

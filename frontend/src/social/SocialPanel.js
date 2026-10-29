@@ -11,7 +11,7 @@ import "../static/css/social/social.css";
 
 export default function SocialPanel() {
     const social = useSocial();
-    const [section, setSection] = useState("friends");
+    const {section, setSection} = social;
     const [inviteRefresh, setInviteRefresh] = useState(0);
     useEffect(() => {
         if (!social.open) return;
