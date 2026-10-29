@@ -16,7 +16,7 @@ npm ci --no-audit --no-fund
 CI=true npm test -- --watchAll=false --runInBand
 CI=false npm run build
 cd ..
-./mvnw --batch-mode --no-transfer-progress clean verify
+SPRING_PROFILES_ACTIVE=test ./mvnw --batch-mode --no-transfer-progress clean verify
 python3 scripts/ci/verify_package.py
 git diff --exit-code
 ```
@@ -40,10 +40,20 @@ not be deployed publicly until production configuration and data initialization
 are prepared and approved. Deep-link routing and public asset authorization
 must also be checked in the production preparation delivery.
 
+## PostgreSQL and production package
+
+The same CI job also provisions a disposable PostgreSQL 17.11 service with random
+runtime/migration credentials, applies Flyway and runs the explicit PostgreSQL
+acceptance suite. It packages without academic seeds, validates two production
+JAR starts, then dumps/restores to another isolated database and checks every
+row, sequence and the restored application. This is local CI infrastructure,
+not a hosted Dixit deployment. See [production.md](production.md) for reproduction.
+No tokens/fixture access files, dumps or credentials are uploaded with diagnostics.
+
 ## Reports and security
 
-GitHub retains only Surefire reports, JaCoCo output and the local smoke log for
-seven days. Logs may contain synthetic test data and must never be generated
+Only failed runs upload Surefire/JaCoCo and smoke/startup diagnostics, retained
+for one day; successful runs keep their normal Actions logs without an artifact upload. Logs may contain synthetic test data and must never be generated
 against real accounts. JARs and frontend bundles are not published by this CI.
 The job has `contents: read`, no persisted checkout credentials and no deployment
 secrets. Actions are pinned to commits. Maven/npm caches contain dependencies,

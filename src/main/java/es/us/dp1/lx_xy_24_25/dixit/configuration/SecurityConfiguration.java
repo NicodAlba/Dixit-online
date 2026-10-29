@@ -59,6 +59,10 @@ public class SecurityConfiguration {
                 }))
 
             .authorizeHttpRequests(auth -> auth
+                .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
+                .requestMatchers(HttpMethod.GET, SpaConfiguration.ROUTES).permitAll()
+                .requestMatchers(HttpMethod.HEAD, SpaConfiguration.ROUTES).permitAll()
+                .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 // Recursos estáticos comunes (css, js, images, webjars…) públicos
                 .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
                 // Public files bundled by CRA; private data remains under /api/v1.

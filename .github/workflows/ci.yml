@@ -16,7 +16,19 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17.11
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       CI: 'true'
     steps:
@@ -47,19 +59,38 @@ jobs:
           CI: 'false'
         run: npm run build
       - name: Backend tests and executable JAR
+        env:
+          SPRING_PROFILES_ACTIVE: test
         run: ./mvnw --batch-mode --no-transfer-progress clean verify
       - name: Verify packaged resources and start executable JAR
         run: python3 scripts/ci/verify_package.py
+      - name: Provision isolated PostgreSQL roles and database
+        run: python3 scripts/ci/provision_postgres.py '${{ job.services.postgres.id }}'
+      - name: PostgreSQL migrations, privacy, concurrency and complete four-player game
+        run: >-
+          ./mvnw --batch-mode --no-transfer-progress
+          -Dspring.profiles.active=prod
+          -Dtest.reports.dir=target/postgres-surefire-reports
+          -Dtest=PostgresPersistenceIT,GameActionPermissionsTest,GamePhasePrivacyTest,FriendRelationshipsTest,GameCancellationTest,ChatAccountIdentityTest,StompPermissionsTest
+          test
+      - name: Package production JAR without academic seeds
+        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests -Pproduction-package package
+      - name: Production startup, routes, secrets, origins and persistence after restart
+        run: python3 scripts/ci/verify_production.py
+      - name: Backup and isolated restore with production JAR
+        run: python3 scripts/ci/verify_restore.py '${{ job.services.postgres.id }}'
       - name: Verify build did not modify tracked files
         run: git diff --exit-code
       - name: Diagnostics
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ci-diagnostics
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: warn
           path: |
             target/surefire-reports/
             target/site/jacoco/
+            target/postgres-surefire-reports/
+            target/production-*.log
             target/ci-smoke.log
