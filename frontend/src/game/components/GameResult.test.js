@@ -8,9 +8,11 @@ test("a canonical winner celebrates once per game and keeps exact standings afte
  const first=render(<GameResult game={completed} currentPlayer={players[0]}/>);
  expect(screen.getByRole("heading",{name:"Your imagination shines!"})).toBeInTheDocument();
  expect(first.container.querySelector(".result-sparks")).not.toBeNull();
+ expect(first.container.querySelector(".result-emblem")).toHaveClass("is-celebrating");
  expect(screen.getByRole("table",{name:"Final standings"})).toHaveTextContent("Fox · Winner16Owl10Bear9");
  first.unmount();const reloaded=render(<GameResult game={completed} currentPlayer={players[0]}/>);
  expect(reloaded.container.querySelector(".result-sparks")).toBeNull();
+ expect(reloaded.container.querySelector(".result-emblem")).not.toHaveClass("is-celebrating");
  expect(screen.getByText("16")).toBeInTheDocument();
 });
 test("all canonical tied winners are named and each receives a shared victory",()=>{
@@ -36,4 +38,12 @@ test("cancellation is not a defeat or a completed game and preserves scores",()=
  expect(screen.getByRole("heading",{name:"Until the next story"})).toBeInTheDocument();
  expect(screen.getByRole("table",{name:"Scores so far"})).toHaveTextContent("Fox16Owl10Bear9");
  expect(screen.queryByText("Winner: Fox")).not.toBeInTheDocument();expect(container.querySelector(".result-sparks")).toBeNull();
+});
+
+test.each(["getItem","setItem"])("unavailable storage (%s) keeps results usable without repeating a celebration",method=>{
+ const spy=jest.spyOn(Storage.prototype,method).mockImplementation(()=>{throw new Error("Storage unavailable");});
+ const {container}=render(<GameResult game={completed} currentPlayer={players[0]}/>);
+ expect(screen.getByRole("table",{name:"Final standings"})).toHaveTextContent("Fox · Winner16");
+ expect(container.querySelector(".result-sparks")).toBeNull();expect(container.querySelector(".result-emblem")).not.toHaveClass("is-celebrating");
+ spy.mockRestore();
 });
