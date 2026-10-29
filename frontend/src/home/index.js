@@ -5,7 +5,7 @@ import logo from "../static/images/Logo dixit.webp";
 import roundLogo from "../static/images/dixit round.png";
 import tokenService from "../services/token.service";
 import jwt_decode from "jwt-decode";
-import {useLocation, useNavigate} from "react-router-dom";
+import {Link, useLocation, useNavigate} from "react-router-dom";
 import {Button, Form, Input, Label, Modal, ModalHeader, ModalBody} from "reactstrap";
 import {FiPlay, FiPlusCircle, FiLogIn, FiUserPlus, FiKey, FiArrowLeft} from "react-icons/fi";
 import {GameInvitationList} from "./GameInvitationList";
@@ -18,7 +18,6 @@ export default function Home() {
     const roles = jwt ? jwt_decode(jwt).authorities : [];
     const [showOptions, setShowOptions] = useState(false);
     const [showAuth, setShowAuth] = useState(false);
-    const [flipped, setFlipped] = useState(false);
     const [view, setView] = useState(null);
     const [message, setMessage] = useState(null);
     const [game, setGame] = useState({password: "", gameId: ""});
@@ -53,9 +52,9 @@ export default function Home() {
     return <main className="home-page-container dixit-ui">
         <section className="hero-div">
             {notice && <div role="status" className="home-notice">{notice} <button onClick={() => setNotice(null)} aria-label="Dismiss notification">×</button></div>}
-            <Tooltip text="Flip the Dixit logo"><button className={`hero-logo ${flipped ? "is-flipped" : ""}`} aria-label="Flip the Dixit logo" aria-pressed={flipped} onClick={() => setFlipped(!flipped)}>
+            <Tooltip text="Dixit home"><Link className="hero-logo" to="/" aria-label="Dixit home">
                 <span className="hero-logo-inner"><span className="hero-logo-front"><img src={logo} alt="Dixit" /></span><span className="hero-logo-back"><img src={roundLogo} alt="" /><span>Tell your story</span></span></span>
-            </button></Tooltip>
+            </Link></Tooltip>
             {roles.includes("ADMIN") ? <h1>Welcome to the admin page</h1> : <>
                 <p className="home-eyebrow">A world of imagination</p>
                 <h1>Do you want to play?</h1>

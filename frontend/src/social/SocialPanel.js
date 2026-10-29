@@ -25,7 +25,7 @@ export default function SocialPanel() {
         if (trigger?.getClientRects().length) trigger.focus();
         else document.querySelector('[aria-controls="main-navigation"]')?.focus();
     })}>
-        <ModalHeader close={<Tooltip text="Close"><button aria-label="Close" onClick={social.closePanel}><FiX aria-hidden="true" size={20} /></button></Tooltip>}><span id="social-title"><FiUsers aria-hidden="true" /> Friends</span></ModalHeader>
+        <ModalHeader close={<Tooltip text="Close"><button aria-label="Close" onClick={social.closePanel}><FiX aria-hidden="true" size={20} /></button></Tooltip>}><span id="social-title"><FiUsers aria-hidden="true" /> Friends</span><span className="social-subtitle">Good stories are better together.</span></ModalHeader>
         <ModalBody>
             <nav className="social-sections" aria-label="Social sections">
                 <button aria-pressed={section === "friends"} onClick={() => setSection("friends")}><FiUsers aria-hidden="true" /> Friends</button>

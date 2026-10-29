@@ -65,3 +65,30 @@
 .social-drawer .modal-header .dixit-tooltip-text {left: auto; right: 0; transform: none;}
 .social-drawer .modal-header > .dixit-tooltip {margin-left: auto;}
 .social-drawer .modal-header button {min-width: 44px;}
+
+/* Illustrated paper surfaces; keep the existing dialog and focus behavior. */
+.social-drawer .modal-content {background: #fff8eb; border: 1px solid #c9a36b; box-shadow: 0 14px 42px #6e4d3040;}
+.social-drawer .modal-header {padding: 22px 18px 18px; background: linear-gradient(#fff8e8b0, #fff1d5b8), url('../../images/SocialBackground.png') center 45% / cover;}
+.social-drawer .modal-title {font-size: 1.3rem;}
+.social-subtitle {display: block; margin-top: 7px; font: 13px/1.45 'Segoe UI', sans-serif; color: #6b5033;}
+.social-drawer .modal-body {background: linear-gradient(#fffaf1, #fff3df); padding: 18px;}
+.social-sections {gap: 8px; padding-bottom: 4px;}
+.social-sections button {border-color: #dfc69a; background: #fffcf5;}
+.social-sections button[aria-pressed="true"] {background: #f5d791; color: #543b15; border-color: #ad7e2b; box-shadow: inset 0 -3px #c69139;}
+.social-drawer h3 {color: #684725; margin-top: 20px; font-size: 1.05rem;}
+.social-person {padding: 14px; border-color: #e0c79f; background: #fffdf7; box-shadow: 0 3px 10px #70512b0c;}
+.social-person-name {display: flex; align-items: center; gap: 11px; min-width: 0;}
+.social-person-name > div {display: grid; gap: 5px; min-width: 0;}
+.social-avatar {display: grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; border: 1px solid #c4a36a; border-radius: 50%; background: linear-gradient(#fff1cf, #f1d29a); color: #684622; font: 16px/1 'american-typewriter', Georgia, serif; box-shadow: inset 0 0 0 3px #fff8e9;}
+.social-drawer .social-person .connection-badge {font-size: .75rem;}
+.social-person-actions {gap: 8px; margin-top: 5px;}
+.social-person-actions button {display: inline-flex; align-items: center; justify-content: center; gap: 5px;}
+.social-drawer button.social-action-primary, .social-drawer .btn-primary {background: #f4d38e; border-color: #b78c42; color: #503916;}
+.social-drawer button.social-action-primary:hover, .social-drawer .btn-primary:hover {background: #ffe1a1; color: #503916;}
+.social-drawer button:active:not(:disabled) {box-shadow: inset 0 2px 4px #77532d2b;}
+.social-empty {padding: 18px 14px; border: 1px dashed #d3b783; border-radius: 12px; background: #fff9ec; color: #735535; line-height: 1.6;}
+.social-request-state {color: #6d5737; font-size: .85rem;}
+.social-refresh {padding-bottom: 2px; color: #705335;}
+.social-refresh button {text-decoration: none; color: #72501f;}
+.social-error, .social-feedback {line-height: 1.5;}
+.social-drawer button:disabled {cursor: default;}
