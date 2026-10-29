@@ -28,7 +28,7 @@ assert os.environ["DIXIT_DB_URL"] == os.environ["DIXIT_TEST_POSTGRES_URL"]
 invalid_env = {key: value for key, value in os.environ.items() if not key.startswith("SPRING_")}
 invalid_env.pop("DIXIT_JWT_SECRET", None)
 with (root / "target/production-missing-secret.log").open("w") as log:
-    result = subprocess.run(["java", "-jar", str(jar), "--spring.profiles.active=prod"],
+    result = subprocess.run(["java", "-jar", str(jar)],
                             env=invalid_env, stdout=log, stderr=subprocess.STDOUT, timeout=30)
 assert result.returncode != 0
 failure = (root / "target/production-missing-secret.log").read_text()
@@ -39,8 +39,8 @@ print("Production JAR excludes academic seeds and rejects missing JWT secret", f
 def server(label):
     log_path = root / f"target/production-{label}.log"
     with log_path.open("w") as log:
-        process = subprocess.Popen(["java", "-jar", str(jar), "--spring.profiles.active=prod",
-                                    "--server.address=127.0.0.1", "--server.port=0"],
+        process = subprocess.Popen(["java", "-jar", str(jar), "--server.address=127.0.0.1", "--server.port=0"],
+                                   env={key: value for key, value in os.environ.items() if not key.startswith("SPRING_")},
                                    stdout=log, stderr=subprocess.STDOUT)
         try:
             deadline = time.monotonic() + 90
