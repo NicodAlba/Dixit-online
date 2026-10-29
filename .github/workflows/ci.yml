@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend from lockfile
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+      - name: Frontend tests (non-interactive)
+        working-directory: frontend
+        run: npm test -- --watchAll=false --runInBand
+      - name: Production frontend build
+        working-directory: frontend
+        # CRA treats inherited lint/source-map warnings as errors under CI=true.
+        # Keep warnings visible; dependency/lint cleanup is a separate task.
+        env:
+          CI: 'false'
+        run: npm run build
+      - name: Backend tests and executable JAR
+        run: ./mvnw --batch-mode --no-transfer-progress clean verify
+      - name: Verify packaged resources and start executable JAR
+        run: python3 scripts/ci/verify_package.py
+      - name: Verify build did not modify tracked files
+        run: git diff --exit-code
+      - name: Diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ci-diagnostics
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            target/surefire-reports/
+            target/site/jacoco/
+            target/ci-smoke.log

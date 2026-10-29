@@ -61,6 +61,13 @@ public class SecurityConfiguration {
             .authorizeHttpRequests(auth -> auth
                 // Recursos estáticos comunes (css, js, images, webjars…) públicos
                 .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
+                // Public files bundled by CRA; private data remains under /api/v1.
+                .requestMatchers(HttpMethod.GET, "/index.html", "/static/**", "/Cards/**",
+                    "/Achievements/**", "/favicon.ico", "/manifest.json", "/robots.txt",
+                    "/logo192.png", "/logo512.png").permitAll()
+                .requestMatchers(HttpMethod.HEAD, "/index.html", "/static/**", "/Cards/**",
+                    "/Achievements/**", "/favicon.ico", "/manifest.json", "/robots.txt",
+                    "/logo192.png", "/logo512.png").permitAll()
                 // A disabled console has no servlet/properties bean: don't use toH2Console().
                 .requestMatchers("/h2-console/**").access((authentication, context) ->
                     new org.springframework.security.authorization.AuthorizationDecision(h2ConsoleEnabled))
