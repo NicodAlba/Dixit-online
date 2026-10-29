@@ -6,7 +6,7 @@ import { List, ListInlineItem } from "reactstrap";
 import fairy from "../../static/images/icons/Fairy.png";
 import "../../static/css/game/Game.css";
 
-export function OwnPlayerPanel({ currentPlayer, currentUser, isStoryteller, turn, selectCard, getPlayerName, handCards, busy = false }) {
+export function OwnPlayerPanel({ currentPlayer, currentUser, isStoryteller, turn, selectCard, getPlayerName, handCards, busy = false, arrivingCardIds = [], confirmedCard = null }) {
     const playedCardIds = new Set((turn?.playedCards || []).map((card) => card.id));
     const hasPlayedCard = Boolean(turn?.hasPlayed);
 
@@ -29,7 +29,7 @@ export function OwnPlayerPanel({ currentPlayer, currentUser, isStoryteller, turn
         };
 
         return (
-            <ListInlineItem key={card.id}>
+            <ListInlineItem key={card.id} className={arrivingCardIds.includes(card.id) ? "card-arriving" : ""}>
                 <button type="button" className={cardClasses} disabled={!clickable} onClick={handleClick} aria-label={`Select card ${index + 1}`}>
                     <img className="card" src={image} alt="Card" />
                 </button>
@@ -40,6 +40,7 @@ export function OwnPlayerPanel({ currentPlayer, currentUser, isStoryteller, turn
 
     return (
         <div className={`owned-cards-container ${handLocked ? "hand-locked" : ""}`}>
+            {confirmedCard && <span className="confirmed-card-flight" aria-hidden="true"><img src={`/Cards/${confirmedCard.image?.id}.png`} alt="" /></span>}
             <div className="hand-heading">
                 <div><strong><AccountMenu accountId={currentPlayer.user?.id ?? currentUser?.id} username={getPlayerName(currentPlayer) || currentUser?.username || "You"} /></strong> · {currentPlayer.points} pts <ConnectionBadge accountId={currentPlayer.user?.id || currentUser?.id} /></div>
                 <span>{visibleHand.length} cards · {isStoryteller ? "Storyteller" : "Your private hand"}</span>

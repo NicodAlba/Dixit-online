@@ -29,5 +29,5 @@ test("a reused image with a new card ID stays visible and selectable while the h
     expect(images.filter(img => img.getAttribute("src") === "/Cards/7.png")).toHaveLength(1);
     fireEvent.click(images.find(img => img.getAttribute("src") === "/Cards/7.png"));
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/v1/turns/31/answer/100", expect.objectContaining({method: "PUT"})));
-    expect(screen.getAllByAltText("Card")).toHaveLength(5);
+    await waitFor(() => expect(screen.getAllByAltText("Card")).toHaveLength(5));
 });

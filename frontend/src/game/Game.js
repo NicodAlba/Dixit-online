@@ -18,6 +18,8 @@ export default function Game() {
     const jwt = tokenService.getLocalAccessToken();
     const currentUser = tokenService.getUser();
     const [action, setAction] = useState(null);
+    const [confirmedPlay, setConfirmedPlay] = useState(null);
+    const activeRound = useRef(null);
     const actionRef = useRef(false);
     const [message, setMessage] = useState(null);
     const [visible, setVisible] = useState(false);
@@ -32,6 +34,16 @@ export default function Game() {
         setVisible,
     });
     const turn=game.cancelled?{...serverTurn,state:"CANCELLED"}:serverTurn;
+    activeRound.current = connection === "connected" ? `${gameId}:${turnId}` : null;
+    useEffect(() => () => {activeRound.current = null;}, []);
+    useEffect(() => {
+        setConfirmedPlay(null);
+    }, [gameId, turnId, connection]);
+    useEffect(() => {
+        if (!confirmedPlay) return;
+        const timer = setTimeout(() => setConfirmedPlay(null), 700);
+        return () => clearTimeout(timer);
+    }, [confirmedPlay]);
     const navigate = useNavigate();
     const ready = connection === "connected" && !loading;
     const busy = Boolean(action) || !ready;
@@ -129,9 +141,6 @@ export default function Game() {
             : `/api/v1/turns/${turnId}/play-card/${card.id}/${currentPlayer.id}`;
         const method = isStoryteller ? "PUT" : "POST";
         try {
-            setPendingPlayedCardIds((prev) =>
-                prev.includes(card.id) ? prev : [...prev, card.id]
-            );
             const response = await fetch(endpoint, {
                 method,
                 headers: {
@@ -143,6 +152,10 @@ export default function Game() {
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {
                 throw new Error(payload.message || `Error HTTP: ${response.status}`);
+            }
+            if (activeRound.current === `${gameId}:${turnId}`) {
+                setPendingPlayedCardIds(prev => prev.includes(card.id) ? prev : [...prev, card.id]);
+                setConfirmedPlay({card, round: `${gameId}:${turnId}`});
             }
             await refresh();
         } catch (error) {
@@ -215,7 +228,7 @@ export default function Game() {
         <RightPlayerPanel currentPlayer={currentPlayer} players={players} getPlayerName={getPlayerName} storyteller={storyteller} getPlayerHandCards={getPlayerHandCards} />
     </>;
     return (
-        <GameLayout gameId={gameId} game={game} loading={loading} connection={connection}
+        <GameLayout gameId={gameId} game={game} perspectiveId={currentPlayer.id} loading={loading} connection={connection}
             storytellerName={getPlayerName(storyteller)} role={isStoryteller ? "You are the storyteller" : "You are a player"}
             message={visible ? message : null} onDismiss={() => setVisible(false)} onRetry={refresh}
             toolbar={<>
@@ -224,7 +237,7 @@ export default function Game() {
             </>}
             opponents={opponents}
             hand={<OwnPlayerPanel currentPlayer={currentPlayer} currentUser={currentUser} isStoryteller={isStoryteller} turn={turn}
-                selectCard={selectCard} getPlayerName={getPlayerName} handCards={getPlayerHandCards(currentPlayer)} busy={busy} />}
+                selectCard={selectCard} getPlayerName={getPlayerName} handCards={getPlayerHandCards(currentPlayer)} busy={busy} confirmedCard={confirmedPlay?.round === `${gameId}:${turnId}` ? confirmedPlay.card : null} />}
             chat={<Chat gameId={gameId} />}>
             {action && <p role="status" className="game-action-status">{action}</p>}
             <TurnStatusPanel game={game} turn={turn?.state === "WAITING_STORYTELLER_CLUE" ? {...turn, clue: clueDraft} : turn}
