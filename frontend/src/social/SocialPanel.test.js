@@ -26,9 +26,10 @@ async function open() {
     await screen.findByRole("heading",{name:"Your friends"});
     return {opener,dialog};
 }
-test("closed panel makes no private requests; opening loads authorized lists and Escape returns focus", async()=>{
+test("authenticated background load is silent; opening retains Escape and focus", async()=>{
     show();
-    expect(global.fetch).not.toHaveBeenCalled();
+    await waitFor(()=>expect(global.fetch).toHaveBeenCalledWith("/api/v1/friends/relationships",expect.objectContaining({headers:expect.objectContaining({Authorization:"Bearer token"})})));
+    expect(screen.queryByRole("region",{name:"Social notifications"})).not.toBeInTheDocument();
     const opener=screen.getByRole("button",{name:"Friends",exact:true});
     opener.focus();fireEvent.click(opener);
     const dialog=await screen.findByRole("dialog",{name:"Friends"});
