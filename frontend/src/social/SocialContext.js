@@ -80,14 +80,21 @@ export function SocialProvider({jwt, children}) {
         finally {pendingRef.current = false; if (alive.current) setPending(false);}
     }, [refresh]);
     const openPanel = useCallback((target) => {if (typeof target === "string") setSection(target); setOpen(true);}, []);
+    const notifyChat = useCallback((gameId, messages, onView) => {
+        const updates = messages.map(message => ({id: `chat:${gameId}:${message.id}`, section: "chat",
+            message: `${message.username}: ${message.text}`, onView}));
+        setNotifications(previous => [...previous, ...updates.filter(item => !previous.some(old => old.id === item.id))].slice(-3));
+    }, []);
+    const clearChatNotifications = useCallback(gameId => setNotifications(previous => previous.filter(item => !item.id.startsWith(`chat:${gameId}:`))), []);
+    const dismissNotification = useCallback(id => setNotifications(previous => previous.filter(item => item.id !== id)), []);
     const closePanel = () => {
         setOpen(false);
         if (location.pathname === "/friends") navigate("/", {replace: true});
     };
     const relation = accountId => relationships.find(item => item.accountId === accountId);
     const context = {
-        open, openPanel, closePanel, section, setSection, notifications, dismissNotification: id => setNotifications(previous => previous.filter(item => item.id !== id)), friends, relationships, loading, loaded, error, feedback, pending,
-        refresh, request, perform, relation, selfId: tokenService.getUser()?.id,
+        open, openPanel, closePanel, section, setSection, notifications, dismissNotification, friends, relationships, loading, loaded, error, feedback, pending,
+        refresh, request, perform, relation, notifyChat, clearChatNotifications, selfId: tokenService.getUser()?.id,
         sendRequest: accountId => perform(() => request(`/api/v1/friends/addFriend/${accountId}`, "POST"), "Friend request sent."),
         acceptRequest: requestId => perform(() => request(`/api/v1/friends/${requestId}/accept`, "PATCH"), "Friend request accepted."),
         denyRequest: requestId => perform(() => request(`/api/v1/friends/${requestId}/deny`, "DELETE"), "Friend request declined."),

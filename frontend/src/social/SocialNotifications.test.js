@@ -1,7 +1,7 @@
 import React from "react";
 import {act, fireEvent, render, screen} from "@testing-library/react";
 import {MemoryRouter} from "react-router-dom";
-import {SocialProvider} from "./SocialContext";
+import {SocialProvider, useSocial} from "./SocialContext";
 import SocialToggle from "./SocialToggle";
 let mockConnection;
 jest.mock("../presence/PresenceContext", () => ({useApplicationConnection: () => mockConnection, usePresenceData: () => ({connections:null})}));
@@ -65,4 +65,26 @@ test("failed invitation notifications do not disable the friends list",async()=>
     render(app());await settle();fireEvent.click(screen.getByRole("button",{name:"Friends",exact:true}));await settle();
     expect(screen.getByRole("heading",{name:"Your friends"})).toBeInTheDocument();
     expect(screen.queryByRole("region",{name:"Social notifications"})).not.toBeInTheDocument();
+});
+
+function ChatNoticeProbe({onView}) {
+    const social=useSocial();
+    return <><button onClick={()=>social.notifyChat(42,[{id:7,username:"Alex",text:"Hello"}],onView)}>Publish chat notice</button><button onClick={()=>social.clearChatNotifications(42)}>Leave chat</button></>;
+}
+test("chat notices share the existing notification area and View activates chat rather than Friends",async()=>{
+    const onView=jest.fn();
+    render(<MemoryRouter><SocialProvider jwt="token"><ChatNoticeProbe onView={onView}/></SocialProvider></MemoryRouter>);await settle();
+    fireEvent.click(screen.getByRole("button",{name:"Publish chat notice"}));
+    expect(screen.getByText("Alex: Hello")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button",{name:"View"}));expect(onView).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog",{name:"Friends"})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button",{name:"Publish chat notice"}));fireEvent.click(screen.getByRole("button",{name:"Leave chat"}));
+    expect(screen.queryByRole("region",{name:"Social notifications"})).not.toBeInTheDocument();
+});
+test("a notice expires without blocking the board, but stays while its controls have keyboard focus",async()=>{
+    render(app());await settle();invitations=[{id:19,gameId:42,inviter:"Alex"}];await tick();
+    const view=screen.getByRole("button",{name:"View"});act(()=>view.focus());
+    await act(async()=>{jest.advanceTimersByTime(15000);});expect(screen.getByText("Alex invited you to a game.")).toBeInTheDocument();
+    act(()=>screen.getByRole("button",{name:"Friends",exact:true}).focus());
+    await act(async()=>{jest.advanceTimersByTime(12000);});expect(screen.queryByText("Alex invited you to a game.")).not.toBeInTheDocument();
 });

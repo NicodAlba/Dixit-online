@@ -15,3 +15,6 @@
 .chat-input-form button:disabled {opacity: .6; cursor: default;}
 .chat-error {padding: 8px 10px; color: #ffe0e0; background: #5a1f2c; overflow-wrap: anywhere; font-size: .875rem;}
 @media (max-width: 900px) {.chat-container {position: static;}.chat-content {height: 320px;}}
+.chat-message.message-arriving {animation: chat-message-arrive .22s ease-out;}
+@keyframes chat-message-arrive {from {opacity: .3; transform: translateY(6px);} to {opacity: 1; transform: none;}}
+@media(prefers-reduced-motion: reduce) {.chat-message.message-arriving {animation: none; transform: none;}}
