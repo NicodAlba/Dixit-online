@@ -130,7 +130,7 @@
 .game-result {position: relative; overflow: hidden; isolation: isolate; padding: 20px 12px; margin-bottom: 16px; border: 1px solid #bfa05c; border-radius: 12px; background: radial-gradient(ellipse at top, #65502f88, #1b2339); animation: result-arrive .5s ease-out;}
 .result-emblem {display: grid; place-items: center; width: 60px; height: 60px; margin: 0 auto 10px; border-radius: 50%; border: 1px solid #e7c573; color: #ffe297; background: #66502e; font-size: 30px;}
 .result-overline {text-transform: uppercase; letter-spacing: .12em; color: #ffe599; font-size: .8rem; margin: 0 0 6px;}
-.result-winner .result-emblem {animation: result-emblem .8s ease-out;}
+.result-emblem.is-celebrating {animation: result-emblem .8s ease-out;}
 .game-result h2 {font-size: 1.4rem; color: #fff0c4;}
 .game-result p {font-size: .9rem;}
 .result-cancelled {background: #232e3e; border-color: #7c8b97;}

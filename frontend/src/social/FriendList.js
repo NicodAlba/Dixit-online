@@ -4,6 +4,7 @@ import {FiEye, FiMail, FiUserMinus} from "react-icons/fi";
 import {usePresenceData} from "../presence/PresenceContext";
 import {ConnectionBadge} from "../presence/ParticipantPresence";
 import {useSocial} from "./SocialContext";
+import SocialAvatar from "./SocialAvatar";
 
 export function FriendList() {
     const social = useSocial();
@@ -28,12 +29,12 @@ export function FriendList() {
     }
     return <section aria-label="Friends list"><h3>Your friends</h3>
         {presence.error && <p className="presence-error" role="status">{presence.error} <a href="/login">Log in</a></p>}
-        {!social.friends.length && <p>No friends yet. Find someone to share a story with.</p>}
+        {!social.friends.length && <p className="social-empty">No friends yet. Find someone to share a story with.</p>}
         <ul className="social-list">{social.friends.map(friend => <li key={friend.id} className="social-person">
-            <div className="social-person-name"><strong>{friend.username}</strong><ConnectionBadge accountId={friend.id} presence={presence} /></div>
+            <div className="social-person-name"><SocialAvatar username={friend.username} /><div><strong>{friend.username}</strong><ConnectionBadge accountId={friend.id} presence={presence} /></div></div>
             <div className="social-person-actions">
                 {friend.spectatableGame && <button disabled={social.pending} onClick={() => spectate(friend)}><FiEye aria-hidden="true" /> Spectate</button>}
-                <button disabled={social.pending} onClick={() => chooseLobby(friend)}><FiMail aria-hidden="true" /> Invite to lobby</button>
+                <button className="social-action-primary" disabled={social.pending} onClick={() => chooseLobby(friend)}><FiMail aria-hidden="true" /> Invite to lobby</button>
                 <button disabled={social.pending} onClick={() => setRemoving(friend.id)}><FiUserMinus aria-hidden="true" /> Remove</button>
             </div>
             {removing === friend.id && <div className="social-confirm"><p>Remove {friend.username} from your friends?</p><button disabled={social.pending} onClick={async () => {if (await social.removeFriend(friend.id)) setRemoving(null);}}>Remove friend</button><button onClick={() => setRemoving(null)}>Cancel</button></div>}

@@ -142,3 +142,19 @@ test("the public play dialog offers account creation without starting private re
     expect(await screen.findByRole("heading", {name: "Create your account"})).toBeInTheDocument();
     expect(global.fetch).not.toHaveBeenCalled();
 });
+
+test.each(["click", "keyboard"])("logo navigates home with %s", async activation => {
+    const user = userEvent.setup();
+    render(<MemoryRouter initialEntries={["/preview"]}><Routes>
+        <Route path="/preview" element={<Home />} />
+        <Route path="/" element={<h1>Home destination</h1>} />
+    </Routes></MemoryRouter>);
+    const logo = screen.getByRole("link", {name: "Dixit home"});
+    expect(logo).toHaveAttribute("href", "/");
+    logo.focus();
+    expect(screen.queryByRole("heading", {name: "Home destination"})).not.toBeInTheDocument();
+    if (activation === "keyboard") await user.keyboard("{Enter}");
+    else await user.click(logo);
+    expect(screen.getByRole("heading", {name: "Home destination"})).toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+});

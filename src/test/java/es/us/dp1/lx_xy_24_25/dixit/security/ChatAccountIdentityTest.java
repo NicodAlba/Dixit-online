@@ -19,7 +19,9 @@ class ChatAccountIdentityTest extends SecurityHttpSupport {
         String renamed=unique();jdbc.update("update appusers set username=? where id=?",renamed,buddy.id());
         var received=request(HttpMethod.GET,"/messages/games/"+game,host.token(),null);status(200,received);
         var message=received.getBody().get(0);Set<String> fields=new HashSet<>();message.fieldNames().forEachRemaining(fields::add);
-        assertEquals(Set.of("accountId","username","text"),fields);
+        assertEquals(Set.of("id","accountId","username","text"),fields);
+        assertTrue(sent.getBody().path("id").asInt()>0);
+        assertEquals(sent.getBody().path("id").asInt(),message.path("id").asInt());
         assertEquals(buddy.id(),message.path("accountId").asInt());assertEquals(renamed,message.path("username").asText());
         status(403,request(HttpMethod.GET,"/messages/games/"+game,outsider.token(),null));
         status(401,request(HttpMethod.GET,"/messages/games/"+game,null,null));

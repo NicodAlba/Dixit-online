@@ -3,6 +3,7 @@ import {Client} from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
 const ApplicationConnection = createContext(null);
+export const useApplicationConnection = () => useContext(ApplicationConnection);
 export function PresenceProvider({jwt, children}) {
     const [connection, setConnection] = useState({state:"connecting", generation:0});
     useEffect(() => {

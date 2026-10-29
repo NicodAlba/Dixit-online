@@ -1,8 +1,13 @@
 import React from "react";
 import {ParticipantPresence} from "../../presence/ParticipantPresence";
 import SocialToggle from "../../social/SocialToggle";
+import useGameMotion from "../../hooks/useGameMotion";
+import RoundRecap from "./RoundRecap";
+import "../../static/css/game/BrightTable.css";
 
-export default function GameLayout({gameId, game, loading, connection = "connected", storytellerName, role, message, onDismiss, onRetry, toolbar, opponents, hand, chat, children}) {
+export default function GameLayout({gameId, game, perspectiveId, loading, connection = "connected", storytellerName, role, message, onDismiss, onRetry, toolbar, opponents, hand, chat, children}) {
+    const effect = useGameMotion({game, connection, perspectiveId});
+    const animatedHand = React.isValidElement(hand) && typeof hand.type !== "string" ? React.cloneElement(hand, {arrivingCardIds: effect?.arrivingCardIds || []}) : hand;
     const rounds = game.turns?.length || 0;
     const total = (game.players?.length || 0) * 2;
     const connectionText = {
@@ -32,10 +37,14 @@ export default function GameLayout({gameId, game, loading, connection = "connect
             {game.cancelled && <div className="game-notice" role="alert">Game cancelled. Scores and history are preserved; no new winners or rewards are awarded.</div>}
             {game.deleted && <div className="game-notice" role="alert">This game has been deleted.</div>}
             <div className={`game-layout ${chat ? "with-chat" : ""}`}>
-                <div className="game-board">
+                <div className={`game-board ${effect ? `motion-${effect.kind}` : ""}`}>
                     <section className="game-opponents" aria-label="Other players">{opponents}</section>
-                    <section className="game-turn-panel" aria-label="Game table">{children}</section>
-                    {hand}
+                    <section className="game-turn-panel" aria-label="Game table">
+                        {effect && <span key={effect.key} className={`game-motion-cue cue-${effect.kind}`} aria-hidden="true"><img src="/Cards/card_reversed.png" alt="" /></span>}
+                        {children}<RoundRecap game={game} />
+                        <div className="table-piles" aria-hidden="true"><span className="table-pile"><img src="/Cards/card_reversed.png" alt="" />Draw pile</span><span className="table-pile table-discard"><img src="/Cards/card_reversed.png" alt="" />Discard</span></div>
+                    </section>
+                    {animatedHand}
                 </div>
                 {chat}
             </div>
