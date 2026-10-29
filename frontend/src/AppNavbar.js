@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Collapse, Nav, Navbar, NavbarBrand, NavbarText, NavbarToggler, NavItem, NavLink } from 'reactstrap';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import tokenService from './services/token.service';
 import jwt_decode from "jwt-decode";
+import {FiLogIn, FiUserPlus, FiAward, FiBarChart2} from "react-icons/fi";
+import SocialToggle from "./social/SocialToggle";
 import logo from "../src/static/images/dixit round.png"
 
 function AppNavbar() {
@@ -10,6 +12,8 @@ function AppNavbar() {
     const [userId, setUserId] = useState("");
     const jwt = tokenService.getLocalAccessToken();
     const [collapsed, setCollapsed] = useState(true);
+    const {pathname} = useLocation();
+    useEffect(() => setCollapsed(true), [pathname]);
 
     const toggleNavbar = () => setCollapsed(!collapsed);
 
@@ -43,10 +47,10 @@ function AppNavbar() {
             ownerLinks = (
                 <>
                     <NavItem>
-                        <NavLink style={{ color: "white" }} tag={Link} to={"/users/" + userId + "/achievements"}>Achievements</NavLink>
+                        <NavLink style={{ color: "white" }} tag={Link} to={"/users/" + userId + "/achievements"}><FiAward aria-hidden="true" /> Achievements</NavLink>
                     </NavItem>
                     <NavItem>
-                        <NavLink style={{ color: "white" }} tag={Link} to="/stats">Statistics</NavLink>
+                        <NavLink style={{ color: "white" }} tag={Link} to="/stats"><FiBarChart2 aria-hidden="true" /> Statistics</NavLink>
                     </NavItem>
                 </>
             )
@@ -60,10 +64,10 @@ function AppNavbar() {
                     <NavLink style={{ color: "white" }} id="docs" tag={Link} to="/docs">Docs</NavLink>
                 </NavItem>
                 <NavItem>
-                    <NavLink style={{ color: "white" }} id="register" tag={Link} to="/register">Register</NavLink>
+                    <NavLink style={{ color: "white" }} id="register" tag={Link} to="/register"><FiUserPlus aria-hidden="true" /> Create account</NavLink>
                 </NavItem>
                 <NavItem>
-                    <NavLink style={{ color: "white" }} id="login" tag={Link} to="/login">Login</NavLink>
+                    <NavLink style={{ color: "white" }} id="login" className="nav-login" tag={Link} to="/login"><FiLogIn aria-hidden="true" /> Log in</NavLink>
                 </NavItem>
             </>
         )
@@ -82,7 +86,7 @@ function AppNavbar() {
                 </NavItem>
                 {!roles.includes("ADMIN") && (
                     <NavItem>
-                        <NavLink style={{ color: "white" }} id="friends" tag={Link} to="/friends">Friends</NavLink>
+                        <SocialToggle />
                     </NavItem>
                 )}
             </>
@@ -96,7 +100,7 @@ function AppNavbar() {
                     <img alt="logo" src={logo} style={{ height: 40, width: 40 }} />
                 </NavbarBrand>
                 <NavbarToggler onClick={toggleNavbar} className="ms-2" aria-controls="main-navigation" aria-expanded={!collapsed} />
-                <Collapse id="main-navigation" isOpen={!collapsed} navbar>
+                <Collapse id="main-navigation" isOpen={!collapsed} navbar onClick={event => {if (event.target.closest?.("a[href]")) setCollapsed(true);}}>
                     <Nav className="me-auto mb-2 mb-lg-0" navbar>
                         {userLinks}
                         {adminLinks}

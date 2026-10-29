@@ -105,6 +105,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/v1/stats/rankings/**").hasAnyAuthority(PLAYER, ADMIN)
 
                 // API for players
+                .requestMatchers(HttpMethod.GET, "/api/v1/presence").hasAuthority(PLAYER)
+                .requestMatchers(HttpMethod.GET, "/api/v1/friends/relationships").hasAuthority(PLAYER)
                 .requestMatchers(HttpMethod.GET, "api/v1/friends").hasAuthority(PLAYER)
                 .requestMatchers(HttpMethod.GET, "api/v1/friends/pending").hasAuthority(PLAYER)
                 .requestMatchers(HttpMethod.PATCH, "api/v1/friends/{requestId}/accept").hasAuthority(PLAYER)

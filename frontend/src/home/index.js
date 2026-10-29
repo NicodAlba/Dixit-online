@@ -1,222 +1,87 @@
-import React, { useState, useEffect } from 'react';
-import '../App.css';
-import '../static/css/home/home.css'
-import logo from '../static/images/Logo dixit.webp'
-import tokenService from "../services/token.service"
+import React, {useState, useEffect, useRef} from "react";
+import "../App.css";
+import "../static/css/home/home.css";
+import logo from "../static/images/Logo dixit.webp";
+import roundLogo from "../static/images/dixit round.png";
+import tokenService from "../services/token.service";
 import jwt_decode from "jwt-decode";
-import { useNavigate } from "react-router-dom"
-import { Button, Form, Input, Label } from 'reactstrap';
-import { GameInvitationList } from "./GameInvitationList";
-
+import {useLocation, useNavigate} from "react-router-dom";
+import {Button, Form, Input, Label, Modal, ModalHeader, ModalBody} from "reactstrap";
+import {FiPlay, FiPlusCircle, FiLogIn, FiUserPlus, FiKey, FiArrowLeft} from "react-icons/fi";
+import {GameInvitationList} from "./GameInvitationList";
+import Tooltip from "../components/ui/Tooltip";
+import ActiveGames from "./ActiveGames";
+import ModalClose from "../components/ui/ModalClose";
 
 export default function Home() {
-    const jwt = tokenService.getLocalAccessToken()
-    const [roles, setRoles] = useState([]);
-
-    useEffect(() => {
-        if (jwt) {
-            setRoles(jwt_decode(jwt).authorities);
-        }
-    }, [jwt])
-    // TODO: fix
-    const emptyGame = {
-        password: ""
-    }
-
-    const [showOptions, setShowOptions] = useState(false)
+    const jwt = tokenService.getLocalAccessToken();
+    const roles = jwt ? jwt_decode(jwt).authorities : [];
+    const [showOptions, setShowOptions] = useState(false);
+    const [showAuth, setShowAuth] = useState(false);
+    const [flipped, setFlipped] = useState(false);
     const [view, setView] = useState(null);
+    const [message, setMessage] = useState(null);
+    const [game, setGame] = useState({password: "", gameId: ""});
+    const [pending, setPending] = useState(false);
+    const pendingRef = useRef(false);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [notice, setNotice] = useState(location.state?.notice || null);
+    useEffect(() => {
+        if (!location.state?.notice) return;
+        setNotice(location.state.notice);
+        navigate(location.pathname, {replace: true, state: {...location.state, notice: null}});
+    }, [location.pathname, location.state, navigate]);
 
-    const [message, setMessage] = useState(null)
-    const [visible, setVisible] = useState(false)
-
-    const [game, setGame] = useState(emptyGame)
-
-    const navigate = useNavigate()
-
-    function handleSubmitCreate(event) {
-        event.preventDefault()
-        const gameToSend = { password: game.password || "" };
-        fetch(
-            "/api/v1/games",
-            {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${jwt}`,
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(gameToSend),
-            }
-        ).then((response) => response.json())
-            .then((data) => {
-                if (data.message) {
-                    setMessage(data.message)
-                    setVisible(true)
-                } else {
-                    const id = data.id
-                    navigate(`/games/${id}`)
-                }
-            }).catch((error) => alert(error))
-    }
-
-    function handleSubmitJoin(event) {
+    async function submit(event) {
         event.preventDefault();
-        const passwordToSend = game.password || "";
-        const gameId = game.gameId;
-
-        fetch(`/api/v1/games/${gameId}/join`, {
-            method: "PATCH",
-            headers: {
-                Authorization: `Bearer ${jwt}`,
-                Accept: "application/json",
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ password: passwordToSend }),
-        })
-            .then(async (response) => {
-                const data = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    if (response.status === 409) {
-                        setMessage(data.message || "Unable to join this game.");
-                        setVisible(true);
-                        navigate("/");
-                    } else if (response.status === 401) {
-                        setMessage("Incorrect password.");
-                        setVisible(true);
-                    } else if (response.status === 404) {
-                        setMessage("Game not found.");
-                        setVisible(true);
-                    } else if (response.status === 403) {
-                        setMessage("Already 4 players in the game");
-                        setVisible(true);
-                    } else {
-                        setMessage(data.message || "Error joining the game.");
-                        setVisible(true);
-                    }
-                    throw new Error(data.message);
-                }
-                const updatedGame = data;
-                navigate(`/games/${updatedGame.id}`);
-            })
-            .catch((error) => console.error("Join error:", error.message));
+        if (pendingRef.current || !jwt) return;
+        pendingRef.current = true; setPending(true); setMessage(null);
+        try {
+            const response = await fetch(view === "create" ? "/api/v1/games" : `/api/v1/games/${game.gameId}/join`, {
+                method: view === "create" ? "POST" : "PATCH",
+                headers: {Authorization: `Bearer ${jwt}`, Accept: "application/json", "Content-Type": "application/json"},
+                body: JSON.stringify({password: game.password || ""}),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || (response.status === 404 ? "Game not found." : response.status === 401 ? "Incorrect password or expired session." : "Unable to open this game. Please try again."));
+            navigate(`/games/${data.id}`);
+        } catch (error) {setMessage(error.message || "Unable to reach the server. Please try again.");}
+        finally {pendingRef.current = false; setPending(false);}
     }
-
-
-    function handleChange(event) {
-        const target = event.target
-        const value = target.value
-        const name = target.name
-        setGame({ ...game, [name]: value })
-    }
-
-    const handlePlayClick = () => {
-        if (!jwt) {
-            navigate("/login");
-            return;
-        }
-        setShowOptions(true);
-
-    }
-
-    function renderCreationForm() {
-        return (
-            <Form onSubmit={handleSubmitCreate}>
-                <Label for="password" className="text-center">
-                    Add a password to the game.
-                </Label>
-                <Input
-                    type="text"
-                    name="password"
-                    id="password"
-                    placeholder="Enter password"
-                    value={game.password || ""}
-                    onChange={handleChange}
-                    className="custom-input"
-                />
-                <div className="custom-button-row">
-                    <Button color="success" type="submit">
-                        Create game
-                    </Button>
-                </div>
-            </Form>
-        );
-    }
-    function renderJoinForm() {
-        return (
-            <Form onSubmit={handleSubmitJoin}>
-                <Label htmlFor="gameId" className="text-center">
-                    Enter the game ID:
-                </Label>
-                <Input
-                    type="number"
-                    name="gameId"
-                    id="gameId"
-                    placeholder="Enter game ID"
-                    value={game.gameId || ""}
-                    onChange={handleChange}
-                    className="custom-input"
-                />
-
-                <Label htmlFor="password" className="text-center">
-                    Enter game password.
-                </Label>
-                <Input
-                    type="text"
-                    name="password"
-                    id="password"
-                    placeholder="Enter password"
-                    value={game.password || ""}
-                    onChange={handleChange}
-                    className="custom-input"
-                />
-                {visible && message &&
-                    <div className="text-danger text-center mt-2">
-                        {message}
-                    </div>
-                }
-
-
-                <div className="custom-button-row">
-                    <Button color="success" type="submit">
-                        Join game
-                    </Button>
-                </div>
-            </Form>
-        );
-    }
-
-    return (
-        <div className="home-page-container">
-            <div className="hero-div">
-                <img src={logo} alt="logo" />
-                {roles.includes("ADMIN") ? (
-                    <h3>Welcome to the admin page</h3>
-                ) : (
-                    <>
-                        <h3>Do you want to play?</h3>
-                        {!showOptions && <Button color="warning" onClick={handlePlayClick}>Play game</Button>}
-                        {showOptions && !view && (
-                            <div className="container">
-                                <div className='custom-button-row'>
-                                    <Button
-                                        color="warning" onClick={() => setView("create")}
-                                    > Create game
-                                    </Button>
-                                </div>
-                                <div className='custom-button-row'>
-                                    <Button
-                                        color="warning" onClick={() => setView("join")}
-                                    > Join game
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                        {view === "create" && renderCreationForm()}
-                        {view === "join" && renderJoinForm()}
-                    </>
-                )}
-            </div>
-            <GameInvitationList />
-        </div>
-    );
+    const change = event => setGame({...game, [event.target.name]: event.target.value});
+    return <main className="home-page-container dixit-ui">
+        <section className="hero-div">
+            {notice && <div role="status" className="home-notice">{notice} <button onClick={() => setNotice(null)} aria-label="Dismiss notification">×</button></div>}
+            <Tooltip text="Flip the Dixit logo"><button className={`hero-logo ${flipped ? "is-flipped" : ""}`} aria-label="Flip the Dixit logo" aria-pressed={flipped} onClick={() => setFlipped(!flipped)}>
+                <span className="hero-logo-inner"><span className="hero-logo-front"><img src={logo} alt="Dixit" /></span><span className="hero-logo-back"><img src={roundLogo} alt="" /><span>Tell your story</span></span></span>
+            </button></Tooltip>
+            {roles.includes("ADMIN") ? <h1>Welcome to the admin page</h1> : <>
+                <p className="home-eyebrow">A world of imagination</p>
+                <h1>Do you want to play?</h1>
+                {jwt && roles.includes("PLAYER") && <ActiveGames key={jwt} jwt={jwt} />}
+                {!showOptions && <Button color="warning" className="home-play" onClick={() => jwt ? setShowOptions(true) : setShowAuth(true)}><FiPlay aria-hidden="true" /> Play game</Button>}
+                {showOptions && !view && <div className="home-actions">
+                    <Button color="warning" onClick={() => setView("create")}><FiPlusCircle aria-hidden="true" /> Create game</Button>
+                    <Button color="warning" onClick={() => setView("join")}><FiKey aria-hidden="true" /> Join game</Button>
+                </div>}
+                {view && <Form onSubmit={submit} className="home-game-form" aria-busy={pending}>
+                    {view === "join" && <><Label for="gameId">Enter the game ID:</Label><Input required min="1" type="number" name="gameId" id="gameId" placeholder="Enter game ID" value={game.gameId} onChange={change} disabled={pending} /></>}
+                    <Label for="password">{view === "create" ? "Add a password to the game." : "Enter game password."}</Label>
+                    <Input type="text" name="password" id="password" placeholder="Optional password" value={game.password} onChange={change} disabled={pending} />
+                    {message && <p className="home-error" role="alert">{message}</p>}
+                    <Button color="success" type="submit" disabled={pending}>{pending ? "Please wait…" : view === "create" ? "Create game" : "Join game"}</Button>
+                </Form>}
+                {showOptions && <button className="text-button" disabled={pending} onClick={() => {setView(null); setShowOptions(false); setMessage(null);}}><FiArrowLeft aria-hidden="true" /> Back</button>}
+            </>}
+        </section>
+        <GameInvitationList />
+        <Modal isOpen={showAuth} toggle={() => setShowAuth(false)} className="home-choice-dialog" labelledBy="play-auth-title" returnFocusAfterClose>
+            <ModalHeader close={<ModalClose onClick={() => setShowAuth(false)} />}><span id="play-auth-title">Join the story</span></ModalHeader>
+            <ModalBody><p>Log in or create an account to play.</p><div className="home-auth-choices">
+                <button className="home-primary" onClick={() => navigate("/login")}><FiLogIn aria-hidden="true" /> Log in</button>
+                <button className="home-primary" onClick={() => navigate("/register")}><FiUserPlus aria-hidden="true" /> Create account</button>
+            </div></ModalBody>
+        </Modal>
+    </main>;
 }

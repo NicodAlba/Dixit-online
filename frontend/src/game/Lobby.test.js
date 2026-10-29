@@ -78,15 +78,73 @@ test("a delayed initial GET cannot overwrite a more recent membership message", 
     expect(screen.getByText("fourth")).toBeInTheDocument();
 });
 
-test("minimal deletion notification returns participants home", async () => {
-    const oldAlert=window.alert;window.alert=jest.fn();
+test("minimal deletion notification returns participants home with integrated feedback and no alert", async () => {
+    const alert = jest.spyOn(window, "alert").mockImplementation(() => {});
+    const options = await openLobby(); await act(async () => options.onConnect());
+    const receive = client.subscribe.mock.calls[0][1];
+    act(() => receive({body: JSON.stringify({type: "DELETED", gameId: 42})}));
+    expect(alert).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith("/", {replace: true, state: {notice: "The host left the lobby."}});
+    alert.mockRestore();
+});
+
+test("a host's own leave ignores its deletion notification while the REST response is pending", async () => {
+    const options = await openLobby(); await act(async () => options.onConnect());
+    let finish;
+    global.fetch.mockReturnValueOnce(new Promise(resolve => {finish = resolve;}));
+    fireEvent.click(screen.getByRole("button", {name: "Leave", exact: true}));
+    fireEvent.click(await screen.findByRole("button", {name: "Yes, leave"}));
+    const receive = client.subscribe.mock.calls[0][1];
+    act(() => receive({body: JSON.stringify({type: "DELETED", gameId: 42})}));
+    await act(async () => finish({ok: true}));
+    expect(mockNavigate.mock.calls).toEqual([["/"]]);
+    expect(screen.queryByText("The host left the lobby.")).not.toBeInTheDocument();
+});
+
+test("a GET rejected after deletion cannot replace the closure with an HTTP error", async () => {
+    const options = await openLobby(); await act(async () => options.onConnect());
+    let finish;
+    global.fetch.mockReturnValueOnce(new Promise(resolve => {finish = resolve;}));
+    const receive = client.subscribe.mock.calls[0][1];
+    act(() => receive({body: JSON.stringify({type: "GAME_UPDATED", gameId: 42})}));
+    const signal = global.fetch.mock.calls.at(-1)[1].signal;
+    act(() => receive({body: JSON.stringify({type: "DELETED", gameId: 42})}));
+    expect(signal.aborted).toBe(true);
+    await act(async () => finish({ok: false, status: 404}));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+});
+
+test("an initially unknown lobby is not described as a host departure", async () => {
+    global.fetch.mockResolvedValue({ok: false, status: 404});
+    render(<Lobby />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Lobby not found. Check the game ID.");
+    expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+test("a missing previously loaded lobby has neutral feedback until a deletion event confirms the reason", async () => {
+    const options = await openLobby(); await act(async () => options.onConnect());
+    const receive = client.subscribe.mock.calls[0][1];
+    global.fetch.mockResolvedValue({ok: false, status: 404});
+    await act(async () => receive({body: JSON.stringify({type: "GAME_UPDATED", gameId: 42})}));
+    expect(await screen.findByRole("alert")).toHaveTextContent("This lobby is no longer available.");
+    expect(mockNavigate).not.toHaveBeenCalled();
+    act(() => receive({body: JSON.stringify({type: "DELETED", gameId: 42})}));
+    expect(mockNavigate).toHaveBeenCalledWith("/", {replace: true, state: {notice: "The host left the lobby."}});
+});
+
+test("initial connection feedback is delayed, but loss and recovery are shown immediately", async () => {
+    jest.useFakeTimers();
     try {
-        const options=await openLobby();await act(async()=>options.onConnect());
-        const receive=client.subscribe.mock.calls[0][1];
-        act(()=>receive({body:JSON.stringify({type:"DELETED",gameId:42})}));
-        expect(window.alert).toHaveBeenCalledWith("The leader deleted the game");
-        expect(mockNavigate).toHaveBeenCalledWith("/");
-    } finally {window.alert=oldAlert;}
+        const options = await openLobby();
+        expect(screen.queryByText("Connecting…")).not.toBeInTheDocument();
+        act(() => jest.advanceTimersByTime(800));
+        expect(screen.getByText("Connecting…")).toBeInTheDocument();
+        await act(async () => options.onConnect());
+        expect(screen.queryByText("Connecting…")).not.toBeInTheDocument();
+        act(() => options.onWebSocketClose());
+        expect(screen.getByText(/Reconnecting/)).toBeInTheDocument();
+    } finally {jest.useRealTimers();}
 });
 
 test("a pending start is blocked and server failures remain visible in the lobby", async () => {

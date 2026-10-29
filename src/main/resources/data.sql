@@ -58,9 +58,9 @@ INSERT INTO images (id, url) VALUES (34, '/Cards/34.png');
 INSERT INTO images (id, url) VALUES (35, '/Cards/35.png');
 
 INSERT INTO badge_images (id, url, type) VALUES (0, '/Achievements/WinAchievements/Win1.png', 'WIN'),
-                                                (1, '/Achievements/WinAchievementsWin5.png', 'WIN'),
-                                                (2, '/Achievements/WinAchievementsWin10.png', 'WIN'),
-                                                (3, '/Achievements/WinAchievementsWin50.png', 'WIN');
+                                                (1, '/Achievements/WinAchievements/Win5.png', 'WIN'),
+                                                (2, '/Achievements/WinAchievements/Win10.png', 'WIN'),
+                                                (3, '/Achievements/WinAchievements/Win50.png', 'WIN');
 
 INSERT INTO badge_images (id, url, type) VALUES (4, '/Achievements/PlayAchievements/Play1.png', 'PLAY'),
                                                 (5, '/Achievements/PlayAchievements/Play5.png', 'PLAY'),

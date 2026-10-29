@@ -1,41 +1,64 @@
-.home-page-container{
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: -1;
-    background-image: url('../../images/HomeBackground.png');
-    background-size:cover;
-    background-position: center;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
+.home-page-container {
+    min-height: calc(100svh - 66px);
+    padding: clamp(22px, 5vh, 60px) 20px;
+    background: linear-gradient(#241b1528, #241b1555), url('../../images/HomeBackground.png') center / cover;
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 24px;
+}
+.hero-div {
+    width: min(100%, 520px); padding: clamp(20px, 4vw, 38px);
+    border: 1px solid #fff4d58c; border-radius: 26px; color: #302216;
+    background: #fff4dddb; box-shadow: 0 18px 55px #25190666; backdrop-filter: blur(10px);
+    display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+    animation: dixit-panel-in .3s ease-out;
+}
+.hero-div h1 {font-size: clamp(1.45rem, 4vw, 2rem); color: #36231b !important; margin: 0;}
+.home-eyebrow {font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; color: #6b4024; margin: 0;}
+.hero-div > .dixit-tooltip {width: min(100%, 290px);}
+.hero-logo {width: 100%; height: 180px; perspective: 900px; border: 0; padding: 0; background: transparent; border-radius: 12px;}
+.hero-logo-inner {display: block; position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .55s ease;}
+.hero-logo.is-flipped .hero-logo-inner {transform: rotateY(180deg);}
+.hero-logo-front, .hero-logo-back {position: absolute; inset: 0; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; flex-direction: column;}
+.hero-logo-front img {width: 100%; max-height: 170px; object-fit: contain; filter: drop-shadow(0 5px 3px #492b2040);}
+.hero-logo-back {transform: rotateY(180deg); gap: 6px;}
+.hero-logo-back img {height: 125px; width: 125px; object-fit: contain;}
+.home-primary, .home-play.btn, .home-actions .btn {min-height: 48px; padding: 12px 24px; border: 1px solid #835024; border-radius: 12px; background: linear-gradient(#efc567, #dfa53b); color: #302216; box-shadow: 0 4px 0 #9c6d35, 0 6px 16px #492b2033; font-weight: 700;}
+.home-primary:hover, .home-play.btn:hover, .home-actions .btn:hover {background: #f5d27d; box-shadow: 0 5px 0 #9c6d35, 0 10px 22px #492b2044; color: #302216;}
+.home-primary:active, .home-play.btn:active {box-shadow: 0 1px 0 #9c6d35;}
+.home-actions, .home-auth-choices {display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;}
+.home-game-form {display: grid; gap: 12px; width: 100%; text-align: left;}
+.home-game-form label {margin: 0; font-size: .95rem;}
+.home-game-form input {font-size: 16px; min-height: 44px; border: 1px solid #9c7b56; background: #fffaf0; color: #302216;}
+.home-error {color: #8b182a; margin: 0;}
+.text-button {border: 0; border-radius: 8px; background: transparent; color: inherit; text-decoration: underline; min-height: 44px; padding: 6px 10px;}
+.active-games {width: 100%; display: grid; gap: 8px;}
+.active-games .home-primary {background: linear-gradient(#486b4a, #305735); color: #fff8e9; border-color: #29472e; box-shadow: 0 4px 0 #213c27, 0 6px 16px #492b2033;}
+.home-secondary-status {font-size: .8rem; color: #685442;}
+.home-notice {display: flex; gap: 12px; align-items: center; border: 1px solid #9c7b56; border-radius: 10px; padding: 10px 14px; background: #fff9ea;}
+.home-notice button {border: 0; background: transparent; padding: 0 8px; min-height: 44px; font-size: 1.5rem;}
+.game-choice-list {list-style: none; padding: 0; display: grid; gap: 16px;}
+.game-choice-list li {display: grid; gap: 5px;}
+.game-choice-list button {padding: 12px; text-align: left; border: 1px solid #986f46; border-radius: 8px; background: #fff4dd;}
+.game-choice-list small {overflow-wrap: anywhere;}
+@media (max-width: 560px) {
+    .home-page-container {padding: 22px 12px; align-items: flex-start;}
+    .hero-div {gap: 15px;}
+    .hero-div > .dixit-tooltip {width: min(100%, 230px);}
+    .hero-logo {height: 145px;}
+    .hero-logo-back img {width: 100px; height: 100px;}
+    .home-actions, .home-auth-choices {flex-direction: column; width: 100%;}
 }
 
-.hero-div{
-    background-color: rgba(255, 255, 255, 0.3);
-    padding: 2rem;
-    border-radius: 25px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
-
-.hero-div h1{
-    font-size: 3rem;
-    font-weight: 700;
-    color: #2f324f;
-    text-align: center;
-    text-transform: uppercase;
-}
-
-.hero-div h3{
-    text-align: center;
-}
-
-h1 {
-    color:  #d9d9d9 !important;
+@media (prefers-reduced-motion: reduce) {
+    .hero-logo {perspective: none;}
+    .hero-logo .hero-logo-inner, .hero-logo.is-flipped .hero-logo-inner {
+        transform: none;
+        transform-style: flat;
+        transition: none;
+    }
+    .hero-logo .hero-logo-front, .hero-logo .hero-logo-back {
+        transform: none;
+        backface-visibility: visible;
+    }
+    .hero-logo .hero-logo-back, .hero-logo.is-flipped .hero-logo-front {display: none;}
+    .hero-logo.is-flipped .hero-logo-back {display: flex;}
 }

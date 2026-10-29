@@ -8,12 +8,14 @@ import {
   forwardRef,
   useEffect,
   useRef,
+  Fragment,
 } from "react";
 
 import PropTypes from "prop-types";
 import FormInput from "./formInput";
 
 const FormGenerator = forwardRef((props, ref) => {
+  const {onSubmit} = props;
   const [formValues, setFormValues] = useState({});
   const [submitForm, setSubmitForm] = useState(false);
 
@@ -28,8 +30,6 @@ const FormGenerator = forwardRef((props, ref) => {
           let input = props.inputs[i];
           for (let validator of input.validators) {
             if (!validator.validate(formValues[input.name])) {
-              console.log(input);
-              console.log(formValues[input.name])
               formInputs.current[i].setErrors([validator.message]);
               isValid = false;
             }
@@ -39,7 +39,7 @@ const FormGenerator = forwardRef((props, ref) => {
         return isValid;
       },
       updateForm: () => {
-        if (Object.keys(formValues).length === 0) {
+        if (props.inputs.length > 0 && Object.keys(formValues).length === 0) {
           let newFormValues = {};
           for (let input of props.inputs) {
             if (input.type === "interval") {
@@ -59,6 +59,7 @@ const FormGenerator = forwardRef((props, ref) => {
 
   function handleSubmit(e) {
     e.preventDefault();
+    if (props.disabled) return;
     let formValuesCopy = {};
 
     for (let i = 0; i < props.inputs.length; i++) {
@@ -79,7 +80,7 @@ const FormGenerator = forwardRef((props, ref) => {
   }
 
   useEffect(() => {
-    if (Object.keys(formValues).length === 0) {
+    if (props.inputs.length > 0 && Object.keys(formValues).length === 0) {
       let newFormValues = {};
       for (let input of props.inputs) {
         if (input.type === "interval") {
@@ -103,24 +104,21 @@ const FormGenerator = forwardRef((props, ref) => {
 
   useEffect(() => {
     if (submitForm) {
-      props.onSubmit({ values: formValues });
+      onSubmit({ values: formValues });
       setSubmitForm(false);
     }
-  }, [submitForm]);
+  }, [submitForm, formValues, onSubmit]);
 
-  useEffect(() => {
-    document.addEventListener("keyup", (e) => {
-      if (e.key === "Enter" && props.listenEnterKey) {
-        handleSubmit(e);
-      }
-    });
-  }, []);
 
   return (
     <div className="class-profile-form">
       <form
         className="class-form"
         ref={formElement}
+        onSubmit={handleSubmit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && !props.listenEnterKey && !["BUTTON", "TEXTAREA"].includes(event.target.tagName)) event.preventDefault();
+        }}
         style={
           props.numberOfColumns > 1
             ? {
@@ -134,7 +132,7 @@ const FormGenerator = forwardRef((props, ref) => {
         {Object.keys(formValues).length > 0 &&
           props.inputs.map((input, index) => {
             return (
-              <>
+              <Fragment key={input.name}>
                 {props.childrenPosition !== -1 &&
                   index === props.childrenPosition &&
                   props.children}
@@ -153,18 +151,17 @@ const FormGenerator = forwardRef((props, ref) => {
                   formValues={formValues}
                   setFormValues={setFormValues}
                   onChange={input?.onChange}
-                  disabled={input.disabled}
+                  disabled={props.disabled || input.disabled}
                   ref={(input) => (formInputs.current[index] = input)}
                 />
-              </>
+              </Fragment>
             );
           })}
         {props.childrenPosition === -1 && props.children}
+        <button type="submit" disabled={props.disabled} className={props.buttonClassName}>
+          {props.buttonText}
+        </button>
       </form>
-
-      <button onClick={handleSubmit} className={`${props.buttonClassName}`}>
-        {props.buttonText}
-      </button>
     </div>
   );
 });
@@ -177,16 +174,18 @@ FormGenerator.propTypes = {
   numberOfColumns: PropTypes.number,
   childrenPosition: PropTypes.number,
   listenEnterKey: PropTypes.bool,
+  disabled: PropTypes.bool,
 };
 
 FormGenerator.defaultProps = {
   inputs: [],
   onSubmit: () => {},
-  buttonText: "Enviar",
+  buttonText: "Submit",
   buttonClassName: "",
   numberOfColumns: 1,
   childrenPosition: 0,
-listenEnterKey: false,
+  listenEnterKey: false,
+  disabled: false,
 };
 
 export default FormGenerator;

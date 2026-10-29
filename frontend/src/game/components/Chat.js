@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from "react";
 import tokenService from "../../services/token.service";
+import AccountMenu from "../../social/AccountMenu";
 import useChatMessages from "../../hooks/useChatMessages";
 import "../../static/css/chat/chat.css";
 
@@ -40,8 +41,8 @@ export default function Chat({gameId}) {
                 }}>
                 {loading && <p role="status">Loading chat…</p>}
                 {messages.map((msg, index) => (
-                    <div key={index} className={`chat-message ${msg.username === user?.username ? "my-message" : "other-message"}`}>
-                        <span className="message-sender">{msg.username}</span>
+                    <div key={index} className={`chat-message ${msg.accountId != null && msg.accountId === user?.id ? "my-message" : "other-message"}`}>
+                        <AccountMenu className="message-sender" accountId={msg.accountId} username={msg.username} />
                         <span className="message-text">{msg.text}</span>
                     </div>
                 ))}

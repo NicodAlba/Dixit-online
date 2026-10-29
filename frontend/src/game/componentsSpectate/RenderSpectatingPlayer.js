@@ -1,4 +1,5 @@
 import React from "react";
+import CardPreview from "../components/CardPreview";
 
 export function RenderSpectatingPlayer({currentPlayer, spectatingUser, isStoryteller, getPlayerName}) {
     const cards = currentPlayer?.cards || [];
@@ -9,9 +10,9 @@ export function RenderSpectatingPlayer({currentPlayer, spectatingUser, isStoryte
                 <span>{cards.length} cards · {isStoryteller ? "Storyteller’s perspective" : "Spectator view"}</span>
             </div>
             <ul className="game-card-list hand-cards">
-                {cards.map(card => <li key={card.id}><div className="card-button">
+                {cards.map((card,index) => <li key={card.id}><div className="card-button">
                     <img className="card" src={`/Cards/${card.image?.id}.png`} alt="Card" />
-                </div></li>)}
+                </div><CardPreview card={card} label={`observed hand card ${index + 1}`} /></li>)}
             </ul>
             <p className="game-help">You are watching this player’s authorized perspective. Actions are available to participants only.</p>
         </section>

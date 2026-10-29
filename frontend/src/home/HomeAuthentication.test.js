@@ -1,4 +1,6 @@
+jest.mock("./ActiveGames", () => () => null);
 import React from "react";
+import userEvent from "@testing-library/user-event";
 import {act, fireEvent, render, screen, waitFor} from "@testing-library/react";
 import {MemoryRouter, Route, Routes} from "react-router-dom";
 import Home from "./index";
@@ -34,6 +36,9 @@ test.each([false, true])("visitor with saved user=%s makes no private request an
     expect(screen.queryByText(authenticationMessage)).not.toBeInTheDocument();
     expect(global.fetch).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", {name: "Play game"}));
+    expect(await screen.findByRole("dialog", {name: "Join the story"})).toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", {name: "Log in", exact: true}));
     expect(screen.getByRole("heading", {name: "Login page"})).toBeInTheDocument();
     expect(global.fetch).not.toHaveBeenCalled();
 });
@@ -103,4 +108,37 @@ test("switching authenticated sessions hides the previous account while new invi
     await act(async () => {complete(response([{id: 8, gameId: 43, inviter: "new-host"}]));});
     expect(await screen.findByText("new-host: 43")).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledTimes(2);
+});
+
+
+test("a lobby closure notice is integrated, dismissible and requires no visitor requests", async () => {
+    render(<MemoryRouter initialEntries={[{pathname: "/", state: {notice: "The host left the lobby."}}]}><Home /></MemoryRouter>);
+    expect(screen.getByRole("status")).toHaveTextContent("The host left the lobby.");
+    fireEvent.click(screen.getByRole("button", {name: "Dismiss notification"}));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+});
+
+
+test("the public play dialog closes with Escape and restores focus to Play game", async () => {
+    const user = userEvent.setup();
+    render(home());
+    const play = screen.getByRole("button", {name: "Play game"});
+    await user.click(play);
+    const dialog = await screen.findByRole("dialog", {name: "Join the story"});
+    expect(dialog).toContainElement(document.activeElement);
+    expect(document.getElementById(dialog.getAttribute("aria-labelledby"))).toHaveTextContent(/^Join the story$/);
+    fireEvent.keyUp(dialog, {key: "Escape", keyCode: 27, which: 27});
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(play).toHaveFocus();
+    expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test("the public play dialog offers account creation without starting private requests", async () => {
+    render(<MemoryRouter><Routes><Route path="/" element={<Home />} /><Route path="/register" element={<h1>Create your account</h1>} /></Routes></MemoryRouter>);
+    fireEvent.click(screen.getByRole("button", {name: "Play game"}));
+    await screen.findByRole("dialog", {name: "Join the story"});
+    fireEvent.click(screen.getByRole("button", {name: "Create account", exact: true}));
+    expect(await screen.findByRole("heading", {name: "Create your account"})).toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
 });

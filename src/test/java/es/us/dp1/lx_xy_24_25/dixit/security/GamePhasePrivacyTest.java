@@ -117,6 +117,15 @@ class GamePhasePrivacyTest extends SecurityHttpSupport {
         assertEquals(order,cardIds(round(m,tid,m.viewer(),first)));assertEquals(order,cardIds(round(m,tid,m.viewer(),story)));
         status(200,request(HttpMethod.POST,"/turns/"+tid+"/vote/"+first+"/"+choices.get(story),m.members().get(first).token(),null));
         assertTrue(round(m,tid,m.members().get(first),null).path("hasVoted").asBoolean());assertFalse(round(m,tid,m.members().get(last),null).path("hasVoted").asBoolean());
+        // A fresh REST read recovers only this perspective's persisted choice.
+        assertEquals(choices.get(story).intValue(),round(m,tid,m.members().get(first),null).path("ownVotedCardId").asInt());
+        assertEquals(choices.get(story).intValue(),game(m,m.members().get(first),null).path("turns").get(0).path("ownVotedCardId").asInt());
+        for(Account other:List.of(m.members().get(last),narrator,m.viewer()))assertFalse(round(m,tid,other,null).hasNonNull("ownVotedCardId"));
+        assertEquals(choices.get(story).intValue(),round(m,tid,m.viewer(),first).path("ownVotedCardId").asInt());
+        assertFalse(round(m,tid,m.viewer(),last).hasNonNull("ownVotedCardId"));
+        assertFalse(round(m,tid,m.viewer(),story).hasNonNull("ownVotedCardId"));
+        status(400,request(HttpMethod.POST,"/turns/"+tid+"/vote/"+first+"/"+choices.get(last),m.members().get(first).token(),null));
+        assertEquals(choices.get(story).intValue(),round(m,tid,m.members().get(first),null).path("ownVotedCardId").asInt());
         for(var member:m.members().entrySet())anonymous(round(m,tid,member.getValue(),null),member.getKey()==story);
         var closed=request(HttpMethod.POST,"/turns/"+tid+"/vote/"+last+"/"+choices.get(story),m.members().get(last).token(),null);status(200,closed);safe(closed.getBody());
         assertEquals("FINISHED",closed.getBody().path("state").asText());

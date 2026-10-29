@@ -142,6 +142,11 @@ public class FriendRestController {
         }
     }
 
+    @GetMapping("/relationships")
+    public ResponseEntity<List<FriendshipView>> relationships() {
+        return ResponseEntity.ok(friendRequestService.relationships(userService.findCurrentUser()));
+    }
+
     @GetMapping(value = "pending")
     @Operation(summary = "Retrieves all pending requests")
     @ApiResponses(value = {

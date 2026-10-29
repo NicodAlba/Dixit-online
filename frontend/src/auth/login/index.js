@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useRef, useState} from "react";
 import {Alert} from "reactstrap";
 import FormGenerator from "../../components/formGenerator/formGenerator";
 import tokenService from "../../services/token.service";
@@ -7,11 +7,16 @@ import {loginFormInputs} from "./form/loginFormInputs";
 
 export default function Login() {
   const [message, setMessage] = useState(null)
-  const loginFormRef = React.createRef();      
+  const loginFormRef = useRef();
+  const submitting = useRef(false);
+  const [pending, setPending] = useState(false);
   
 
   async function handleSubmit({ values }) {
 
+    if (submitting.current) return;
+    submitting.current = true;
+    setPending(true);
     const reqBody = values;
     setMessage(null);
     await fetch("/api/v1/auth/signin", {
@@ -30,6 +35,9 @@ export default function Login() {
       })
       .catch((error) => {         
         setMessage(typeof error === "string" ? error : error.message || "Unable to log in. Please try again.");
+      }).finally(() => {
+        submitting.current = false;
+        setPending(false);
       });            
   }
 
@@ -42,7 +50,7 @@ export default function Login() {
           <></>
         )}
 
-        <h1>Login</h1>
+        <h1>Log in</h1>
 
         <div className="auth-form-container login-card">
           <FormGenerator
@@ -51,7 +59,8 @@ export default function Login() {
             onSubmit={handleSubmit}
             numberOfColumns={1}
             listenEnterKey
-            buttonText="Login"
+            disabled={pending}
+            buttonText={pending ? "Logging in…" : "Log in"}
             buttonClassName="auth-button"
           />
         </div>

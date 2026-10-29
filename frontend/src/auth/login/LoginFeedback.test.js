@@ -12,7 +12,7 @@ test("a network failure shows readable feedback instead of crashing the login sc
     render(<Login />);
     fireEvent.click(screen.getByRole("button", {name: "Login"}));
     expect(await screen.findByRole("alert")).toHaveTextContent("Network unavailable");
-    expect(screen.getByRole("heading", {name: "Login"})).toBeInTheDocument();
+    expect(screen.getByRole("heading", {name: "Log in"})).toBeInTheDocument();
 });
 test("a rejected login retains the form and its server-independent feedback", async () => {
     global.fetch = jest.fn().mockResolvedValue({status: 401});

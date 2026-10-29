@@ -51,7 +51,20 @@ class StompPermissionsTest extends SecurityHttpSupport {
         client.setMessageConverter(new CompositeMessageConverter(List.of(new MappingJackson2MessageConverter(),new ByteArrayMessageConverter(),new StringMessageConverter())));
         client.start();
     }
-    @AfterEach void close(){for(Connection c:connections)if(c.session().isConnected())c.session().disconnect();client.stop();}
+    @AfterEach void close(){
+        try {
+            for(Connection c:connections)if(c.session().isConnected()) {
+                try {c.session().disconnect();}
+                catch(org.springframework.messaging.MessageDeliveryException failure) {
+                    // An expected rejection can close the transport after isConnected().
+                    Throwable cause=failure.getCause();
+                    if(!(cause instanceof IllegalStateException) || cause.getMessage()==null
+                        || !(cause.getMessage().contains("is not open: current state CLOSING")
+                          || cause.getMessage().contains("is not open: current state CLOSED"))) throw failure;
+                }
+            }
+        } finally {client.stop();}
+    }
     StompHeaders headers(String token){StompHeaders h=new StompHeaders();if(token!=null)h.add("Authorization","Bearer "+token);return h;}
     Connection connect(Account account)throws Exception{return connect(account.token());}
     Connection connect(String token)throws Exception{
@@ -149,6 +162,9 @@ class StompPermissionsTest extends SecurityHttpSupport {
         Thread.sleep(Math.max(0,expiry.getTime()-System.currentTimeMillis())+150);
         publisher.convertAndSend("/topic/game/"+id,GameEvent.changed(id));
         assertNotNull(currentEvents.poll(5,TimeUnit.SECONDS));assertNull(expiredEvents.poll(400,TimeUnit.MILLISECONDS));
-        expiring.session().subscribe("/topic/game/"+id,new Signals());assertNotNull(expiring.signals().errors.poll(5,TimeUnit.SECONDS));
+        assertNotNull(expiring.signals().errors.poll(5,TimeUnit.SECONDS));
+        long closedBy=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+        while(expiring.session().isConnected()&&System.nanoTime()<closedBy)Thread.sleep(20);
+        assertFalse(expiring.session().isConnected(),"Expired authentication must close the transport.");
     }
 }

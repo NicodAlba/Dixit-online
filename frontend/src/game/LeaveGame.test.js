@@ -1,3 +1,4 @@
+jest.mock("../social/SocialToggle", () => () => null);
 import React from "react";
 import {fireEvent, render, screen, waitFor} from "@testing-library/react";
 import Game from "./Game";

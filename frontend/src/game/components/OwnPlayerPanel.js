@@ -1,4 +1,7 @@
 import React from "react";
+import AccountMenu from "../../social/AccountMenu";
+import CardPreview from "./CardPreview";
+import {ConnectionBadge} from "../../presence/ParticipantPresence";
 import { List, ListInlineItem } from "reactstrap";
 import fairy from "../../static/images/icons/Fairy.png";
 import "../../static/css/game/Game.css";
@@ -30,6 +33,7 @@ export function OwnPlayerPanel({ currentPlayer, currentUser, isStoryteller, turn
                 <button type="button" className={cardClasses} disabled={!clickable} onClick={handleClick} aria-label={`Select card ${index + 1}`}>
                     <img className="card" src={image} alt="Card" />
                 </button>
+                <CardPreview card={card} label={`hand card ${index + 1}`} />
             </ListInlineItem>
         );
     });
@@ -37,7 +41,7 @@ export function OwnPlayerPanel({ currentPlayer, currentUser, isStoryteller, turn
     return (
         <div className={`owned-cards-container ${handLocked ? "hand-locked" : ""}`}>
             <div className="hand-heading">
-                <div><strong>{getPlayerName(currentPlayer) || currentUser?.username || "You"}</strong> · {currentPlayer.points} pts</div>
+                <div><strong><AccountMenu accountId={currentPlayer.user?.id ?? currentUser?.id} username={getPlayerName(currentPlayer) || currentUser?.username || "You"} /></strong> · {currentPlayer.points} pts <ConnectionBadge accountId={currentPlayer.user?.id || currentUser?.id} /></div>
                 <span>{visibleHand.length} cards · {isStoryteller ? "Storyteller" : "Your private hand"}</span>
             </div>
             {isStoryteller && <img className="storyteller-icon" src={fairy} alt="Storyteller" />}

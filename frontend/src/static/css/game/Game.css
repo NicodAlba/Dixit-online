@@ -1,6 +1,6 @@
 .game-page-container {
-    --card-width: clamp(78px, 6.8vw, 110px);
-    --table-card-width: clamp(96px, 8vw, 128px);
+    --card-width: clamp(86px, 7.6vw, 120px);
+    --table-card-width: clamp(108px, 9vw, 140px);
     position: relative;
     min-height: 100vh;
     min-height: 100dvh;
@@ -45,21 +45,19 @@
 .game-page-container .card-button img.card {width: var(--card-width); height: auto; aspect-ratio: 100 / 145; object-fit: cover; border-radius: 5px;}
 .game-page-container .table-cards img.card {width: var(--table-card-width);}
 .card-button > span {font-size: .75rem; max-width: var(--table-card-width);}
-.card-clickable {cursor: pointer; transition: transform .15s ease;}
-.card-clickable:hover {transform: translateY(-3px); outline: 2px solid #ffdf83;}
+.card-clickable {cursor: pointer;}
+.card-clickable:hover {outline: 2px solid #ffdf83;}
 .card-button:disabled {cursor: default; opacity: 1;}
 .card-own {border: 2px solid #e3bf69;}
 .card-answer {outline: 2px solid #e3bf69;}
+.card-voted {border: 3px solid #7fdaa0; background: #203b2c;}
+.card-voted .vote-label {color: #dcffe8; font-weight: 700;}
 .card-result {display: flex; flex-direction: column; font-size: .85rem; margin-top: 6px;}
 .owned-cards-container {position: relative; padding: 12px 14px; text-align: center;}
 .hand-heading {display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; text-align: left; font-size: .9rem;}
 .hand-heading strong {color: #ffe599;}
 .hand-heading > span {color: #e7dfd0; font-size: .85rem;}
 .storyteller-icon {width: 26px; height: 26px; margin-bottom: 6px;}
-.clue-form {max-width: 550px; margin: 14px auto; text-align: left;}
-.clue-form-row {display: flex; gap: 10px;}
-.clue-form input {min-width: 0; font-size: 16px;}
-.clue-form button {flex-shrink: 0;}
 .game-notice {display: flex; align-items: center; flex-wrap: wrap; gap: 10px; max-width: 1500px; margin: 0 auto 12px; padding: 10px 14px; background: #4e3721; border: 1px solid #c59a56; border-radius: 8px; font-size: .9rem;}
 .game-error {background: #5a1f2c; color: #ffe0e0; border-color: #b77785;}
 .game-notice button {background: #272b37; color: white; border: 1px solid #b5ad9e; border-radius: 6px; padding: 5px 10px;}
@@ -80,7 +78,10 @@
     .game-header h1 {font-size: 1.15rem;}
     .game-toolbar {max-width: 155px;}
     .game-toolbar .leave-game {padding: 8px 10px; font-size: .85rem;}
-    .game-opponents {grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)); gap: 6px;}
+    .game-opponents {grid-template-columns: 1fr; gap: 6px;}
+    .opponent-info {display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; width: 100%;}
+    .opponent-name-row {flex: 1 1 100%;}
+    .game-page-container .game-opponents .right-player-container .dixit-tooltip-text {left: 0; right: auto;}
     .player-panel {padding: 8px; display: block;}
     .opponent-name {font-size: .85rem;}
     .opponent-points, .opponent-role {font-size: .75rem;}
@@ -91,10 +92,66 @@
     .hand-cards {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;}
     .hand-cards .card-button {width: 100%;}
     .game-page-container .hand-cards img.card {width: 100%; max-width: 110px;}
-    .clue-form-row {flex-direction: column;}
     .perspective-picker select {max-width: 150px;}
 }
 @media (prefers-reduced-motion: reduce) {.card-clickable {transition: none;}.card-clickable:hover {transform: none;}}
 
 .game-page-container * {font-family: inherit;}
-.game-toolbar .leave-game, .clue-form button {min-height: 44px;}
+.game-toolbar .leave-game {min-height: 44px;}
+.game-toolbar .dixit-tooltip-text {left: auto; right: 0; transform: none;}
+/* Stable action areas; only illustrations and decoration move. */
+.card-button {overflow: hidden; transition: box-shadow .18s, border-color .18s;}
+.card-button img.card {transition: transform .18s ease; transform-origin: center;}
+.card-button:hover, .card-button:focus-within {box-shadow: 0 8px 22px #0008, 0 0 0 1px #e5c478;}
+.card-button:hover img.card, .card-button:focus-visible img.card {transform: scale(1.045) translateY(-2px);}
+.game-card-list > li {display: flex; flex-direction: column; align-items: center; gap: 5px;}
+.card-inspect {display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: 1px solid #93835b; background: #242c40; color: #f9e4b2; border-radius: 7px; min-height: 32px; padding: 3px 8px; font-size: .72rem;}
+.card-inspect:hover, .card-inspect:focus-visible {background: #39425c; box-shadow: 0 3px 0 #111522;}
+.card-inspect-tooltip .dixit-tooltip-text {white-space: normal; width: 130px; text-align: center;}
+.hand-cards > li:last-child .dixit-tooltip-text, .table-cards > li:last-child .dixit-tooltip-text {left: auto; right: 0; transform: none;}
+.modal-dialog.card-preview-dialog {max-width: 480px;}
+.card-preview-dialog .modal-header {display: flex; align-items: center; justify-content: space-between; gap: 12px;}
+.card-preview-dialog .modal-header > .dixit-tooltip {margin-left: auto;}
+.card-preview-dialog .modal-header .dixit-tooltip-text {left: auto; right: 0; transform: none;}
+.card-preview-dialog .modal-title {font-size: 1rem; text-transform: capitalize;}
+.card-preview-dialog .modal-body {display: flex; flex-direction: column; text-align: center; padding: 12px; gap: 12px;}
+.card-preview-dialog .modal-body img {display: block; width: auto; max-width: 100%; height: min(65dvh, 520px); object-fit: contain; border-radius: 10px; box-shadow: 0 8px 22px #30201944;}
+.card-preview-dialog .modal-body p {font-size: .85rem; margin: 0;}
+.card-preview-close {background: transparent; border: 0; min-width: 44px; color: #3b291c; font-size: 24px;}
+.card-preview-close:focus-visible {outline: 3px solid #925812; outline-offset: 3px;}
+.player-panel {transition: border-color .18s, box-shadow .18s; animation: dixit-panel-in .25s ease-out;}
+.player-panel:hover, .player-panel:focus-within {border-color: #d3b975; box-shadow: 0 6px 24px #0007;}
+.turn-scene {animation: dixit-panel-in .22s ease-out;}
+.game-toolbar button, .chat-input-form button {transition: background-color .15s, box-shadow .15s;}
+.game-toolbar button:hover, .chat-input-form button:hover {box-shadow: 0 3px 0 #111522;}
+.game-toolbar button:active, .chat-input-form button:active {box-shadow: inset 0 2px 4px #0006;}
+.chat-container summary {transition: background-color .15s;}
+.chat-container summary:hover, .chat-container summary:focus-visible {background: #d2b45d1c;}
+.game-result {position: relative; overflow: hidden; isolation: isolate; padding: 20px 12px; margin-bottom: 16px; border: 1px solid #bfa05c; border-radius: 12px; background: radial-gradient(ellipse at top, #65502f88, #1b2339); animation: result-arrive .5s ease-out;}
+.result-emblem {display: grid; place-items: center; width: 60px; height: 60px; margin: 0 auto 10px; border-radius: 50%; border: 1px solid #e7c573; color: #ffe297; background: #66502e; font-size: 30px;}
+.result-overline {text-transform: uppercase; letter-spacing: .12em; color: #ffe599; font-size: .8rem; margin: 0 0 6px;}
+.result-winner .result-emblem {animation: result-emblem .8s ease-out;}
+.game-result h2 {font-size: 1.4rem; color: #fff0c4;}
+.game-result p {font-size: .9rem;}
+.result-cancelled {background: #232e3e; border-color: #7c8b97;}
+.result-standings {width: 100%; max-width: 440px; margin: 10px auto 0; border-collapse: collapse; font-size: .9rem;}
+.result-standings caption {caption-side: top; color: #ffe599; text-align: center; padding: 8px;}
+.result-standings th, .result-standings td {padding: 7px 10px; border-bottom: 1px solid #c8b37455; text-align: left;}
+.result-standings td:last-child, .result-standings thead th:last-child {text-align: right;}
+.result-winner-label {color: #ffe599; font-weight: 400; font-size: .8rem;}
+.result-sparks {position: absolute; inset: 0; pointer-events: none; z-index: -1; overflow: hidden;}
+.result-sparks span {position: absolute; left: calc(5% + var(--spark) * 8%); top: 20%; color: #ffe08e; opacity: 0; animation: result-spark 1.7s ease-out calc(var(--spark) * 40ms) 1;}
+@keyframes result-arrive {from {opacity: 0;} to {opacity: 1;}}
+@keyframes result-emblem {0% {transform: scale(.8) rotate(-12deg);} 60% {transform: scale(1.1) rotate(6deg);} 100% {transform: none;}}
+@keyframes result-spark {10% {opacity: .9;} 100% {opacity: 0; transform: translateY(180px) rotate(120deg);}}
+@media (max-width: 560px) {
+    .card-inspect {min-height: 44px; padding: 6px 8px;}
+    .card-inspect-tooltip .dixit-tooltip-text {left: 0; transform: none; width: 115px;}
+    .hand-cards > li:nth-child(3n) .dixit-tooltip-text {left: auto; right: 0; transform: none;}
+    .card-preview-dialog .modal-body img {height: min(60dvh, 460px);}
+}
+@media (prefers-reduced-motion: reduce) {
+    .game-page-container *, .card-preview-dialog * {animation: none !important; transition: none !important; scroll-behavior: auto !important;}
+    .card-button:hover img.card, .card-button:focus-visible img.card {transform: none;}
+    .result-sparks {display: none;}
+}
