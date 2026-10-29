@@ -1,6 +1,7 @@
 import React from "react";
 import {ParticipantPresence} from "../../presence/ParticipantPresence";
 import SocialToggle from "../../social/SocialToggle";
+import "../../static/css/game/BrightTable.css";
 
 export default function GameLayout({gameId, game, loading, connection = "connected", storytellerName, role, message, onDismiss, onRetry, toolbar, opponents, hand, chat, children}) {
     const rounds = game.turns?.length || 0;
@@ -34,7 +35,9 @@ export default function GameLayout({gameId, game, loading, connection = "connect
             <div className={`game-layout ${chat ? "with-chat" : ""}`}>
                 <div className="game-board">
                     <section className="game-opponents" aria-label="Other players">{opponents}</section>
-                    <section className="game-turn-panel" aria-label="Game table">{children}</section>
+                    <section className="game-turn-panel" aria-label="Game table">{children}
+                        <div className="table-piles" aria-hidden="true"><span className="table-pile"><img src="/Cards/card_reversed.png" alt="" />Draw pile</span><span className="table-pile table-discard"><img src="/Cards/card_reversed.png" alt="" />Discard</span></div>
+                    </section>
                     {hand}
                 </div>
                 {chat}
