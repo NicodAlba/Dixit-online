@@ -43,7 +43,9 @@ defaults; see below. Neither artifact is approval for a public deployment.
 
 The same CI job also provisions a disposable PostgreSQL 17.11 service with random
 runtime/migration credentials, applies Flyway and runs the explicit PostgreSQL
-acceptance suite. It packages without academic seeds, validates two production
+acceptance suite, including maintenance permissions/transaction completion. A
+separate disposable dixit_bootstrap database tests competing first-admin
+bootstraps and BCrypt without touching any managed database. It packages without academic seeds, validates two production
 JAR starts, then dumps/restores to another isolated database and checks every
 row, sequence and the restored application. This is local CI infrastructure,
 not a hosted Dixit deployment. See [production.md](production.md) for reproduction.
@@ -91,7 +93,9 @@ tools. It proves missing configuration fails with networking disabled, then
 starts the image twice against the disposable PostgreSQL service on host
 loopback, with synthetic secrets injected at runtime. It tests PORT, health,
 React routes/assets, SockJS info, API guards, completed-history persistence,
-recovery after terminating runtime DB connections, and graceful shutdown.
+recovery after terminating runtime DB connections, and graceful shutdown. The
+image starts in maintenance and denies creation while retaining history access;
+the packaged bootstrap rejects execution without an interactive terminal.
 Containers run with a read-only filesystem, writable temporary /tmp, dropped
 capabilities and a 512 MB memory limit. This is not a load/capacity guarantee.
 Docker is required for that step; a successful local JAR is not image evidence.

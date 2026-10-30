@@ -31,6 +31,11 @@ public class ExceptionHandlerController {
         return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(es.us.dp1.lx_xy_24_25.dixit.operations.MaintenanceUnavailableException.class)
+    public ResponseEntity<MessageResponse> maintenanceUnavailable(es.us.dp1.lx_xy_24_25.dixit.operations.MaintenanceUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new MessageResponse(ex.getMessage()));
+    }
+
 	@ExceptionHandler(Exception.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
 	public ResponseEntity<ErrorMessage> globalExceptionHandler(Exception ex, WebRequest request) {

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Run explicitly against an isolated PostgreSQL 17 database; never included in H2 runs. */
 class PostgresPersistenceIT extends SecurityHttpSupport {
+    @org.springframework.beans.factory.annotation.Autowired es.us.dp1.lx_xy_24_25.dixit.operations.MaintenanceGate maintenance;
     @Test void migratesReferenceDataAndRestrictsRuntimeRole() throws Exception {
         try (var connection = Objects.requireNonNull(jdbc.getDataSource()).getConnection()) {
             assertEquals("PostgreSQL", connection.getMetaData().getDatabaseProductName());
@@ -34,6 +35,8 @@ class PostgresPersistenceIT extends SecurityHttpSupport {
         status(200, request(HttpMethod.PATCH,"/games/"+game+"/start",host.token(),null));
         Map<Integer,Account> players = new LinkedHashMap<>();
         for (Account actor : accounts) players.put(count("select id from players where game_id=? and user_id=?",game,actor.id()),actor);
+        maintenance.setEnabled(true);
+        try {
         for (int round=0; round<8; round++) {
             int turn = count("select max(id) from turns where game_id=?",game);
             int narrator = count("select storyteller_id from turns where id=?",turn);
@@ -55,6 +58,7 @@ class PostgresPersistenceIT extends SecurityHttpSupport {
                 status(200,request(HttpMethod.POST,route+"/vote/"+entry.getKey()+"/"+answer,entry.getValue().token(),null));
             }
         }
+        } finally { maintenance.setEnabled(false); }
         for (int player : players.keySet()) {
             assertEquals(2,count("select count(*) from turns where game_id=? and storyteller_id=? and state='FINISHED'",game,player),
                 "Each participant narrates exactly twice, independent of PostgreSQL row order");
