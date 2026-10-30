@@ -72,7 +72,7 @@ class Operator:
         env = dict(self.env, PGHOST=endpoint.hostname, PGPORT=str(endpoint.port or 5432),
                    PGDATABASE=endpoint.path.lstrip('/'), PGUSER=self.values[prefix + 'USERNAME'],
                    PGPASSWORD=self.values[prefix + 'PASSWORD'], PGSSLMODE='verify-full',
-                   PGSSLROOTCERT=self.values.get('DIXIT_MIGRATION_DB_SSL_ROOT_CERT', self.values['DIXIT_DB_SSL_ROOT_CERT']),
+                   PGSSLROOTCERT=self.values.get(prefix + 'SSL_ROOT_CERT', self.values['DIXIT_DB_SSL_ROOT_CERT']),
                    PGCONNECT_TIMEOUT='10', PGAPPNAME='dixit-managed-acceptance')
         # Password is process environment only, never a CLI argument or output.
         result = subprocess.run([str(self.pg_bin / 'psql'), '-X', '-qAt', '-w', '-v', 'ON_ERROR_STOP=1'],
