@@ -10,6 +10,7 @@ import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
+from history_check import assert_history_unchanged, first_difference
 
 root = Path(__file__).resolve().parents[2]
 jar, = (root / "target").glob("*.jar")
@@ -115,6 +116,10 @@ with server("restart") as base:
     login = request(base, "/api/v1/auth/signin", body={"username": name, "password": password}, method="POST")
     assert login["token"]
     assert request(base, "/api/v1/games/" + str(lobby["id"]), token) == saved
-    assert request(base, "/api/v1/games/" + str(history_access["gameId"]), history_access["token"]) == history
+    restored_history = request(base, "/api/v1/games/" + str(history_access["gameId"]), history_access["token"])
+    assert_history_unchanged(history, restored_history)
+    presentation_difference = first_difference(history, restored_history)
+    if presentation_difference:
+        print("Only unordered voter/winner presentation changed at " + presentation_difference + "; all values preserved", flush=True)
     print("PostgreSQL restart retained account, JWT key, completed 8-turn history and unchanged lobby; no active-game recovery claimed", flush=True)
 print("Production routes, health, origins, API guards and two real JAR starts verified", flush=True)
