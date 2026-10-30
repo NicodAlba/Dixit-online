@@ -1,0 +1,34 @@
+# Allow only inputs required by Dockerfile. Never send .git, worktrees,
+# academic contracts, local configuration, logs or existing builds.
+**
+!Dockerfile
+!.dockerignore
+!pom.xml
+!mvnw
+!.mvn/
+!.mvn/wrapper/
+!.mvn/wrapper/maven-wrapper.properties
+!frontend/
+!frontend/package.json
+!frontend/package-lock.json
+!frontend/public/
+!frontend/public/**
+!frontend/src/
+!frontend/src/**
+!src/
+!src/main/
+!src/main/**
+# Exclusions must come last so nested private files cannot override them.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.jks
+**/*.log
+**/*.bak
+**/*.tmp
+**/node_modules
+**/build
+**/target
