@@ -49,6 +49,31 @@ class ProductionConfigurationTest {
             .withProperty("spring.datasource.url", "jdbc:postgresql://db.example/isolated")
             .withProperty("spring.datasource.hikari.data-source-properties.sslmode", "disable")));
     }
+    @Test void validatesSeparateMigrationEndpointAndItsTls() {
+        assertDoesNotThrow(() -> ProductionConfiguration.validate(valid()
+            .withProperty("spring.flyway.url", "jdbc:postgresql://migration.example/isolated")
+            .withProperty("spring.flyway.jdbc-properties.sslmode", "verify-full")));
+        for (String url : new String[]{"jdbc:h2:mem:wrong", "jdbc:postgresql://migration.example/db?password=private",
+                "jdbc:postgresql://migration.example/db?sslmode=disable",
+                "jdbc:postgresql://migration.example/db?sslfactory=org.postgresql.ssl.NonValidatingFactory",
+                "jdbc:postgresql://migration.example/db?sslhostnameverifier=untrusted"}) {
+            assertThrows(IllegalStateException.class, () -> ProductionConfiguration.validate(valid().withProperty("spring.flyway.url", url)));
+        }
+        assertThrows(IllegalStateException.class, () -> ProductionConfiguration.validate(valid()
+            .withProperty("spring.flyway.url", "jdbc:postgresql://migration.example/db")
+            .withProperty("spring.flyway.jdbc-properties.sslmode", "disable")));
+    }
+    @Test void acceptsSupabaseSessionRolesAndRejectsUnverifiedTransactionPooling() {
+        var env = valid().withProperty("spring.datasource.url", "jdbc:postgresql://aws-0-eu-north-1.pooler.supabase.com:5432/postgres")
+            .withProperty("spring.datasource.username", "dixit_runtime.project_ref")
+            .withProperty("spring.flyway.user", "dixit_migrator.project_ref");
+        assertDoesNotThrow(() -> ProductionConfiguration.validate(env));
+        for (String url : new String[]{"jdbc:postgresql://aws-0-eu-north-1.pooler.supabase.com:6543/postgres",
+                "jdbc:postgresql://db.project.supabase.co:6543/postgres"}) {
+            assertThrows(IllegalStateException.class, () -> ProductionConfiguration.validate(valid().withProperty("spring.datasource.url", url)));
+            assertThrows(IllegalStateException.class, () -> ProductionConfiguration.validate(valid().withProperty("spring.flyway.url", url)));
+        }
+    }
     @Test void rejectsWildcardsAndUntrustedInsecureOrigins() {
         for (String origin : new String[]{"*", "https://*.example", "http://dixit.example", "https://dixit.example/path", "https://dixit.example,"}) {
             assertThrows(IllegalStateException.class, () -> ProductionConfiguration.validate(valid().withProperty("dixit.web.allowed-origins", origin)), origin);

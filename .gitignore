@@ -126,3 +126,7 @@ target/
 /docs/*[Cc]ontract*
 /docs/*[Cc]ontrato*
 /docs/*[Aa]greement*
+
+# Generated Python operator/CI bytecode
+__pycache__/
+*.py[cod]

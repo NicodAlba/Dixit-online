@@ -19,22 +19,10 @@ public class ProductionConfiguration {
 
     static void validate(Environment env) {
         String url = required(env, "spring.datasource.url");
-        if (!url.startsWith("jdbc:postgresql://") || url.contains("@")
-                || url.toLowerCase().matches(".*[?&](user|password)=.*")) {
-            throw new IllegalStateException("Production requires a PostgreSQL JDBC URL without embedded credentials.");
-        }
-        try {
-            URI database = URI.create(url.substring("jdbc:".length()));
-            boolean local = java.util.Set.of("localhost", "127.0.0.1", "[::1]").contains(database.getHost() == null ? "" : database.getHost());
-            if (database.getHost() == null || database.getPath() == null || database.getPath().length() < 2) throw new IllegalArgumentException();
-            String ssl = env.getProperty("spring.datasource.hikari.data-source-properties.sslmode", "verify-full");
-            if (!local && (!"verify-full".equals(ssl) || (database.getQuery() != null
-                    && database.getQuery().toLowerCase().matches(".*(?:^|&)sslmode=(?!verify-full(?:&|$)).*")))) {
-                throw new IllegalArgumentException();
-            }
-        } catch (IllegalArgumentException error) {
-            throw new IllegalStateException("Production database requires a valid host/database and verified TLS outside loopback.");
-        }
+        String ssl = env.getProperty("spring.datasource.hikari.data-source-properties.sslmode", "verify-full");
+        validateDatabaseUrl(url, ssl);
+        validateDatabaseUrl(env.getProperty("spring.flyway.url", url),
+            env.getProperty("spring.flyway.jdbc-properties.sslmode", ssl));
         String runtimeUser = required(env, "spring.datasource.username");
         required(env, "spring.datasource.password");
         String migrationUser = required(env, "spring.flyway.user");
@@ -71,6 +59,33 @@ public class ProductionConfiguration {
                 || env.getProperty("spring.h2.console.enabled", Boolean.class, false)
                 || env.getProperty("spring.jpa.show-sql", Boolean.class, false)) {
             throw new IllegalStateException("Production requires schema validation, no SQL seeds, no H2 console and no SQL logging.");
+        }
+    }
+
+    static void validateDatabaseUrl(String url, String ssl) {
+        if (!url.startsWith("jdbc:postgresql://") || url.contains("@")
+                || url.toLowerCase().matches(".*[?&](user|password)=.*")) {
+            throw new IllegalStateException("Production requires a PostgreSQL JDBC URL without embedded credentials.");
+        }
+        try {
+            URI database = URI.create(url.substring("jdbc:".length()));
+            boolean local = java.util.Set.of("localhost", "127.0.0.1", "[::1]").contains(database.getHost() == null ? "" : database.getHost());
+            String host = database.getHost();
+            if (host != null && ((host.endsWith(".pooler.supabase.com") && database.getPort() != 5432)
+                    || (host.endsWith(".supabase.co") && database.getPort() == 6543))) {
+                throw new IllegalArgumentException(); // Supabase transaction pooling is not approved.
+            }
+            if (database.getHost() == null || database.getPath() == null || database.getPath().length() < 2) throw new IllegalArgumentException();
+            if (!local && database.getQuery() != null && database.getQuery().toLowerCase()
+                    .matches(".*(?:^|&)(sslfactory|sslhostnameverifier)=.*")) {
+                throw new IllegalArgumentException();
+            }
+            if (!local && (!"verify-full".equals(ssl) || (database.getQuery() != null
+                    && database.getQuery().toLowerCase().matches(".*(?:^|&)sslmode=(?!verify-full(?:&|$)).*")))) {
+                throw new IllegalArgumentException();
+            }
+        } catch (IllegalArgumentException error) {
+            throw new IllegalStateException("Production database requires a valid host/database and verified TLS outside loopback.");
         }
     }
 

@@ -1,7 +1,7 @@
 # Preparación local de producción
 
 Estado: aplicación única + PostgreSQL 17/Flyway aprobados para preparación local.
-No hay proveedor ni publicación aprobados. Presupuesto máximo 0 €; propuestas y
+Supabase Free está elegido como proveedor PostgreSQL; el propietario ha creado el proyecto Dixit. El proveedor de aplicación y la publicación siguen pendientes. Presupuesto máximo 0 €; propuestas y
 límites en [production-proposal.md](production-proposal.md). CI sin CD automático.
 
 ## Configuración
@@ -21,6 +21,9 @@ en Git, builds, frontend o logs. No generar la clave JWT en cada arranque.
 - `DIXIT_DB_ROLE`: identificador simple del rol real; normalmente igual al usuario,
   pero un pooler puede requerir un nombre de conexión distinto.
 - `DIXIT_MIGRATION_DB_USERNAME`, `DIXIT_MIGRATION_DB_PASSWORD`: rol DDL distinto.
+- `DIXIT_MIGRATION_DB_URL`: endpoint opcional distinto para Flyway; por defecto usa DIXIT_DB_URL.
+- `DIXIT_DB_SSL_ROOT_CERT`: ruta de la CA externa legible; por defecto ~/.postgresql/root.crt.
+- `DIXIT_MIGRATION_DB_SSL_MODE` y `DIXIT_MIGRATION_DB_SSL_ROOT_CERT`: opcionales para un endpoint de migración distinto; heredan los valores runtime.
 - `DIXIT_JWT_SECRET`: Base64 de al menos 64 bytes aleatorios privados, estable entre
   reinicios. Guardar copia segura por separado de los dumps de datos.
 - `DIXIT_ALLOWED_ORIGINS`: orígenes HTTPS exactos separados por comas, sin slash
@@ -129,8 +132,10 @@ obteniendo ID de la secuencia. No SQL con contraseña plana, endpoint público o
 contraseña inventada. Esa herramienta de bootstrap queda pendiente de implementar
 antes de crear el primer administrador; no es necesaria para registrar jugadores.
 
-Faltan elección/aprobación de proveedor, creación del entorno, HTTPS/proxy real,
-posible Dockerfile y prueba de imagen, política de activas, bootstrap admin,
+Supabase está elegido y Docker construido/verificado en CI (ver [docker.md](docker.md)).
+Faltan elección/aprobación del proveedor de aplicación, HTTPS/proxy real, política de activas y bootstrap admin,
 backups operativos, primer despliegue supervisado y validación pública/visual.
 Recorrido de esta entrega: `feature/production-foundation` → PR → `develop`.
 Main/releases corresponden al propietario; no hay URL pública autorizada.
+
+Integración concreta de Supabase, roles, conexión y validación gestionada: [supabase.md](supabase.md). No añadir sus secretos a Actions; las PR siguen usando PostgreSQL aislado.
