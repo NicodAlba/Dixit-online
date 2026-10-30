@@ -124,16 +124,16 @@ larga. Acordar RPO/RTO reales con el propietario antes de admitir datos reales.
 La clave estable conserva sesiones JWT entre reinicios; el cambio de contraseña
 sigue sin revocación global inmediata. Rotar la clave invalida todos los tokens.
 
-No hay administrador predeterminado. Procedimiento propuesto antes de necesitar
-el primero: herramienta local de una sola ejecución con conexión autorizada,
-contraseña elegida por el propietario con entrada oculta y confirmada, BCrypt,
-transacción y bloqueo de authority ADMIN; crear solo si no existe administrador,
-obteniendo ID de la secuencia. No SQL con contraseña plana, endpoint público o
-contraseña inventada. Esa herramienta de bootstrap queda pendiente de implementar
-antes de crear el primer administrador; no es necesaria para registrar jugadores.
+No hay administrador predeterminado. El bootstrap local aprobado está implementado
+con entrada oculta y confirmada, BCrypt y transacción/bloqueo asesor; solo crea el
+primer ADMIN y rechaza sobrescribir cuentas o usar roles de BD privilegiados.
+No existe endpoint público, contraseña inventada ni argumento sensible. Ver
+[demo-maintenance.md](demo-maintenance.md) para comandos, límites y control ADMIN.
+Las cuentas ADMIN ficticias de aceptación requieren retirada autorizada antes del
+bootstrap del propietario; no se eliminan automáticamente.
 
 Supabase está elegido y Docker construido/verificado en CI (ver [docker.md](docker.md)).
-Faltan elección/aprobación del proveedor de aplicación, HTTPS/proxy real, política de activas y bootstrap admin,
+Faltan elección/aprobación del proveedor de aplicación, HTTPS/proxy real, política de activas tras caída y creación del administrador del propietario,
 backups operativos, primer despliegue supervisado y validación pública/visual.
 Recorrido de esta entrega: `feature/production-foundation` → PR → `develop`.
 Main/releases corresponden al propietario; no hay URL pública autorizada.

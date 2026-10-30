@@ -172,7 +172,7 @@ def main():
     parser.add_argument('--config', type=Path, required=True)
     parser.add_argument('--pg-bin', type=Path, required=True)
     parser.add_argument('--project-ref', required=True)
-    parser.add_argument('--phase', choices=['migrate', 'acceptance', 'permissions', 'cancellation', 'restart'], required=True)
+    parser.add_argument('--phase', choices=['migrate', 'acceptance', 'permissions', 'cancellation', 'restart', 'maintenance'], required=True)
     parser.add_argument('--acknowledge-test-data', action='store_true', required=True)
     args = parser.parse_args()
     operator = Operator(args.config, args.pg_bin, args.project_ref)
@@ -201,6 +201,14 @@ def main():
                       '-Dtest.reports.dir=target/supabase-cancellation-reports', '-Dtest=GameCancellationTest', 'test'],
                      'supabase-cancellation.log')
         print('Managed cancellation/reconnection cases passed with the actual 30000 ms policy; CI default remains 2000 ms.', flush=True)
+    elif args.phase == 'maintenance':
+        operator.permissions()
+        operator.run(['./mvnw', '--batch-mode', '--no-transfer-progress', '-Dspring.profiles.active=prod',
+                      '-Dtest.reports.dir=target/supabase-maintenance-reports',
+                      '-Dtest=PostgresPersistenceIT,MaintenancePermissionsTest,MaintenanceTransactionTest', 'test'],
+                     'supabase-maintenance.log')
+        operator.permissions()
+        print('Managed maintenance authorization, admission transactions and complete four-player game passed.', flush=True)
     elif args.phase == 'restart':
         operator.run(['python3', 'scripts/ci/verify_production.py'], 'supabase-restart-check.log')
         before = operator.fingerprint()

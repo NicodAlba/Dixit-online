@@ -32,6 +32,7 @@ public class GameService {
     private final UserService userService;
     private final AchievementService achievementService;
     private final FriendRequestService friendRequestService;
+    @Autowired private es.us.dp1.lx_xy_24_25.dixit.operations.MaintenanceGate maintenance;
     @Autowired private org.springframework.context.ApplicationEventPublisher events;
 
     @Autowired
@@ -143,6 +144,7 @@ public class GameService {
 
     @Transactional
     public Game createGame(String password, User user) {
+        maintenance.admitNewGameOrStart();
         Game game = new Game();
         game.setPassword((password != null && !password.isBlank()) ? password : null);
         game.setLeader(user);
@@ -153,6 +155,15 @@ public class GameService {
         game.getPlayers().add(player);
         user.getPlayers().add(player);
         return gameRepository.save(game);
+    }
+
+    /** Scalar authorization before the admission gate: no game row lock or stale entity snapshot. */
+    @Transactional(readOnly = true)
+    public void requireLeaderForStart(Integer id, User user) {
+        if (!gameRepository.existsByIdAndLeaderUsername(id, user.getUsername())) {
+            if (!gameRepository.existsById(id)) throw new ResourceNotFoundException("Game", "id", id);
+            throw new AccessDeniedException("Only the leader can start the game");
+        }
     }
 
     @Transactional

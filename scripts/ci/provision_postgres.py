@@ -11,11 +11,12 @@ passwords = {name: secrets.token_hex(32) for name in ("runtime", "migrator")}
 sql = "\n".join(
     f"CREATE ROLE dixit_{role} LOGIN PASSWORD '{password}';"
     for role, password in passwords.items()
-) + "\nCREATE DATABASE dixit_ci OWNER dixit_migrator;\n"
+) + "\nCREATE DATABASE dixit_ci OWNER dixit_migrator;\nCREATE DATABASE dixit_bootstrap OWNER dixit_migrator;\n"
 subprocess.run(["docker", "exec", "-i", container, "psql", "-U", "postgres",
                 "-v", "ON_ERROR_STOP=1"], input=sql, text=True, check=True)
 values = {
     "DIXIT_DB_URL": "jdbc:postgresql://127.0.0.1:5432/dixit_ci",
+    "DIXIT_BOOTSTRAP_TEST_URL": "jdbc:postgresql://127.0.0.1:5432/dixit_bootstrap",
     "DIXIT_TEST_POSTGRES_URL": "jdbc:postgresql://127.0.0.1:5432/dixit_ci",
     "DIXIT_DB_USERNAME": "dixit_runtime",
     "DIXIT_DB_PASSWORD": passwords["runtime"],
