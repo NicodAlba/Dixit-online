@@ -76,7 +76,9 @@ jobs:
       - name: Package production JAR without academic seeds
         run: ./mvnw --batch-mode --no-transfer-progress -DskipTests -Pproduction-package package
       - name: Production startup, routes, secrets, origins and persistence after restart
-        run: python3 scripts/ci/verify_production.py
+        run: |
+          python3 -m unittest discover -s scripts/ci -p 'test_*.py'
+          python3 scripts/ci/verify_production.py
       - name: Backup and isolated restore with production JAR
         run: python3 scripts/ci/verify_restore.py '${{ job.services.postgres.id }}'
       - name: Verify build did not modify tracked files

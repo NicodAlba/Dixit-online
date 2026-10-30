@@ -54,6 +54,7 @@ public class Game extends BaseEntity {
     private List<Turn> turns = new ArrayList<>();
 
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC") // Stable seat/rotation order across JDBC query plans and point updates.
     @JsonManagedReference("game-players") //prevents infinite looping during serialization
     private List<Player> players = new ArrayList<>();
 

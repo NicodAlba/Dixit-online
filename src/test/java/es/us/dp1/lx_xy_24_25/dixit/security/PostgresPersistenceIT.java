@@ -55,6 +55,10 @@ class PostgresPersistenceIT extends SecurityHttpSupport {
                 status(200,request(HttpMethod.POST,route+"/vote/"+entry.getKey()+"/"+answer,entry.getValue().token(),null));
             }
         }
+        for (int player : players.keySet()) {
+            assertEquals(2,count("select count(*) from turns where game_id=? and storyteller_id=? and state='FINISHED'",game,player),
+                "Each participant narrates exactly twice, independent of PostgreSQL row order");
+        }
         assertEquals(8,count("select count(*) from turns where game_id=? and state='FINISHED'",game));
         assertEquals(52,count("select count(*) from cards where game_id=?",game));
         assertEquals(32,count("select count(*) from cards where game_id=? and turn_id is not null and user_id is not null",game));
