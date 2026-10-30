@@ -54,3 +54,7 @@ Java; no es requisito de esta decisión ni está implementado por esta ADR.
 Recorrido: **feature/production-foundation → PR → develop**. Main, releases y
 publicación permanecen bajo control del propietario. La deuda visual DEV-053/054
 continúa explícita; pruebas HTTP y de base de datos no la sustituyen.
+
+Actualización de proveedor aprobada el 30 de octubre de 2026: ADR-0007 elige
+Supabase Free. La comparación histórica anterior no implica mantener abierta
+esa elección; hosting de aplicación/publicación siguen pendientes.
