@@ -35,10 +35,9 @@ script, card and badge files, SockJS discovery and a private REST denial, and te
 This checks packaging and startup, not public proxy transport, visual behavior,
 production PostgreSQL compatibility or recovery of active games after restart.
 
-The current JAR retains development defaults and academic sample data. It must
-not be deployed publicly until production configuration and data initialization
-are prepared and approved. Deep-link routing and public asset authorization
-must also be checked in the production preparation delivery.
+The ordinary JAR uses development defaults and academic sample data. The separate
+`production-package` profile excludes those seeds and selects strict production
+defaults; see below. Neither artifact is approval for a public deployment.
 
 ## PostgreSQL and production package
 
@@ -72,3 +71,27 @@ installing the Allure reporting CLI.
 
 Changes follow `feature/*` or `fix/*` → PR → `develop`. Only the owner promotes
 `develop` to `main`. CI success is not deployment approval.
+
+## Inspect runs in GitHub
+
+Open [Actions](https://github.com/NicodAlba/Dixit-online/actions), select CI, open
+a run and then `verify`. Check its branch and commit before interpreting results.
+Expand each step to read live or completed logs. Green means required checks
+passed, red identifies a failed step, yellow is queued/running, and cancelled
+can mean a newer commit superseded the run. PR checks also link to these logs.
+A green result is not a visual acceptance or a deployment.
+
+## Actual Docker artifact
+
+After the existing tests, packaging and isolated restore, CI builds `dixit:ci`
+from Dockerfile in its checkout. It does not push the image anywhere.
+`verify_image.py` extracts the final-stage JAR and compares all React resources,
+checks strict prod defaults/no academic seeds, UID 10001 and absence of build
+tools. It proves missing configuration fails with networking disabled, then
+starts the image twice against the disposable PostgreSQL service on host
+loopback, with synthetic secrets injected at runtime. It tests PORT, health,
+React routes/assets, SockJS info, API guards, completed-history persistence,
+recovery after terminating runtime DB connections, and graceful shutdown.
+Containers run with a read-only filesystem, writable temporary /tmp, dropped
+capabilities and a 512 MB memory limit. This is not a load/capacity guarantee.
+Docker is required for that step; a successful local JAR is not image evidence.
