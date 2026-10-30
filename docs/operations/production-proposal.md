@@ -6,14 +6,15 @@ acredita proveedores o despliegues ya implementados. El propietario aprobó
 la preparación local de aplicación única + PostgreSQL 17/Flyway; su configuración
 y comprobaciones se describen en [production.md](production.md). La CI se describe en [ci.md](ci.md).
 
-## Diagnóstico operativo
+## Diagnóstico operativo recibido y preparación realizada
 
-La versión usa H2 create-drop, clave JWT efímera si falta configuración y
-`data.sql` con cuentas académicas. Broker, presencia y plazos son de proceso.
-Faltan perfiles de producción, migraciones y una política aprobada de reinicio.
-El JAR ya incluye React y permite leer sus archivos públicos; faltan el fallback
-acotado de rutas React, revisión de referencias localhost, orígenes, proxy HTTPS,
-salud y validación real del transporte desplegado. No basta con cambiar JDBC.
+Al comenzar esta fase, la versión usaba H2 create-drop, clave JWT efímera si
+faltaba configuración y `data.sql` con cuentas académicas. La preparación local
+aprobada ya añade perfil prod estricto, Flyway, PostgreSQL, rutas React, REST
+relativo, orígenes y salud mínima; las verificaciones y procedimientos están en
+[production.md](production.md). Broker, presencia y plazos siguen siendo de
+proceso. Quedan pendientes la política aprobada de reinicio, el proveedor y la
+validación de HTTPS/proxy y transporte en un entorno público.
 
 ## Empaquetado recomendado
 
@@ -32,7 +33,7 @@ imagen construida antes de desplegarla. No se publicará en un registro por defe
 [Runtime oficial](https://render.com/docs/native-runtimes),
 [Docker](https://render.com/docs/docker).
 
-Preparación siguiente: rutas GET/HEAD React explícitas hacia index.html, sin
+Preparación local implementada: rutas GET/HEAD React explícitas hacia index.html, sin
 capturar `/api`, `/ws`, errores ni archivos inexistentes; REST relativo al origen,
 SockJS en `/ws`; puerto `PORT`, escucha adecuada al contenedor, cabeceras reenviadas
 solo del proxy confiable y HTTPS público. Origen permitido explícito, health
@@ -82,9 +83,9 @@ es de 5 USD/30 días y luego Free concede 1 USD/mes de consumo. No acredita cubr
 esta JVM de forma sostenida, por lo que no se recomienda para este requisito.
 [Condiciones oficiales](https://docs.railway.com/pricing/free-trial).
 
-## Persistencia propuesta; no elegida todavía
+## Persistencia aprobada para preparación local; proveedor pendiente
 
-Motor candidato: **PostgreSQL 17**, último parche disponible al ejecutar pruebas,
+Motor aprobado para preparación local: **PostgreSQL 17**, último parche disponible al ejecutar pruebas,
 mismo major local y gestionado. Sigue soportado hasta noviembre de 2029 y Neon
 lo ofrece en Free. El major real ofrecido por Supabase se debe comprobar antes
 de elegirlo. [Soporte PostgreSQL](https://www.postgresql.org/support/versioning/),
@@ -93,11 +94,12 @@ H2 sigue siendo útil para pruebas rápidas; no acredita concurrencia o dialecto
 PostgreSQL. MySQL también sería viable con trabajo de adaptación y un hosting
 aprobado, pero no aporta ventaja para la propuesta gratuita de PostgreSQL.
 
-Driver `org.postgresql:postgresql`, Flyway OSS (`flyway-core` y
-`flyway-database-postgresql`), con versiones gestionadas compatibles con Boot
-3.5.5 verificadas al implementar. [Módulo oficial](https://documentation.red-gate.com/flyway/reference/database-driver-reference/postgresql-database).
+Driver `org.postgresql:postgresql` 42.7.14 y Flyway OSS 11.7.2 (`flyway-core` y
+`flyway-database-postgresql`), compatibles con Boot 3.5.5. El parche de pgJDBC
+se fija explícitamente por seguridad; Flyway usa la versión gestionada. [Módulo oficial](https://documentation.red-gate.com/flyway/reference/database-driver-reference/postgresql-database).
 
-Plan de migraciones después de aprobar el motor:
+Alcance aprobado y realizado mediante V1–V3 y pruebas PostgreSQL; el bootstrap
+de administrador sigue pendiente, como precisa [production.md](production.md):
 
 1. V1: esquema `dixit` dedicado con entidades actuales, tablas de unión, claves,
    índices, restricciones y `entity_sequence` con incremento compatible con JPA.
@@ -165,7 +167,7 @@ Antes de difusión: validación funcional pública de cuatro participantes, priv
 reconexión/cancelación, persistencia/restauración y comportamiento de activas;
 validación visual pendiente de Fase 4 y revisión de permisos/atribuciones de recursos.
 
-Aprobar separadamente: (1) empaquetado A + PostgreSQL 17/Flyway para preparación
-local, (2) proveedor y límites de demo gratuita, (3) política de partidas activas,
-(4) creación de entorno y primera publicación. Aprobar preparación no autoriza
-publicar. Cada entrega sigue `feature/*` o `fix/*` → PR → `develop`.
+Aprobado: empaquetado A + PostgreSQL 17/Flyway para preparación local.
+Pendiente de aprobar separadamente: (1) proveedor y límites de demo gratuita,
+(2) política de partidas activas, (3) creación de entorno y primera publicación.
+Aprobar preparación no autoriza publicar. Cada entrega sigue `feature/*` o `fix/*` → PR → `develop`.
