@@ -13,6 +13,8 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    @org.springframework.beans.factory.annotation.Value("${dixit.web.allowed-origins:}")
+    private String[] allowedOrigins;
     private final StompAccess access;
     public WebSocketConfig(StompAccess access) { this.access = access; }
 
@@ -42,7 +44,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         //http://localhost:8080/ws
         registry.addEndpoint("/ws")
-            .setAllowedOriginPatterns("*")
+            .setAllowedOrigins(allowedOrigins)
             .withSockJS();
     }
 }

@@ -2,8 +2,9 @@
 
 Consulta oficial: **30 de octubre de 2026**. Presupuesto fijado por el propietario:
 **0 €**, sin planes de pago. Este documento propone la siguiente entrega; no
-acredita configuración de producción, migraciones, proveedores o despliegues
-ya implementados. La CI se describe en [ci.md](ci.md).
+acredita proveedores o despliegues ya implementados. El propietario aprobó
+la preparación local de aplicación única + PostgreSQL 17/Flyway; su configuración
+y comprobaciones se describen en [production.md](production.md). La CI se describe en [ci.md](ci.md).
 
 ## Diagnóstico operativo
 
