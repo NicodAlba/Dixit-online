@@ -155,4 +155,4 @@ with server('first'):
     print('Image recovered interrupted PostgreSQL connections and retained completed history', flush=True)
 with server('restart'):
     assert_history_unchanged(saved, request('/api/v1/games/' + str(access['gameId']), access['token']))
-print('Two real image starts, configurable PORT, routes, API guards, 512 MB limit and graceful stops verified; no active-game recovery claimed', flush=True)
+print('Two real image starts, configurable PORT, routes, API guards, 512 MB limit and graceful stops verified; no active-game continuation claimed', flush=True)
