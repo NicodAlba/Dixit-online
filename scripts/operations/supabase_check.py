@@ -64,6 +64,9 @@ class Operator:
         # Only explicitly selected tests receive this opt-in, never normal PR workflows.
         self.env['DIXIT_TEST_POSTGRES_URL'] = self.url
         self.env['SPRING_PROFILES_ACTIVE'] = 'prod'
+        # Acceptance/restart checks must not cancel unrelated managed fixtures.
+        self.env['DIXIT_RECOVER_INTERRUPTED_GAMES'] = 'false'
+        self.env['DIXIT_VERIFY_INTERRUPTED_RECOVERY'] = 'false'
         self.env['DIXIT_ACCEPTANCE_GRACE_MS'] = '30000'
 
     def query(self, sql, runtime=False):

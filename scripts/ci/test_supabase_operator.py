@@ -37,7 +37,9 @@ class ManagedOperatorGuardTest(unittest.TestCase):
                 path.write_text(''.join(key+'='+value+'\n' for key,value in config.items()))
                 path.chmod(0o600)
             write(values)
-            Operator(path, Path('/unused'), ref)
+            operator = Operator(path, Path('/unused'), ref)
+            self.assertEqual('false', operator.env['DIXIT_RECOVER_INTERRUPTED_GAMES'])
+            self.assertEqual('false', operator.env['DIXIT_VERIFY_INTERRUPTED_RECOVERY'])
             for changed in ({'DIXIT_DB_URL': values['DIXIT_DB_URL'].replace(':5432', ':6543')},
                             {'DIXIT_DB_USERNAME': 'postgres.' + ref},
                             {'DIXIT_DB_SSL_MODE': 'disable'},

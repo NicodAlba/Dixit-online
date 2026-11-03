@@ -13,6 +13,7 @@ from zipfile import ZipFile
 from history_check import assert_history_unchanged, first_difference
 
 root = Path(__file__).resolve().parents[2]
+recover_interrupted = os.environ.get("DIXIT_VERIFY_INTERRUPTED_RECOVERY", "false") == "true"
 jar, = (root / "target").glob("*.jar")
 with ZipFile(jar) as archive:
     assert "BOOT-INF/classes/data.sql" not in archive.namelist(), "Academic accounts bundled"
@@ -42,7 +43,7 @@ def server(label):
     with log_path.open("w") as log:
         process = subprocess.Popen(["java", "-jar", str(jar), "--server.address=127.0.0.1", "--server.port=0"],
                                    env=dict({key: value for key, value in os.environ.items() if not key.startswith("SPRING_")},
-                                            DIXIT_RECOVER_INTERRUPTED_GAMES="true", DIXIT_MAINTENANCE_ENABLED="false"),
+                                            DIXIT_RECOVER_INTERRUPTED_GAMES=str(recover_interrupted).lower(), DIXIT_MAINTENANCE_ENABLED="false"),
                                    stdout=log, stderr=subprocess.STDOUT)
         try:
             deadline = time.monotonic() + 90
@@ -111,27 +112,31 @@ with server("first") as base:
     token = login["token"]
     lobby = request(base, "/api/v1/games", token, body={}, method="POST", expected=201)
     saved = request(base, "/api/v1/games/" + str(lobby["id"]), token)
-    interrupted = request(base, "/api/v1/games", token, body={}, method="POST", expected=201)
-    for index in range(2):
-        guest_name = "restart_" + secrets.token_hex(8)
-        guest_password = secrets.token_urlsafe(24)
-        request(base, "/api/v1/auth/signup", body={"username":guest_name,"password":guest_password,"authority":"PLAYER"}, method="POST", expected=201)
-        guest = request(base, "/api/v1/auth/signin", body={"username":guest_name,"password":guest_password}, method="POST")
-        request(base, "/api/v1/games/"+str(interrupted["id"])+"/join", guest["token"], body={}, method="PATCH")
-    request(base, "/api/v1/games/"+str(interrupted["id"])+"/start", token, method="PATCH")
+    if recover_interrupted:
+        interrupted = request(base, "/api/v1/games", token, body={}, method="POST", expected=201)
+        for index in range(2):
+            guest_name = "restart_" + secrets.token_hex(8)
+            guest_password = secrets.token_urlsafe(24)
+            request(base, "/api/v1/auth/signup", body={"username":guest_name,"password":guest_password,"authority":"PLAYER"}, method="POST", expected=201)
+            guest = request(base, "/api/v1/auth/signin", body={"username":guest_name,"password":guest_password}, method="POST")
+            request(base, "/api/v1/games/"+str(interrupted["id"])+"/join", guest["token"], body={}, method="PATCH")
+        request(base, "/api/v1/games/"+str(interrupted["id"])+"/start", token, method="PATCH")
     history = request(base, "/api/v1/games/" + str(history_access["gameId"]), history_access["token"])
     assert history["endDate"] and len(history["turns"]) == 8
 with server("restart") as base:
     login = request(base, "/api/v1/auth/signin", body={"username": name, "password": password}, method="POST")
     assert login["token"]
     assert request(base, "/api/v1/games/" + str(lobby["id"]), token) == saved
-    recovered = request(base, "/api/v1/games/"+str(interrupted["id"]), token)
-    assert recovered["cancelled"] and recovered["endDate"] and not recovered["winners"]
-    request(base, "/api/v1/games", token, body={}, method="POST", expected=201)
+    if recover_interrupted:
+        recovered = request(base, "/api/v1/games/"+str(interrupted["id"]), token)
+        assert recovered["cancelled"] and recovered["endDate"] and not recovered["winners"]
+        request(base, "/api/v1/games", token, body={}, method="POST", expected=201)
     restored_history = request(base, "/api/v1/games/" + str(history_access["gameId"]), history_access["token"])
     assert_history_unchanged(history, restored_history)
     presentation_difference = first_difference(history, restored_history)
     if presentation_difference:
         print("Only unordered voter/winner presentation changed at " + presentation_difference + "; all values preserved", flush=True)
-    print("PostgreSQL restart retained account, JWT key, completed 8-turn history and unchanged lobby; interrupted game cancelled and ordinary admissions reopened", flush=True)
+    print("PostgreSQL restart retained account, JWT key, completed 8-turn history and unchanged lobby", flush=True)
+    if recover_interrupted:
+        print("Interrupted game cancelled without a winner; ordinary admissions reopened without ADMIN", flush=True)
 print("Production routes, health, origins, API guards and two real JAR starts verified", flush=True)
