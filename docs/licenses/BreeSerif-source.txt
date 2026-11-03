@@ -1,0 +1,3 @@
+Official Google Fonts repository, pinned revision 7e3be94aca03febf473611cd5eb99a526086e3c4
+https://raw.githubusercontent.com/google/fonts/7e3be94aca03febf473611cd5eb99a526086e3c4/ofl/breeserif/
+Unmodified BreeSerif-Regular.ttf. See OFL and FONTLOG in this directory.

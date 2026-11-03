@@ -1,0 +1,280 @@
+{
+  "license": "CC0-1.0",
+  "original_vector_art": true,
+  "card_titles": [
+    "The gardener in the sky",
+    "A well for the moon",
+    "The wandering town",
+    "The forest of keys",
+    "The sea above us",
+    "The rain collector",
+    "The cloud keeper",
+    "The tree of borrowed hours",
+    "A mountain for tea",
+    "The fox at dusk",
+    "A door to another tide",
+    "The library takes flight",
+    "The river that remembers music",
+    "The house that would not stay",
+    "The last move",
+    "The garden looking back",
+    "A ladder for lost stars",
+    "The kite with roots",
+    "The candle at the end of the world",
+    "The cat who caught an orbit",
+    "The bottled forest",
+    "The island of untold roots",
+    "The sun in the mirror",
+    "The swan and the gate",
+    "The moth outside the tent",
+    "The sleeping mountain heart",
+    "A seed for tomorrow",
+    "The bridge of strings",
+    "The garden of echoes",
+    "An elephant in the rain",
+    "The compass at the pole",
+    "The violin migration",
+    "The castle between moments",
+    "The painter of clouds",
+    "The swing between moons",
+    "The universe in an acorn"
+  ],
+  "masters": [
+    {
+      "master": "assets/original-art/backgrounds/Achievements-AchievementsBackground.svg",
+      "sha256": "69afd7e6f29ebbe4cfcee2f24e80872179746722d35025ba83f50964f70da258"
+    },
+    {
+      "master": "assets/original-art/backgrounds/GameBackground.svg",
+      "sha256": "bf7187e19658ddfd722590b528fc5fa03913d6c92b3134da78da3feafa865a3b"
+    },
+    {
+      "master": "assets/original-art/backgrounds/HomeBackground.svg",
+      "sha256": "7f89787e4605a67018ca2d8301d624e311e2d44d030701b4ce6fbb96e93012ca"
+    },
+    {
+      "master": "assets/original-art/backgrounds/LobbyBackground.svg",
+      "sha256": "01ac8522d229c21cfd72bfdd6a0a11be0727d90d9ba2a13086171e62ae001d97"
+    },
+    {
+      "master": "assets/original-art/backgrounds/SocialBackground.svg",
+      "sha256": "fc8d635973d891daf01a1640580f20bcf23cd7368d882749381c78e09ef5239f"
+    },
+    {
+      "master": "assets/original-art/badges/Play1.svg",
+      "sha256": "d6ba9298f1992a77886047afc30735c65a52a3434e234e650e60d929c07b08e8"
+    },
+    {
+      "master": "assets/original-art/badges/Play10.svg",
+      "sha256": "5a78f4d750da787f00e49e95833f92fa8a210f7f0deae6bccca0235a8961169b"
+    },
+    {
+      "master": "assets/original-art/badges/Play5.svg",
+      "sha256": "fa291ca5c86da2fc30fe98de12dc69e4d1a0922d99f1298191dee636c46634ac"
+    },
+    {
+      "master": "assets/original-art/badges/Play50.svg",
+      "sha256": "854a1d3079c837b6e4bf7b947d7102af68c06e0517c1fa60ad225bd866130f7e"
+    },
+    {
+      "master": "assets/original-art/badges/Trick100.svg",
+      "sha256": "f348c70c2d93c7b4589c516eee20b91fea99d392545f4697c570e0766d20ded6"
+    },
+    {
+      "master": "assets/original-art/badges/Trick20.svg",
+      "sha256": "7fb694206de7dbaa8f47f990e43014db298cff3ae9ebd9166b1759fb1d331384"
+    },
+    {
+      "master": "assets/original-art/badges/Trick5.svg",
+      "sha256": "45c414d08d86599d01fafebd7b53b9f329ea4be5bac2e44c464a264eb7e1f260"
+    },
+    {
+      "master": "assets/original-art/badges/Trick50.svg",
+      "sha256": "af865b9d9ed84ecbe96b38a34e5ab9bb7fdc14a29e2b95776c5a459544ec7539"
+    },
+    {
+      "master": "assets/original-art/badges/Win1.svg",
+      "sha256": "a941347344cdc921437046c249ae10286f3e5256b1a6a46dc52d02c8dc6feb5f"
+    },
+    {
+      "master": "assets/original-art/badges/Win10.svg",
+      "sha256": "0eebe1c78668d37bfa3155b5a270fc64ad800eff1a4bfedd8117b96b60a39271"
+    },
+    {
+      "master": "assets/original-art/badges/Win5.svg",
+      "sha256": "debafb7bf720a212de9ed9a60036f57af846c512c657f6bdd7be7deef7187a1a"
+    },
+    {
+      "master": "assets/original-art/badges/Win50.svg",
+      "sha256": "75406d51d8fa551585d334c1cc69e6602991fbb88344a1fffb1283c4823feb28"
+    },
+    {
+      "master": "assets/original-art/card-back.svg",
+      "sha256": "0e404a57b13e6cfae46ff553f27c1013f137549f25c301f7e78ac0bd2fdbaebe"
+    },
+    {
+      "master": "assets/original-art/cards/0.svg",
+      "sha256": "fd770cdb5bb7f8f4a8a4f1b9b2251ab81771397a2929a8f79e5478f434346070"
+    },
+    {
+      "master": "assets/original-art/cards/1.svg",
+      "sha256": "05edfa3b058553c365fc04968850c24a41d615824919c279ef4c43f88ff0102d"
+    },
+    {
+      "master": "assets/original-art/cards/10.svg",
+      "sha256": "e0130fe20e7765640b79604922207c745b652ad86e0dd6464bfa6f54fdf16c2c"
+    },
+    {
+      "master": "assets/original-art/cards/11.svg",
+      "sha256": "6889f58193c2e09fbc89da97890a7f91495da901f3b0faeacd47ba20a7f030fd"
+    },
+    {
+      "master": "assets/original-art/cards/12.svg",
+      "sha256": "3eb03e689fa82e94ab8b8a741c51e9ae3d0d2760583e1946ad322717c414de32"
+    },
+    {
+      "master": "assets/original-art/cards/13.svg",
+      "sha256": "22a708a8049a3578acb8c2785c451287638930d02daf32b8ded1eb7cb1b5b22e"
+    },
+    {
+      "master": "assets/original-art/cards/14.svg",
+      "sha256": "def619f10f0d28b155953f34ade0aa70f39416b3a5407526d9c20760b2d116e3"
+    },
+    {
+      "master": "assets/original-art/cards/15.svg",
+      "sha256": "12ba4bfab431ded686964e0bdc2f58e1b6b0cb5898df0afd40b9fc061c55c4ed"
+    },
+    {
+      "master": "assets/original-art/cards/16.svg",
+      "sha256": "9e832f4a3adb15a08997343e22ebadf052f0f481d75be78b1edf89b3213be217"
+    },
+    {
+      "master": "assets/original-art/cards/17.svg",
+      "sha256": "47bafeedd38430c176afafab0feb808dfd70f63d04621db223eedbdddce4d832"
+    },
+    {
+      "master": "assets/original-art/cards/18.svg",
+      "sha256": "7cc2e841e51a7938df70da3f7f302b0c2454c679eb1f124837e35b8c758174db"
+    },
+    {
+      "master": "assets/original-art/cards/19.svg",
+      "sha256": "e790c9cae3a27b4dca738c7803acc9ea0af31c95fb418b79fc7619d5a04903cf"
+    },
+    {
+      "master": "assets/original-art/cards/2.svg",
+      "sha256": "2937a71deb2805b1d8eada66e3eda01af10c3476afe719b47fa54bc6949283a6"
+    },
+    {
+      "master": "assets/original-art/cards/20.svg",
+      "sha256": "552e2368f0ca56e0eed9a766c4c52d6a230d0ba28ae5a015f67c03104272b936"
+    },
+    {
+      "master": "assets/original-art/cards/21.svg",
+      "sha256": "7a0ce16843df99cbf14949a6e619537970d086ad0bcb035ff1f17a0c2844dad6"
+    },
+    {
+      "master": "assets/original-art/cards/22.svg",
+      "sha256": "a6d06bf1917f8098d37a4ebbb39332f8815c88b79fc1ab5cfcddf06f0a606d08"
+    },
+    {
+      "master": "assets/original-art/cards/23.svg",
+      "sha256": "70b6d0714113b42bff75c3146bc180b0142a855b1e6532ceef66dc2a59803b4a"
+    },
+    {
+      "master": "assets/original-art/cards/24.svg",
+      "sha256": "a7d094580b746e32d2d4ae66734817568fc5aabb411c839a1ec40b12cf09f0fa"
+    },
+    {
+      "master": "assets/original-art/cards/25.svg",
+      "sha256": "a92bf2e9970d07b7dee40911fa35028d323568e1da040bd1077b98736f6720cf"
+    },
+    {
+      "master": "assets/original-art/cards/26.svg",
+      "sha256": "fba00e7c55fc7651dc2443d4107431972cd97e3582af2c21735cb2b2e3bbb9cf"
+    },
+    {
+      "master": "assets/original-art/cards/27.svg",
+      "sha256": "ee5e8ebcaec995dfc82278421be651441055827a485d7a0b0fc376369d4e3a61"
+    },
+    {
+      "master": "assets/original-art/cards/28.svg",
+      "sha256": "7025b7d2973dc5cfa83b088f78077cff1395035dba1e9d52627dab3bf420c696"
+    },
+    {
+      "master": "assets/original-art/cards/29.svg",
+      "sha256": "ccf839487ed95e9aa4f571fa6db1c53fe66c06e9468785960b9572e13b6e588b"
+    },
+    {
+      "master": "assets/original-art/cards/3.svg",
+      "sha256": "e3c47ee127b323f1dc2ac0ab59a2ebf730c3857e72682ef23259b0218877cd05"
+    },
+    {
+      "master": "assets/original-art/cards/30.svg",
+      "sha256": "ec03eb925d062078bd2b9579449fa6a898b4f62cd7bcc2894de4e6381ac300ae"
+    },
+    {
+      "master": "assets/original-art/cards/31.svg",
+      "sha256": "6a5d38de8a1561b0779664619a18d4150817005e96e992531bcc125682b2bcf8"
+    },
+    {
+      "master": "assets/original-art/cards/32.svg",
+      "sha256": "03bba8b67f1bfa14432a95cd9d8ef675a68a0ebd8abb4d9431fbb7c2eddd4559"
+    },
+    {
+      "master": "assets/original-art/cards/33.svg",
+      "sha256": "8dfcf6025036bd2dc78d327a974835819c846c1e9b7c5f99b0cd51336df864b3"
+    },
+    {
+      "master": "assets/original-art/cards/34.svg",
+      "sha256": "4f08b346804d16d117057576e4d9b7308987d770ca0519e60bb5fa56a4b66f01"
+    },
+    {
+      "master": "assets/original-art/cards/35.svg",
+      "sha256": "3b39c767416c30dd18ce4dcede4039cc860787eb0d761c5a6f5ff2fcc93101d5"
+    },
+    {
+      "master": "assets/original-art/cards/4.svg",
+      "sha256": "4fd9b38f8539793f6cb74c56e3616b529992cfc13195734b38a560e22d9db581"
+    },
+    {
+      "master": "assets/original-art/cards/5.svg",
+      "sha256": "7adb51e2b801a82de10b5790c65f083d8128308e57421d743bceb13534a123df"
+    },
+    {
+      "master": "assets/original-art/cards/6.svg",
+      "sha256": "321c761f03a558ed8dc87b5c46270090a72564efa9a9f2bb106a085b9ff56156"
+    },
+    {
+      "master": "assets/original-art/cards/7.svg",
+      "sha256": "14f97eaafd6086c3f51a75b56ff6ca8b6a5d828cf7ef4998deb71eae6af1150d"
+    },
+    {
+      "master": "assets/original-art/cards/8.svg",
+      "sha256": "b171348c2216ab493ed7a759e7508ce05757b89567da03837ca0f01ff6d6832e"
+    },
+    {
+      "master": "assets/original-art/cards/9.svg",
+      "sha256": "e31f2afb64aa1927b7907f8b01d7f637197d45b0adae427d60d3567afa08241b"
+    },
+    {
+      "master": "assets/original-art/emblem.svg",
+      "sha256": "8f04d00a4374789027319565b866eb885c551130f16940fddcfa21abb2fb980e"
+    },
+    {
+      "master": "assets/original-art/fairy.svg",
+      "sha256": "e6d62a0659987f5eb0773e37610378a83e591766ad8a200c5103e9d510e11f09"
+    },
+    {
+      "master": "assets/original-art/locked.svg",
+      "sha256": "bbdc3dd9ce5f3a15ba015a96002484708f8c6e485a7bb10dd8031b2e353ac93f"
+    },
+    {
+      "master": "assets/original-art/parchment.svg",
+      "sha256": "cc0a7fe4a4bb0f1af86bf14cdef64ea88c50e17c056b809daba9ac8a8b8ad6ad"
+    },
+    {
+      "master": "assets/original-art/wordmark.svg",
+      "sha256": "42b93ffe45cf8e07363d94fe01f81146186dd7c3ca72768dc2b3aabf5afa8b70"
+    }
+  ]
+}

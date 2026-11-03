@@ -13,7 +13,7 @@
   align-items: center;
   background: radial-gradient(circle at 10% 10%, rgba(35,20,10,0.25), rgba(0,0,0,0.85));
   color: var(--chocolate);
-  font-family: 'american-typewriter', serif;
+  font-family: 'Bree Serif', serif;
 }
 
 .custom-form-input {
@@ -82,7 +82,7 @@
   font-size: 2.8rem;
   color: var(--chocolate) !important;
   letter-spacing: 1px;
-  font-family: 'american-typewriter', Georgia, serif !important;
+  font-family: 'Bree Serif', Georgia, serif !important;
   font-weight: 900;
   text-shadow: 1px 1px 0 rgba(0,0,0,0.25);
 } 
