@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useRef} from "react";
 import "../App.css";
 import "../static/css/home/home.css";
-import logo from "../static/images/Logo dixit.webp";
+import logo from "../static/images/Logo dixit.png";
 import roundLogo from "../static/images/dixit round.png";
 import tokenService from "../services/token.service";
 import jwt_decode from "jwt-decode";
@@ -51,6 +51,7 @@ export default function Home() {
     const change = event => setGame({...game, [event.target.name]: event.target.value});
     return <main className="home-page-container dixit-ui">
         <section className="hero-div">
+            <p className="asset-notice"><a href="/static/notices/ASSET-NOTICES.txt" target="_blank" rel="noreferrer">Original demo art · Asset licenses</a></p>
             {notice && <div role="status" className="home-notice">{notice} <button onClick={() => setNotice(null)} aria-label="Dismiss notification">×</button></div>}
             <Tooltip text="Dixit home"><Link className="hero-logo" to="/" aria-label="Dixit home">
                 <span className="hero-logo-inner"><span className="hero-logo-front"><img src={logo} alt="Dixit" /></span><span className="hero-logo-back"><img src={roundLogo} alt="" /><span>Tell your story</span></span></span>

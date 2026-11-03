@@ -1,0 +1,374 @@
+[
+  {
+    "path": "frontend/public/Achievements/PlayAchievements/Play1.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "82b30ff9a06e9122fc0ab3f7698795d30bd1b81c86da6bfa174b6b96b6bbefed"
+  },
+  {
+    "path": "frontend/public/Achievements/PlayAchievements/Play10.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "19bd0d6ffc24e1796edd3e193fe7e7c6ed71e1c192c9986ba439034bffdd8b4d"
+  },
+  {
+    "path": "frontend/public/Achievements/PlayAchievements/Play5.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "9ef82148c7259d0fcef5ce4ff4e9dcdb6e00b1809a51a024483f115f06ea3ee1"
+  },
+  {
+    "path": "frontend/public/Achievements/PlayAchievements/Play50.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "a1a9657856a20076177fbc2eb1468acbd7e9a1f1efad209d7c59a0caa869fcef"
+  },
+  {
+    "path": "frontend/public/Achievements/TrickAchievements/Trick100.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "6a967c0bdddd99d34e0717e20e397f22b7ebe1d14a57875f7bf143e99c6cdead"
+  },
+  {
+    "path": "frontend/public/Achievements/TrickAchievements/Trick20.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "b886c843d52e859aa83171cd11aed412ef8e1f56f3d5d73382c48dc83e1aec84"
+  },
+  {
+    "path": "frontend/public/Achievements/TrickAchievements/Trick5.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "5a36b2a312dc0f03fa775a339a9e60a935542c15048152b055e0db021ab0fa9b"
+  },
+  {
+    "path": "frontend/public/Achievements/TrickAchievements/Trick50.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "3fb99690d00c744557a6f74be7bf66e2875d9588ff0a1143b9b20b5d844d86f4"
+  },
+  {
+    "path": "frontend/public/Achievements/WinAchievements/Win1.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "da3e41f915a6dd01f914f8db8888cfd57e8fe2d91c6c911fb83bc99dd9082d2b"
+  },
+  {
+    "path": "frontend/public/Achievements/WinAchievements/Win10.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "91a891810308aacc1a127d7c7b62ea373c6104ccb830f0106df61d32f83a6cd5"
+  },
+  {
+    "path": "frontend/public/Achievements/WinAchievements/Win5.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "348b98fe2bc424a5ae81beb3a8a0e4e1549928d35b4095b172d36238d4e0d3cc"
+  },
+  {
+    "path": "frontend/public/Achievements/WinAchievements/Win50.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "dda6ef4f8e97aec14acee204ad149c00f1ddca75b7615c1fbd8f48132eace206"
+  },
+  {
+    "path": "frontend/public/Cards/0.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "c65def5efcc4dfa0b202cedcf7eca567e95fd9fff7a949a9c9b1471b089c1b34"
+  },
+  {
+    "path": "frontend/public/Cards/1.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "9f0945bd61f6888fa5990a4929354f65e92a465c54da96baffc98d1cc5bb0c9a"
+  },
+  {
+    "path": "frontend/public/Cards/10.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "cac9ea19591f30a6712dcf76611d26e04777c2d7490bf318af02e8705165d857"
+  },
+  {
+    "path": "frontend/public/Cards/11.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "4abb3aba112985712d11dc23bb9db50b9060ce9f728d5e0c5c5e8a182caf9d17"
+  },
+  {
+    "path": "frontend/public/Cards/12.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "8edfab006e5ae92a8a38c00f1c464574edc41a0ba31b69b7c796e96b336895fb"
+  },
+  {
+    "path": "frontend/public/Cards/13.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "ea9a31c1b422d4ad466e289eba4d65a90618da34c0d0e50667c1f800d68b804d"
+  },
+  {
+    "path": "frontend/public/Cards/14.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "7a7ad55c08c582582e925b0a21fe35fe0634ba8a303b8d679ad424780ae6aa76"
+  },
+  {
+    "path": "frontend/public/Cards/15.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "af69c934317cc60f2bff62229a81385ce7adb81cf949fdc9df0fa1f125a0ad6b"
+  },
+  {
+    "path": "frontend/public/Cards/16.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "0cebcd74ad68da1cfc4c72bad99bba43e4974231e90aeb8f0c50682622c2ae20"
+  },
+  {
+    "path": "frontend/public/Cards/17.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "dc945aa73113a0d4647d36c8be7270d4f71ba726546e9cce792a977a6aeb1133"
+  },
+  {
+    "path": "frontend/public/Cards/18.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "a04391e0ed8a823c439ea39052b0f711dfcc9dc74308d731cd603c33e8a24430"
+  },
+  {
+    "path": "frontend/public/Cards/19.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "d80b4d2e1e60b831abe36cc17da6f60d21620b5429594fce948df246cc7b50c8"
+  },
+  {
+    "path": "frontend/public/Cards/2.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "c81bbfa972ae5b840eb0e4eb12cc162cfcf622ba961c8b95fa8625bef71d3761"
+  },
+  {
+    "path": "frontend/public/Cards/20.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "6a11a42ad19826226d8912534a2320c16139b3d031009bf47a2282d5ddb3fea1"
+  },
+  {
+    "path": "frontend/public/Cards/21.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "1dee84e4a14ef30d9bdd63f2867de87c655e0eac8aa27c2af9ddc421530f4d68"
+  },
+  {
+    "path": "frontend/public/Cards/22.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "8c659506e07ef612eab03518bf569c74ef224fcab379c214f6bc9599cbdb93c0"
+  },
+  {
+    "path": "frontend/public/Cards/23.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "f071c968c4705c5355ae0a8c5fe5c479ad99dee172bde43bdced1c95145af3e0"
+  },
+  {
+    "path": "frontend/public/Cards/24.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "b2641fb4259588e0759089149475f490211c89734388a9ebbfc2eda84163a173"
+  },
+  {
+    "path": "frontend/public/Cards/25.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "2d4bba4357a5dc7483ce548e2fd4d7fdec1581820ccc0f227c21b98fa7b683f7"
+  },
+  {
+    "path": "frontend/public/Cards/26.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "28c3bb1a59867bc7ca7ff94242a2af498b8f4b3836bb0d8c926215a34d198287"
+  },
+  {
+    "path": "frontend/public/Cards/27.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "f96d654bd18fcc0efd37d41e09784acf6b2230a280e9fd5a6e1458277f9d663b"
+  },
+  {
+    "path": "frontend/public/Cards/28.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "6e51f7aa98b7487462546d4d4b9f3934086e1ddb9e84e5aa771f5bbe6e9a1469"
+  },
+  {
+    "path": "frontend/public/Cards/29.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "5de022b36792c3e07dd4321164e207e1964f959d196b727f5486bffdfe3b969b"
+  },
+  {
+    "path": "frontend/public/Cards/3.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "081b027b6c3e575d881c227c9706c7e94fa83f23dc75b624c969abef276d8103"
+  },
+  {
+    "path": "frontend/public/Cards/30.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "90eaf3f07401784d999a234e5e72664ad2b73e96299cb46774bdf703fb49ccd5"
+  },
+  {
+    "path": "frontend/public/Cards/31.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "26ce0abed14849e508caf9a9957daeabff9f043ad16c1be0327a5c1bb9e4fd8b"
+  },
+  {
+    "path": "frontend/public/Cards/32.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "61f40999eb8d74df6feae21bc393bcb3ba867af58c6bdae0cb0d74ed68f720d9"
+  },
+  {
+    "path": "frontend/public/Cards/33.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "a6f5b126ce47450b4e521809ad66fd5c2bdef3e0d701331afe6baecbbd435c71"
+  },
+  {
+    "path": "frontend/public/Cards/34.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "bf0ccaadd4dcb9d883e67b9edf89654608bdc75dd9d0b16733fa22a15f1464fb"
+  },
+  {
+    "path": "frontend/public/Cards/35.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "f47fd47f2aa3c2968cee937696dfe2b341000af465f066f4cb6166b1e5ea3fe5"
+  },
+  {
+    "path": "frontend/public/Cards/4.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "7c16aaa25964573e4086c21cc2eb1d6140c7115445336c2959caa1655ae7d6b8"
+  },
+  {
+    "path": "frontend/public/Cards/5.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "f00626936a1d0ff49616508dd7314b01f0640b0e453b23734b7e7cfc720e1d3e"
+  },
+  {
+    "path": "frontend/public/Cards/6.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "55d5e75549249e3a90fbc1579bc58c915f5dd785a474c1cf3c5d41ebd3b32c34"
+  },
+  {
+    "path": "frontend/public/Cards/7.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "aec69befc9cc67e9082fe832b914c1cd85d25819e5c0c1bd78a401040990c058"
+  },
+  {
+    "path": "frontend/public/Cards/8.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "a602ca601f70f587cf8f142dc71e98abc4c9035c3b585582beb97c54502551dd"
+  },
+  {
+    "path": "frontend/public/Cards/9.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "2052e08d750f3fd0582061a02ed90c29ac4b7eb296771a558be8f9eeb78c8f96"
+  },
+  {
+    "path": "frontend/public/Cards/card_reversed.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "8d7b7e4f0c28a61aad8f9d072fa049bddd46cd09bd74262175085ab33bb68912"
+  },
+  {
+    "path": "frontend/public/favicon.ico",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "589a0f96d458d6fa139662ae6d1bbb4e68df272cbfec605fdc5b6195c143af4b"
+  },
+  {
+    "path": "frontend/public/logo192.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "231d59dcf06844761368d21c1f6f6d4aa8bf73a9e42d86bac619b94b45c4dedd"
+  },
+  {
+    "path": "frontend/public/logo512.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "d8b6644348bdf496ca4653a04d9e8d8fc6437a40997a75503faacf1812ab7016"
+  },
+  {
+    "path": "frontend/src/static/images/Achievements/AchievementsBackground.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "5ae0141ce1bd929a992cad475c9a1875242d1754dcc9904ecee231087bc34650"
+  },
+  {
+    "path": "frontend/src/static/images/Achievements/Locked.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "b34da287e2c263431713237344db1e443cd30c4e33ac515c031fcb7d497c78d0"
+  },
+  {
+    "path": "frontend/src/static/images/GameBackground.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "cd595b173fb424210b41ebb9b4a595d79ffabdbad41620e57834c8357181ba9a"
+  },
+  {
+    "path": "frontend/src/static/images/HomeBackground.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "805992e7d945780b771391e7faee57ecb8397859100ed59fa69c8cea386afe33"
+  },
+  {
+    "path": "frontend/src/static/images/LobbyBackground.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "b67e39592a2c1210fd19e2057178f90d9e41dd2ca5d9acc1740fb38ff40f77d6"
+  },
+  {
+    "path": "frontend/src/static/images/Logo dixit.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "c9cd30ffbb8f18fcb26dcd2ebfe69b5cab2e009508ccac04b5be0563ed2aba01"
+  },
+  {
+    "path": "frontend/src/static/images/SocialBackground.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "fc9c879f1e2ba8d5c11f5a3fda647e92495d8752e294270bfa98d7b437d72c68"
+  },
+  {
+    "path": "frontend/src/static/images/dixit round.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "d8b6644348bdf496ca4653a04d9e8d8fc6437a40997a75503faacf1812ab7016"
+  },
+  {
+    "path": "frontend/src/static/images/icons/Fairy.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "f333e0d08780288d1d96bac3387a05e86d767253153093e6b29e4b6d63b5707b"
+  },
+  {
+    "path": "frontend/src/static/images/icons/Parchment.png",
+    "license": "CC0-1.0",
+    "source": "assets/original-art / scripts/assets/generate_original_art.py",
+    "sha256": "300101606c9de075768d2812a4791e45af037321a74273d25d01204ab5fe37db"
+  }
+]
