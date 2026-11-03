@@ -41,3 +41,6 @@ hosting, incur spending or authorize public publication.
 
 See ../operations/demo-maintenance.md for commands and limitations; actual test
 and Git evidence belongs only in ../CHANGELOG_DEV.md.
+
+2026-11-03: ADR-0009 records the owner-approved minimal crash cancellation and
+ordinary cold-start reopening; the original pending decision above is historical.

@@ -19,10 +19,10 @@ assert os.environ['DIXIT_TEST_POSTGRES_URL'] == 'jdbc:postgresql://127.0.0.1:543
 assert os.environ['DIXIT_DB_URL'] == os.environ['DIXIT_TEST_POSTGRES_URL']
 assert os.environ['DIXIT_DB_SSL_MODE'] == 'disable'  # CI loopback only, never hosted Supabase.
 base = 'http://127.0.0.1:18080'
-env = dict(os.environ, PORT='18080', DIXIT_MAINTENANCE_ENABLED='true')
+env = dict(os.environ, PORT='18080', DIXIT_MAINTENANCE_ENABLED='true', DIXIT_RECOVER_INTERRUPTED_GAMES='true')
 keys = ('DIXIT_DB_URL', 'DIXIT_DB_USERNAME', 'DIXIT_DB_PASSWORD',
         'DIXIT_MIGRATION_DB_USERNAME', 'DIXIT_MIGRATION_DB_PASSWORD',
-        'DIXIT_JWT_SECRET', 'DIXIT_DB_SSL_MODE', 'DIXIT_ALLOWED_ORIGINS', 'PORT', 'DIXIT_MAINTENANCE_ENABLED')
+        'DIXIT_JWT_SECRET', 'DIXIT_DB_SSL_MODE', 'DIXIT_ALLOWED_ORIGINS', 'PORT', 'DIXIT_MAINTENANCE_ENABLED', 'DIXIT_RECOVER_INTERRUPTED_GAMES')
 secret_keys = ('DIXIT_DB_PASSWORD', 'DIXIT_MIGRATION_DB_PASSWORD', 'DIXIT_JWT_SECRET')
 
 def docker(*args, **kwargs):
