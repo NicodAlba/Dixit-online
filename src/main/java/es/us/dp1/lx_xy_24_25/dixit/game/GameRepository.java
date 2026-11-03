@@ -27,4 +27,7 @@ public interface GameRepository extends CrudRepository<Game, Integer>{
     List<Game> findByEndDateIsNotNull();
     List<Game> findByStartDateNotNullAndEndDateIsNull();
     List<Game> findByEndDateNotNull();
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT g FROM Game g WHERE g.startDate IS NOT NULL AND g.endDate IS NULL ORDER BY g.id")
+    List<Game> findInterruptedForUpdate();
 }

@@ -51,12 +51,15 @@ a promise that a free application host meets the intended load.
 Stop with docker stop (25 seconds). Java receives SIGTERM as PID 1 and Spring
 allows up to 20 seconds for requests. Wait for termination before starting a
 replacement: never run overlapping playable instances with independent brokers.
-Do not stop with active games until the maintenance/outage policy is approved.
+For planned maintenance drain active games before stopping. ADR-0009 authorizes
+minimal cancellation of interrupted games on the next exclusive-instance startup;
+it does not authorize rolling overlap.
 No automatic restart reconstructs presence, sockets or host timers.
 
 ## Validation and publication
 
 See [ci.md](ci.md) for the actual image checks. Local tooling is absent on the
 owner machine at preparation time; successful image evidence must come from
-a real Actions run, not Dockerfile inspection. Registry publishing and the
-first public service remain separate owner approvals.
+a real Actions run, not Dockerfile inspection. The owner authorized a manual Render Free demo on 2026-11-03, without registry
+publication. Resource clearance and exclusive-instance operation remain blockers;
+see render-free.md.

@@ -31,6 +31,8 @@ jobs:
           --health-retries 10
     env:
       CI: 'true'
+      # Only isolated CI/restore smoke may opt into interrupted-game fixture recovery.
+      DIXIT_VERIFY_INTERRUPTED_RECOVERY: 'true'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -71,7 +73,7 @@ jobs:
           ./mvnw --batch-mode --no-transfer-progress
           -Dspring.profiles.active=prod
           -Dtest.reports.dir=target/postgres-surefire-reports
-          -Dtest=PostgresPersistenceIT,GameActionPermissionsTest,GamePhasePrivacyTest,FriendRelationshipsTest,GameCancellationTest,ChatAccountIdentityTest,StompPermissionsTest,MaintenancePermissionsTest,MaintenanceTransactionTest,BootstrapAdminIT
+          -Dtest=PostgresPersistenceIT,GameActionPermissionsTest,GamePhasePrivacyTest,FriendRelationshipsTest,GameCancellationTest,ChatAccountIdentityTest,StompPermissionsTest,MaintenancePermissionsTest,MaintenanceTransactionTest,BootstrapAdminIT,InterruptedGamePersistenceTest
           test
       - name: Package production JAR without academic seeds
         run: ./mvnw --batch-mode --no-transfer-progress -DskipTests -Pproduction-package package

@@ -1,9 +1,8 @@
 # Demo maintenance and first administrator
 
-Status: owner explicitly approved this contract and the local administrator
-bootstrap on 2026-10-30, following Phase 5 section 11. One playable application instance; no public deployment or CD
-authorized. Supabase Free is selected; Render Free remains an application-host
-candidate only.
+Status: maintenance/bootstrap approved 2026-10-30. On 2026-11-03 the owner also
+authorized a manual occasional demo on Render Free and minimal crash cancellation
+(ADR-0009). Exposure is blocked by the gates in render-free.md; no demo is live.
 
 ## Approved behavior
 
@@ -28,8 +27,8 @@ reported separately and survive the update. No automatic timeout forces games
 to end. Existing host departure/cancellation behavior remains unchanged.
 
 Initial mode is configurable by DIXIT_MAINTENANCE_ENABLED. Set true explicitly
-for a replacement process, perform health and functional checks, then reopen
-through the authenticated ADMIN endpoint. The switch is per process and is not
+only for an intentionally closed, supervised start, then reopen through ADMIN.
+Ordinary demo/cold starts must use false and opt in to restart recovery (ADR-0009). The switch is per process and is not
 a database migration. Operations must never overlap two playable processes.
 The local first-administrator bootstrap uses hidden confirmed input, BCrypt and
 a transaction-scoped advisory lock. It refuses an existing ADMIN and uses the
@@ -41,25 +40,22 @@ restricted runtime database role. It has no Spring bean or public endpoint.
 2. Enable maintenance in the current process and wait until active games finish.
 3. Take and verify the protected backup; never put it in Git or public artifacts.
 4. Stop the old process and verify termination before starting its replacement.
-5. Start the replacement with maintenance initially true, approved secrets, TLS
-   and the single managed database. Apply only reviewed versioned migrations.
+5. Start one replacement with approved secrets/TLS, restart recovery true and
+   ordinary maintenance false. Recovery keeps health unavailable until complete.
+   Apply only reviewed versioned migrations; planned draining leaves no active games.
 6. Check health, routes, login and authorized REST/STOMP through HTTPS/proxy.
-7. Reopen using the ADMIN control. Roll back only to an app/schema-compatible
+7. Health gates ordinary reopening; if explicitly started closed, ADMIN reopens. Roll back only to an app/schema-compatible
    artifact; reverting code does not undo destructive data changes.
 
-## Unexpected crash remains a separate decision
+## Approved unexpected-crash policy
 
-Accounts, cards, authors, votes, scores and history persist in PostgreSQL.
-Broker, presence, WebSocket sessions and host-disconnection deadlines are not
-reconstructed automatically. A free host can stop/restart unexpectedly; there
-is no promise of continuity or automatic recovery.
-
-After an unexpected crash, reopen in maintenance and inspect active records.
-Do not silently cancel or rewrite them at startup. The owner must separately
-agree whether to implement explicit supervised cancellation/recovery or scope
-automatic reconciliation. Existing actor-authorized exit/cancellation remains
-available where applicable. This unresolved policy blocks first publication,
-not the independent Docker/database checks.
+The owner accepts interruption of active games, without full recovery or HA.
+With DIXIT_RECOVER_INTERRUPTED_GAMES=true, startup reuses cancellation under write
+locks, preserving cards/turns/authors/votes/points/accounts/relations, with no new
+wins or rewards. Completed games and lobbies are excluded; repetition is idempotent.
+Recovery failure fails startup and stays closed/unhealthy. Existing English UI
+reports cancellation and preserved history. This assumes the old process has
+stopped; it is not multi-instance coordination. See ADR-0009 and render-free.md.
 
 ## Operator commands
 
@@ -83,10 +79,10 @@ administrator password.
 
 The maintenance helper signs in through Dixit REST; JWT exists only in process
 memory. It accepts HTTPS origins or loopback HTTP for local operation. The flag
-is in memory: explicitly set DIXIT_MAINTENANCE_ENABLED=true in the host environment
-so every replacement/cold start stays closed until an ADMIN reopens it. A Free
-host restart can therefore require manual reopening. This is an operational
-tradeoff, not automatic availability.
+is in memory. Ordinary demo/cold starts use DIXIT_MAINTENANCE_ENABLED=false and
+DIXIT_RECOVER_INTERRUPTED_GAMES=true, so normal restarts do not await an absent
+ADMIN. Explicit true remains a deliberate closed-start override; do not leave it
+configured for the ordinary demo. Never overlap playable application instances.
 
 Managed acceptance currently contains identifiable fictitious ADMIN accounts.
 They must be reviewed and retired with owner authorization before using the
@@ -105,4 +101,4 @@ check starts closed and verifies create denial, readable history and packaged
 CLI rejection without a terminal. Actual results are recorded in CHANGELOG_DEV.
 No hosted single-process replacement or public proxy has been executed.
 
-Route: feature/demo-maintenance → PR → develop. No main or public publication.
+Route: feature/demo-maintenance → PR → develop. No main changes; public exposure remains gated in render-free.md.

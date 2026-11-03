@@ -196,6 +196,14 @@ public class GameService {
         gameRepository.findByIdForUpdate(gameId).ifPresent(this::cancel);
     }
 
+    /** Startup only, after the operator has stopped the previous instance. */
+    @Transactional
+    public int cancelInterruptedGames() {
+        var interrupted = gameRepository.findInterruptedForUpdate();
+        interrupted.forEach(this::cancel);
+        return interrupted.size();
+    }
+
     private void cancel(Game game){
         if(game.getStartDate()==null || game.hasFinished())return;
         game.setCancelled(true);
