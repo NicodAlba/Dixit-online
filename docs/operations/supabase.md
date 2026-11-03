@@ -167,3 +167,8 @@ retirada de fixtures, bootstrap del administrador propietario y validación
 visual/red real necesitan sus pasos/autorizaciones antes de difusión.
 
 Recorrido: feature/supabase-postgresql → PR → develop; main es del propietario.
+
+Maintenance acceptance is available as `--phase maintenance` after the approved
+implementation: ADMIN control, admission transaction completion/rollback and the
+full four-player game finishing while closed (six targeted cases). It creates
+fictitious fixtures; it does not run first-admin bootstrap on the managed database.

@@ -34,6 +34,7 @@ public class TurnService {
     private final CardService cardService;
     private final SimpMessagingTemplate messagingTemplate;
     private final UserService userService;
+    @Autowired private es.us.dp1.lx_xy_24_25.dixit.operations.MaintenanceGate maintenance;
 
     @Autowired
     public TurnService(TurnRepository turnRepository, CardRepository cardRepository, PlayerRepository playerRepository,
@@ -162,6 +163,8 @@ public class TurnService {
 
     @Transactional
     public Game startGame(Integer gameId, User user) {
+        gameService.requireLeaderForStart(gameId, user);
+        maintenance.admitNewGameOrStart();
         Game game = gameService.findByIdForUpdate(gameId);
         if (game.getLeader() == null || !game.getLeader().getId().equals(user.getId())) {
             throw new AccessDeniedException("Only the leader can start the game");

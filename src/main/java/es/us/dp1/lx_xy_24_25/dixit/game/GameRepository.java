@@ -11,6 +11,8 @@ import java.util.Optional;
 
 public interface GameRepository extends CrudRepository<Game, Integer>{
     List<Game> findAll();
+    long countByStartDateIsNotNullAndEndDateIsNull();
+    long countByStartDateIsNullAndEndDateIsNull();
     boolean existsByIdAndLeaderUsername(Integer id, String username);
     boolean existsByIdAndStartDateNotNullAndEndDateNull(Integer id);
     Optional<Game> findById(Integer id);

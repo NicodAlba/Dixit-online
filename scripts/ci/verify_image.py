@@ -19,10 +19,10 @@ assert os.environ['DIXIT_TEST_POSTGRES_URL'] == 'jdbc:postgresql://127.0.0.1:543
 assert os.environ['DIXIT_DB_URL'] == os.environ['DIXIT_TEST_POSTGRES_URL']
 assert os.environ['DIXIT_DB_SSL_MODE'] == 'disable'  # CI loopback only, never hosted Supabase.
 base = 'http://127.0.0.1:18080'
-env = dict(os.environ, PORT='18080')
+env = dict(os.environ, PORT='18080', DIXIT_MAINTENANCE_ENABLED='true')
 keys = ('DIXIT_DB_URL', 'DIXIT_DB_USERNAME', 'DIXIT_DB_PASSWORD',
         'DIXIT_MIGRATION_DB_USERNAME', 'DIXIT_MIGRATION_DB_PASSWORD',
-        'DIXIT_JWT_SECRET', 'DIXIT_DB_SSL_MODE', 'DIXIT_ALLOWED_ORIGINS', 'PORT')
+        'DIXIT_JWT_SECRET', 'DIXIT_DB_SSL_MODE', 'DIXIT_ALLOWED_ORIGINS', 'PORT', 'DIXIT_MAINTENANCE_ENABLED')
 secret_keys = ('DIXIT_DB_PASSWORD', 'DIXIT_MIGRATION_DB_PASSWORD', 'DIXIT_JWT_SECRET')
 
 def docker(*args, **kwargs):
@@ -48,6 +48,7 @@ finally:
     docker('rm', container)
 with ZipFile(artifact) as archive:
     assert b'spring.profiles.default=prod' in archive.read('BOOT-INF/classes/application.properties')
+    assert 'BOOT-INF/classes/es/us/dp1/lx_xy_24_25/dixit/configuration/BootstrapAdmin.class' in archive.namelist()
     assert 'BOOT-INF/classes/data.sql' not in archive.namelist()
     assert 'BOOT-INF/classes/application-mysql.properties' not in archive.namelist()
     assert 'BOOT-INF/lib/postgresql-42.7.14.jar' in archive.namelist()
@@ -115,6 +116,12 @@ def request(path, token=None, body=None, method='GET', expected=200):
         assert error.code == expected, (path, error.code, expected)
         return None
 
+# Verify the packaged one-shot CLI fails safely without an interactive terminal.
+bootstrap = subprocess.run(['docker', 'run', '--rm', '--network', 'none', '--entrypoint', 'java', image,
+    '-Dloader.main=es.us.dp1.lx_xy_24_25.dixit.configuration.BootstrapAdmin',
+    '-cp', '/app/app.jar', 'org.springframework.boot.loader.launch.PropertiesLauncher'], capture_output=True, text=True, timeout=30)
+assert bootstrap.returncode != 0 and 'Use an interactive terminal' in bootstrap.stderr
+
 access = json.loads((root / 'target/postgres-completed-game.json').read_text())
 with server('first'):
     for path in ('/', '/login', '/register', '/friends', '/games/123/game'):
@@ -128,6 +135,7 @@ with server('first'):
     request('/actuator/env', expected=401)
     request('/h2-console/', expected=401)
     request('/static/js/absent.js', expected=404)
+    request('/api/v1/games', access['token'], {}, method='POST', expected=503)
     saved = request('/api/v1/games/' + str(access['gameId']), access['token'])
     assert saved['endDate'] and len(saved['turns']) == 8
     # Force real runtime connections to close in the disposable CI service only.

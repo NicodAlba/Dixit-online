@@ -29,12 +29,20 @@ aporta los backups diarios de Pro; las copias propias son necesarias.
 [recursos](https://supabase.com/docs/guides/platform/compute-and-disk),
 [conexiones](https://supabase.com/docs/guides/database/connecting-to-postgres).
 
-Render Free tiene suspensión y arranque en frío, disco efímero y posibles
-reinicios sin aviso. Admite WebSockets; SockJS y HTTPS deben verificarse a
-través del proxy real. No es una promesa de continuidad o capacidad para juegos.
-[Free](https://render.com/docs/free), [WebSockets](https://render.com/docs/websocket).
-Sin tarjeta, upgrades, addon IPv4, dominio o backup de pago. Ante límites no
-autoriza contratar nada; se detiene y se informa.
+Render Free: 0,1 CPU/512 MB, 750 horas por workspace/mes; duerme tras
+15 minutos sin tráfico entrante (incluidos mensajes WebSocket) y despertar ronda
+un minuto. Disco efímero, logs y rollback limitado a dos despliegues anteriores;
+puede reiniciarse sin aviso. No hay SSH, jobs puntuales o disco persistente Free.
+Admite WebSockets; HTTPS/SockJS y capacidad deben comprobarse en el proxy real.
+[Recursos](https://render.com/docs/compute-plans),
+[condiciones Free](https://render.com/docs/free),
+[WebSockets](https://render.com/docs/websocket).
+
+Para mantener 0 €: sin método de pago ni upgrades; controlar cuotas de builds y
+egress en panel. Agotarlas puede suspender servicio o builds. Tráfico externo alto,
+incluida la BD externa, también puede causar suspensión; no se autoriza pagar para
+levantarla. Sin addon IPv4, dominio o backups de pago. Render Free se propone como
+demo ocasional; no acredita disponibilidad continua ni continuidad de partidas.
 
 ## Publicación manual propuesta
 
