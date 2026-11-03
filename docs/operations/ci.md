@@ -99,3 +99,12 @@ the packaged bootstrap rejects execution without an interactive terminal.
 Containers run with a read-only filesystem, writable temporary /tmp, dropped
 capabilities and a 512 MB memory limit. This is not a load/capacity guarantee.
 Docker is required for that step; a successful local JAR is not image evidence.
+
+## Interrupted-game startup checks
+
+The production JAR smoke opts in to exclusive-instance restart recovery, creates
+a started game, restarts, verifies cancellation without a winner, preserved
+completed history/lobby/JWT and new admissions without ADMIN. PostgreSQL regression
+checks row/score preservation and idempotence; recovery unit checks failure/health
+and deliberate closed mode. The image enables recovery and explicit maintenance.
+This is cancellation after interruption, not continuation of an active game.

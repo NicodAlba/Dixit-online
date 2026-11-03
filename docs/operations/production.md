@@ -69,8 +69,12 @@ permanece en REST/STOMP. `/actuator/health` devuelve solo estado; consola H2 y
 otros endpoints de gestión no son públicos. OpenAPI queda desactivado en prod.
 
 Detener mediante SIGTERM. Spring permite hasta 20 s para peticiones pendientes;
-no equivale a esperar una partida completa o restaurar sesiones. No se cancelan
-filas al arrancar ni se reconstruyen automáticamente los plazos del anfitrión.
+no equivale a esperar una partida completa o restaurar sesiones. La demo puede
+activar DIXIT_RECOVER_INTERRUPTED_GAMES=true: cancela iniciadas sin cierre mediante
+la regla existente, sin borrar datos ni premiar, y solo entonces presenta salud UP.
+Requiere haber detenido el proceso anterior. No reconstruye plazos/sesiones.
+Arranque ordinario maintenance=false; cierre explícito true solo supervisado.
+Ver ADR-0009 y [render-free.md](render-free.md).
 
 ## Pruebas PostgreSQL y artefacto
 
@@ -133,9 +137,12 @@ Las cuentas ADMIN ficticias de aceptación requieren retirada autorizada antes d
 bootstrap del propietario; no se eliminan automáticamente.
 
 Supabase está elegido y Docker construido/verificado en CI (ver [docker.md](docker.md)).
-Faltan elección/aprobación del proveedor de aplicación, HTTPS/proxy real, política de activas tras caída y creación del administrador del propietario,
+Render Free y la política mínima tras caída están aprobados para demo ocasional
+a 0 €. Faltan autorización de recursos gráficos/fuente, acreditar sustitución sin
+solapamiento, HTTPS/proxy real y creación del administrador del propietario,
 backups operativos, primer despliegue supervisado y validación pública/visual.
 Recorrido de esta entrega: `feature/production-foundation` → PR → `develop`.
-Main/releases corresponden al propietario; no hay URL pública autorizada.
+Main/releases corresponden al propietario; hay autorización condicionada de demo,
+pero no existe URL pública. Bloqueos y procedimiento en render-free.md.
 
 Integración concreta de Supabase, roles, conexión y validación gestionada: [supabase.md](supabase.md). No añadir sus secretos a Actions; las PR siguen usando PostgreSQL aislado.

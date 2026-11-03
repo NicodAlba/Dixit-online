@@ -1,6 +1,7 @@
-# Primera publicación: propuesta pendiente de autorización
+# Primera demo autorizada, exposición pendiente de condiciones
 
-Actualizado el 30 de octubre de 2026. Presupuesto estricto **0 €**.
+Actualizado el 3 de noviembre de 2026. Render Free y publicación manual desde
+develop autorizados por el propietario; bloqueos actuales en [render-free.md](render-free.md). Presupuesto estricto **0 €**.
 Supabase Free está elegido y el propietario ha creado el proyecto Dixit.
 No hay que volver a elegir proveedor PostgreSQL. El estado real de conexión y
 validación está en [supabase.md](supabase.md); Docker y CI en [docker.md](docker.md)
@@ -14,9 +15,9 @@ Una sola instancia jugable; no Supabase Auth/Realtime/Storage/Edge Functions,
 Redis, broker externo o escalado horizontal.
 
 Base: Supabase Free/Nano, North EU Stockholm eu-north-1, PostgreSQL 17.11
-verificado en el proyecto. App candidata: Render Free, Docker, región europea
+verificado en el proyecto. Aplicación autorizada: Render Free, Docker, región europea
 próxima disponible (Frankfurt si se confirma), HTTPS onrender.com gratuito,
-React servido por el mismo proceso. Render aún no está aprobado ni creado.
+React servido por el mismo proceso. Render está aprobado; no se ha creado un servicio Dixit ni expuesto recursos.
 La latencia entre regiones y capacidad deben medirse en el entorno autorizado.
 
 Supabase Free ofrece 500 MB de base, CPU compartida/500 MB RAM, 5 GB de egress
@@ -63,10 +64,12 @@ legible/montada, roles limitados, JWT estable, PORT y origen HTTPS exacto;
 confirmar proxy confiable. No copiar secretos a capas Docker ni frontend.
 Mantener Data API desactivada y comprobar permisos del esquema dixit.
 
-El mantenimiento se prepara conforme al contrato de
+El mantenimiento y la política mínima de reinicio siguen el contrato de
 [demo-maintenance.md](demo-maintenance.md): cerrar nuevas creaciones/inicios,
 esperar cero activas, copia protegida, detener único proceso, migraciones
-revisadas y arranque cerrado. Tras salud/funcionalidad se reabre expresamente.
+revisadas y recuperación de iniciadas sin cierre. El arranque ordinario usa maintenance=false
+y salud no disponible hasta completar recuperación; no hereda cierre indefinido.
+El cierre explícito true exige supervisión y reapertura ADMIN.
 El contrato ha sido aprobado; su implementación/evidencia se entrega por
 feature/demo-maintenance, no se presupone por existir este documento.
 
@@ -81,12 +84,13 @@ revierte datos ni DDL. Preferir migraciones aditivas. En incompatibilidad,
 corrección hacia delante o restauración validada en otra base, sin sobrescribir
 la base pública como prueba. Procedimiento de copias/restauración en supabase.md.
 
-## Autorizaciones todavía necesarias
+## Condiciones pendientes de publicación
 
-Proveedor/servicio de aplicación gratuito y creación del entorno; política
-explícita de activas tras caída; origen/mecanismo definitivo del despliegue;
-primera publicación supervisada. Preparación y proyecto de BD no autorizan URL
-pública o CD. CD con aprobación manual se valorará después de publicar y verificar
-la primera versión, nunca por cada push a develop.
+El propietario autoriza Render Free y demo manual desde SHA CI-green de develop.
+La política tras caída está en ADR-0009. Quedan permisos/procedencia de recursos,
+administrador del propietario y fixtures, procedimiento efectivo de instancia
+única y verificaciones en URL real. No se expondrá el contenido mientras estas
+condiciones sigan abiertas. CD manual solo después de acreditar esa operación;
+no publicación automática por cada push. Ver render-free.md para evidencia concreta.
 
 Recorrido de cada unidad: feature/* o fix/* → PR → develop. No cambios en main.
