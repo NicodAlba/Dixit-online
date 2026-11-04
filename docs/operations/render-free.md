@@ -136,3 +136,15 @@ visual acceptance; verify the actual browser product separately. Preserve the
 Phase 4 visual debt until the relevant journeys are actually observed.
 
 Route: feature/* or fix/* → PR → develop; main remains the owner's responsibility.
+
+## Provider maintenance and the approved database guard (2026-11-04)
+
+Render may overlap stateless processes during its own maintenance, including
+Free without advance notice. ADR-0011 adds DIXIT_SINGLE_INSTANCE_GUARD=true to
+**the next** service's required configuration. Initial service A is unguarded;
+stop it before starting a guarded replacement. Do not enable this by a rolling
+update over A. The guard fences runtime database sessions; it cannot prevent
+Render physically starting another JVM or guarantee uninterrupted service.
+A rejected provider replacement can require a manual stop/retry. Keep monitoring
+Render notices. Managed session-pooler validation and guarded public replacement
+are pending; do not describe the protection as already deployed.

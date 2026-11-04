@@ -43,7 +43,7 @@ def server(label):
     with log_path.open("w") as log:
         process = subprocess.Popen(["java", "-jar", str(jar), "--server.address=127.0.0.1", "--server.port=0"],
                                    env=dict({key: value for key, value in os.environ.items() if not key.startswith("SPRING_")},
-                                            DIXIT_RECOVER_INTERRUPTED_GAMES=str(recover_interrupted).lower(), DIXIT_MAINTENANCE_ENABLED="false"),
+                                            DIXIT_RECOVER_INTERRUPTED_GAMES=str(recover_interrupted).lower(), DIXIT_MAINTENANCE_ENABLED="false", DIXIT_SINGLE_INSTANCE_GUARD="true"),
                                    stdout=log, stderr=subprocess.STDOUT)
         try:
             deadline = time.monotonic() + 90
@@ -92,6 +92,17 @@ history_access = json.loads((root / "target/postgres-completed-game.json").read_
 name = "restart_" + secrets.token_hex(8)
 password = secrets.token_urlsafe(24)
 with server("first") as base:
+    # A second real executable must fail before Flyway/JPA/recovery or HTTP startup.
+    with (root / "target/production-overlap-rejected.log").open("w") as overlap_log:
+        overlap = subprocess.run(["java", "-jar", str(jar), "--server.port=0"],
+            env=dict({key: value for key, value in os.environ.items() if not key.startswith("SPRING_")},
+                     DIXIT_SINGLE_INSTANCE_GUARD="true", DIXIT_RECOVER_INTERRUPTED_GAMES="true"),
+            stdout=overlap_log, stderr=subprocess.STDOUT, timeout=60)
+    rejected = (root / "target/production-overlap-rejected.log").read_text()
+    assert overlap.returncode != 0 and "Another Dixit process owns" in rejected
+    assert "Startup recovery completed" not in rejected and "Tomcat started on port" not in rejected
+    assert "Migrating schema" not in rejected
+    print("Second production process rejected before migrations/recovery while the first remains healthy", flush=True)
     for path in ("/", "/login", "/register", "/friends", "/games/123/game", "/users/123/achievements"):
         assert b'<div id="root"></div>' in request(base, path)
     assert request(base, "/ws/info")["websocket"] is True
