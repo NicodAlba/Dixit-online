@@ -9,6 +9,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class SingleInstanceConnectionsTest {
+    @Test void configurationAndPostprocessorHaveDistinctSpringBeanNames() {
+        try (var context = new org.springframework.context.annotation.AnnotationConfigApplicationContext()) {
+            context.getEnvironment().setActiveProfiles("prod");
+            context.register(SingleInstanceConnections.class);
+            context.refresh();
+            assertNotNull(context.getBean("singleInstanceConnections"));
+            assertNotNull(context.getBean("runtimeInstanceConnectionGuard"));
+        }
+    }
     @Test void claimsBeforeReturningTheDatasourceToItsConsumers() throws Exception {
         var pool = mock(HikariDataSource.class);
         var connection = mock(Connection.class);

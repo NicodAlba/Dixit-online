@@ -181,7 +181,10 @@ Render physically starting another JVM or guarantee uninterrupted service.
 A rejected provider replacement can require a manual stop/retry. Keep monitoring
 Render notices. Four actual Supabase session-pooler tests passed (cohorts, concurrent claim,
 connection termination/reconnect and Hikari physical-session lifetime), with no
-application-table writes. Guarded public replacement remains pending; do not describe the protection as already deployed.
+application-table writes. A local production JAR also migrated an empty isolated PostgreSQL 17 database and
+reached health UP; a second JAR was rejected before migrations/HTTP/recovery while
+the first remained live. Spring bean-registration regression passes. Full CI and
+guarded public replacement remain pending; do not describe the protection as already deployed.
 
 
 ## Resume after the owner's computer shutdown

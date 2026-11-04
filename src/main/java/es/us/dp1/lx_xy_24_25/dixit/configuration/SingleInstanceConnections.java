@@ -13,7 +13,7 @@ import org.springframework.core.env.Environment;
 @Configuration(proxyBeanMethods = false)
 @Profile("prod")
 public class SingleInstanceConnections {
-    @Bean
+    @Bean(name = "runtimeInstanceConnectionGuard")
     static BeanPostProcessor singleInstanceConnections(Environment environment) {
         boolean enabled = environment.getProperty("dixit.database.single-instance-guard", Boolean.class, false);
         String process = "dixit.runtime." + UUID.randomUUID();
