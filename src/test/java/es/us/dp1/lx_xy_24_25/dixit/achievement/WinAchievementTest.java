@@ -2,7 +2,8 @@ package es.us.dp1.lx_xy_24_25.dixit.achievement;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Date;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.qameta.allure.Description;
 import io.qameta.allure.Epic;
@@ -27,8 +28,13 @@ public class WinAchievementTest {
         winAchievement.setDescription("Win description");
         winAchievement.setThreshold(2);
 
+        long beforeUnlock = System.currentTimeMillis();
         winAchievement.unlockWinAchievements(2);
-        assertEquals(new Date(), winAchievement.getDateObtained());
+        long afterUnlock = System.currentTimeMillis();
+        assertNotNull(winAchievement.getDateObtained());
+        long obtained = winAchievement.getDateObtained().getTime();
+        assertTrue(obtained >= beforeUnlock && obtained <= afterUnlock,
+            "Achievement timestamp must fall within the unlock operation");
     }
 
     @Test
