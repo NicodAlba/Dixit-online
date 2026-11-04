@@ -65,6 +65,7 @@ try {
   const own=new Map();
   for(const actor of accounts){
    const state=await api('GET','/games/'+game,actor);assert.equal(state.players.length,4);
+   if(round===0){const rival=state.players.find(p=>p.user.id!==actor.id);await api('GET','/players/'+rival.id+'/cards',actor,undefined,403);}
    for(const player of state.players){if(player.user.id===actor.id){own.set(actor.id,player);assert.equal(player.cards.length,6);const previous=hands.get(actor.id)||new Set();player.cards.forEach(c=>previous.add(c.id));hands.set(actor.id,previous);}else assert.equal(player.cards.length,0,'Rival hand leaked');}
   }
   if(round===0)await visual('Initial hand and storyteller selection');
@@ -86,6 +87,7 @@ try {
   console.log('Completed round',round+1,'with actor-specific REST views and live STOMP sessions');
  }
  assert(last.endDate&&!last.cancelled);assert.equal(last.turns.length,8);assert(last.turns.every(t=>t.state==='FINISHED'));
+ for(const round of last.turns){assert.equal(round.playedCards.length,4);assert.equal(new Set(round.playedCards.map(c=>c.user?.id)).size,4,'Historical authors missing');assert.equal(round.playedCards.reduce((n,c)=>n+c.votes.length,0),3,'Historical votes missing');}
  assert([...narrators.values()].every(n=>n===2));assert([...hands.values()].every(cards=>cards.size>6),'No replenishment seen');
  for(const actor of accounts){const stats=await api('GET','/stats/user/'+actor.id,actor);assert.equal(stats.gamesPlayed,1);await api('GET','/users/'+actor.id+'/achievements',actor);const history=await api('GET','/games/my',actor);assert(history.some(g=>g.id===game));}
  assert(connections.every(c=>c.events.length>1),'Missing live invalidations');

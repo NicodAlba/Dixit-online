@@ -132,7 +132,40 @@ node scripts/operations/public_acceptance.mjs --url https://APPROVED.onrender.co
 
 The output contains only synthetic account credentials/tokens and must stay 0600
 outside Git/public artifacts. This is automated acceptance, not desktop/mobile
-visual acceptance; verify the actual browser product separately. Preserve the
+visual acceptance; use optional `--visual-pauses` to stop at key game phases
+while observing the actual browser product. Preserve the
 Phase 4 visual debt until the relevant journeys are actually observed.
 
 Route: feature/* or fix/* → PR → develop; main remains the owner's responsibility.
+
+
+## Current supervised acceptance checkpoint (2026-11-04)
+
+Initial service `dixit-demo-20261103-a`, id `srv-dblmh5tg1s2s73ct21i0`,
+https://dixit-demo-20261103-a.onrender.com, deploy
+`dep-dblmh6dg1s2s73ct23b0`, actual SHA
+`8377bad18af4226c82e36c104b7cef19b3b2d828` (Actions 41874465899 SUCCESS).
+Render marked Live at 18:23:13 CET. Startup on 0.1 CPU took 180.6 seconds for
+Spring; do not promise a one-minute cold start. Health may include group names
+(liveness/readiness), with no component/details exposure.
+
+Public four-PLAYER acceptance completed eight rounds, reconnection, scoped REST
+views, live WSS/STOMP, replenishment, friendship/invitation, history/statistics and
+achievements. One participant's actual desktop UI was observed through the key
+phases, including original art, social presence, chat and final reveal; this is
+not four independent GUI clients or full inherited Phase 4 visual acceptance.
+Mobile viewport override did not take effect, so no mobile claim is made.
+
+`public_persistence.py` is read-only and uses only the protected synthetic fixture:
+
+```sh
+python3 scripts/operations/public_persistence.py --url https://APPROVED.onrender.com --fixture /private/demo-acceptance.json --save-baseline /private/demo-baseline.json
+python3 scripts/operations/public_persistence.py --url https://REPLACEMENT.onrender.com --fixture /private/demo-acceptance.json --compare /private/demo-baseline.json
+```
+
+It checks stable JWT/private hands, all historical authors/votes, final hands,
+stats/history and per-actor view fingerprints. It preserves playedCards order in
+the fingerprint so an anonymous-order change after restart is detected. The
+second URL must be explicitly selected as the authorized replacement; credentials
+are neither printed nor sent to an arbitrary host. Ordinary CI never runs this.
+Idle startup and stop-first game-service replacement are pending at this checkpoint.
