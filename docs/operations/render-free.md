@@ -1,35 +1,39 @@
-# First occasional demo on Render Free
+# Occasional demo on Render Free
 
-Updated 2026-11-03. The owner authorizes manual publication from a verified develop
-SHA, budget 0 €, Supabase Dixit Free only. No main/release, card, upgrade, purchased
-domain or automatic deployment. **No Dixit service or public app URL has been
-created in this intervention.** Public exposure remains blocked as described below.
+Updated 2026-11-03. The owner authorizes manual publication from a CI-green develop
+SHA, strictly 0 €, Supabase Dixit Free only. No main/release, card, upgrade, paid
+disk/domain or Auto-Deploy. ADR-0010 records the approved changing-URL procedure.
+Actual publication and acceptance evidence is recorded in CHANGELOG_DEV; a probe
+URL is not a playable demo.
 
-## Account and intended configuration
+## Free account and configuration
 
-The actual Render dashboard shows Hobby, no card on file, $0 accrued/projected,
-750 instance hours, 5 GB bandwidth and 500 pipeline minutes per workspace/month.
-These quotas are shared with existing services; do not alter them. Free web
-compute is 0.1 CPU/512 MB; filesystem is ephemeral. Idle spin-down, cold starts,
-unannounced restarts and quota suspensions are accepted for an occasional demo.
-See [Free limits](https://render.com/docs/free) and
+Dashboard: Hobby, no card, $0 accrued/projected, shared monthly quotas of 750
+instance hours, 5 GB bandwidth and 500 pipeline minutes. Free web compute is
+0.1 CPU/512 MB, ephemeral filesystem, no scaling. Frankfurt app → Stockholm DB.
+Idle spin-down after 15 minutes, cold starts, provider restarts and quota
+suspension are accepted for this occasional demo; no uptime guarantee or paid
+fallback. [Free limits](https://render.com/docs/free),
 [compute plans](https://render.com/docs/compute-plans), checked 2026-11-03.
 
-Use one Docker web service, nearest available European region to Stockholm,
-repository NicodAlba/Dixit-online, branch develop, explicit CI-green commit.
-Auto-Deploy **Off**, health check `/actuator/health`, default Java Docker entrypoint
-and externally supplied PORT. No Render database or disk. Build from that SHA,
-not a moving latest branch, and verify the deployed SHA in the dashboard.
+One active Docker web service serves React and Spring. Repository
+NicodAlba/Dixit-online, branch develop, explicit CI-green SHA. Root/build context
+repository root, Dockerfile `./Dockerfile`, default Java entrypoint, external PORT,
+Auto-Deploy **Off**, health `/actuator/health`. No Render database, disk, registry
+credentials, extra frontend service or build-time production secrets.
 
-Load the production variables in production.md outside Git. Mount the official
-Supabase CA as `/etc/secrets/supabase-ca.crt`; point both JDBC configurations at
-that path with verify-full. Separate limited runtime/migration credentials and
-stable JWT remain backend-only. DIXIT_DB_ROLE is dixit_runtime even when the
-connection username includes the Supabase project suffix. Set the exact new HTTPS
-origin after allocation and verify the proxy's trusted forwarding addresses;
-do not guess a broad trusted-proxy regex or disable TLS to get a green check.
+Copy the private backend variables in production.md through Render Environment,
+never Git, frontend, logs or screenshots. Limited runtime and migration roles
+remain separate. Stable JWT is copied unchanged. Mount the official public CA
+as secret file `supabase-ca.crt`; both JDBC URLs/properties use
+`/etc/secrets/supabase-ca.crt` and verify-full. Replace any owner's local CA path
+inside URL query parameters too. Session pooler port 5432 provides IPv4; do not
+switch to transaction port 6543 or buy IPv4.
 
-For normal demo/cold starts:
+Use the new exact HTTPS origin for DIXIT_ALLOWED_ORIGINS. Keep trusted forwarding
+restricted until verified; do not invent a broad proxy regex. React uses relative
+REST URLs and the current HTTPS origin for SockJS. Verify TLS, HTTP redirect and
+actual authenticated transport after publication.
 
 ```
 SPRING_PROFILES_ACTIVE=prod
@@ -37,77 +41,98 @@ DIXIT_RECOVER_INTERRUPTED_GAMES=true
 DIXIT_MAINTENANCE_ENABLED=false
 ```
 
-Recovery closes admission and keeps health OUT_OF_SERVICE until its transaction
-finishes. Active interrupted games are cancelled using the existing rule; completed
-games/lobbies/history remain. The app then opens without ADMIN intervention.
-Explicit maintenance=true deliberately stays closed and is for supervised
-exceptions only. H2/console/seeds/create-drop remain disabled in production.
+Recovery closes admission/health until its cancellation transaction completes.
+Interrupted active games close without new wins/rewards; completed games,
+accounts, relationships, cards, turns, votes and lobbies remain. It does not
+recover live timers/broker/presence. Explicit maintenance=true is a deliberately
+closed start requiring ADMIN reopening; ordinary cold starts use false.
 
-## Mandatory update sequence — not yet accredited on a Dixit service
+## Accredited provider behavior and failed update path
 
-1. Confirm the exact develop SHA has successful CI including image and restore;
-   keep auto-deploy Off. Check free quotas and schema/app rollback compatibility.
-2. ADMIN `maintenance.py --enable`; wait activeGameCount=0. Do not kill live games
-   as planned maintenance. Waiting lobbies may remain.
-3. Use the existing protected backup procedure. Keep encryption/JWT separately.
-4. Suspend the specific Dixit service. Wait for actual stopped status **and zero
-   running instances**, no pending deploy/restart. A button click, HTTP failure,
-   202 response or health failure alone does not prove the old process stopped.
-5. Only after that proof, select/build the intended commit and start one instance.
-   Determine in the actual Free service whether deploying while suspended and
-   resuming supports this sequence; do not assume it from endpoint names.
-6. Require health UP after recovery, verify one running instance, deployed SHA,
-   TLS, routes, authenticated REST/STOMP/SockJS and ordinary admission. If explicitly
-   started closed, verify then ADMIN reopen; otherwise health controls reopening.
+The isolated Free probe `dixit-online-demo` (`srv-dbl262d9fdbs73cljur0`) deployed
+commit `14eca3c1595d389ed11293e865b2601300839512`, without DB, secrets or Dixit assets.
+Health and logs identified boot `0b515602-9a78-4c33-a37b-592c40529558`, instance
+suffix l9hnh, PID 1. Suspension showed **Suspended by you** and `PROBE_STOP` for
+that same boot at **2026-11-03T18:13:17.861Z**. The metrics chart had no series yet;
+no numerical instance count is claimed from it. Free has no multi-instance scaling.
 
-Render documents [rolling deploys/restarts](https://render.com/docs/deploys),
-[Suspend](https://api-docs.render.com/reference/suspend-service-1),
-[Resume](https://api-docs.render.com/reference/resume-service-1) and
-[List instances](https://api-docs.render.com/reference/list-instances). The endpoints
-exist; this does not prove the Free account's end-to-end stop/update/start behavior.
-Do not use Manual Deploy/Restart/Rollback on a running Dixit process. If the above
-sequence cannot be established, keep the app unpublished; no paid workaround.
+An actual POST to its existing secret hook, selecting that SHA while suspended,
+returned **HTTP 409**, `{"conflict":"service is suspended"}`. Manual Deploy is
+absent while suspended. Saving a Docker-command setting does not build a new
+commit. [Official hook responses](https://render.com/docs/deploy-hooks) agree.
+Resume started boot `3c442349-9fb8-406c-8ab8-526ee021d977`, suffix p7cc6, at
+18:16:58.347Z, after the previous STOP, using the same artifact. It was suspended
+again and logged STOP at **18:17:37.659Z**. This proves stop/resume, not a new-SHA
+update while suspended. Private hook stays outside Git/Actions.
 
-Rollback uses the same drain/backup/stop/zero-instance sequence and an artifact
-compatible with the current schema. Reverting code does not undo data changes.
-For incompatible schema recovery, restore the protected dump to an isolated
-compatible database, compare rows/sequence/Flyway and boot there before any
-controlled switch. Never overwrite Supabase just to test restoration.
+Render [deploy/restart behavior](https://render.com/docs/deploys) overlaps old/new
+instances. Do not use Manual Deploy, Restart or Rollback on a running Dixit
+process connected to this database. Memory-only maintenance does not coordinate
+processes. Do not resume a suspended predecessor after a replacement is active.
 
-## Public resource and administrator gates
+## Approved stop-first publication/update (changing URL)
 
-Focused inspection found:
+The owner explicitly approved this alternative after the 409 test:
 
-- pom.xml declares Apache 2.0 and README preserves the Spring Petclinic/academic
-  origin. This does not establish rights to bundled art or fonts.
-- `frontend/src/static/fonts/American Typewriter Bold.ttf` embeds an E+F Designstudios
-  copyright/ITC trademark notice and OS/2 fsType value 6. No web redistribution
-  licence for that file was found in the repository. Font metadata alone is not
-  permission to serve it publicly or a legal conclusion about permitted uses.
-- `frontend/public/Cards`, achievements, backgrounds/icons and Dixit branding have
-  no resource-specific authorization/attribution manifest in the reviewed sources.
-  No such permission can be inferred from a public Git repository or the POM.
+1. Select a develop SHA with successful CI including actual image and restoration.
+   Confirm available shared quotas, no paid selection and Auto-Deploy Off.
+2. For an existing game service, owner runs `maintenance.py --enable` with hidden
+   ADMIN input. Wait activeGameCount=0; let games finish, preserve waiting lobbies.
+3. Create the protected backup and verify isolated restoration. Keep dump/key/JWT
+   separately outside Git. No managed database is overwritten for testing.
+4. Suspend the old service. Confirm provider Suspended, no pending deployment and
+   matching shutdown/process-closure logs. A failed HTTP request alone is not
+   proof. If closure cannot be established, stop and obtain provider evidence.
+5. Create one **new Free** Docker service, with the approved SHA and the above
+   external backend configuration. Never start it before predecessor closure.
+   Verify actual deployed SHA and one playable service. Keep all predecessors
+   suspended; no horizontal scaling or rolling update.
+6. Wait health UP, then check React/deep links/assets/notices, login/registration,
+   authenticated REST/STOMP/SockJS, reconnection, privacy, history/statistics.
+   Publish the **new URL** only after acceptance. Existing JWT/account/history
+   remain usable on the new origin; a browser may need to sign in there.
+7. Exercise an idle cold start without uptime pings, and a controlled game-service
+   replacement. Record HTTP, automated and visual results separately.
 
-Before exposure, the owner must supply the relevant permissions/provenance or
-approve replacing affected resources with clearly redistributable equivalents.
-No art/font replacement or redesign is silently performed. This publication gate
-is unresolved; do not upload the current app to a publicly reachable service.
+A new service means a new onrender.com URL. That tradeoff and downtime are
+accepted, not a promise of a fixed public hostname. Suspended services are not
+billed; do not delete predecessors or add resources without the relevant scope.
 
-The private backend config contains database/JWT credentials, not a chosen owner
-ADMIN password. No owner ADMIN is invented. Existing acceptance accounts include
-fictitious ADMINs; operations/supabase.md requires authorized retirement before
-first-admin bootstrap. Their prefixes alone are not authority for bulk deletion.
-Keep them and give the owner the protected interactive bootstrap procedure in
-demo-maintenance.md; never send passwords in chat/arguments/captures.
+Rollback follows the same drain/backup/suspend/closure/new-Free-service sequence,
+built from a schema-compatible previous SHA. Reverting application code does not
+undo migrations or data. For incompatible recovery restore into an isolated
+compatible database, contrast rows/sequence/Flyway and boot there before agreeing
+any controlled switch. Never test restore over the managed source.
 
-## After these gates
+## Resource and administrator gates
 
-First publication is manual and supervised. Reuse existing scenarios on the actual
-URL: React/deep links, signup/login, four-player full game in UI, actor/phase
-privacy, chat/social/notifications, authenticated STOMP/SockJS, reconnect/interruption,
-history/statistics/achievements, idle cold start and maintenance/reopening.
-Record actual HTTP, automated and desktop/mobile visual evidence separately.
-The Phase 4 visual acceptance is still pending. No public validation or CD is
-claimed; manual deployment is sufficient until this full procedure is accredited.
+Owner-approved original art and the self-hosted OFL Bree Serif font replace the
+unaccredited inherited graphics/font. All 36 cards are distinct narrative images;
+IDs and database history remain. See public-assets.md and shipped notices under
+/static/notices. Code/academic notices remain; no inference from the POM's licence
+was used for inherited illustrations.
+
+Exactly six privately inventoried fictitious ADMINs were downgraded to PLAYER
+only after verified encrypted backup. Passwords and history were preserved. The
+owner then ran hidden terminal bootstrap and chose their own credentials. A
+read-only check found one ADMIN and no synthetic ADMIN. No default password,
+public bootstrap endpoint or bulk deletion. See DEV-064 and supabase.md.
+
+## Reproducible public acceptance
+
+After `npm ci` with the project's supported Node 22, the owner-run script creates
+four identifiable PLAYER fixtures and plays eight rounds through HTTPS REST and
+live authenticated WebSockets/STOMP. It checks hands/votes/order, replenishment,
+reconnection, history/statistics/achievements. It never reads backend secrets or
+runs in ordinary CI. Use a private owner-controlled output directory:
+
+```sh
+node scripts/operations/public_acceptance.mjs --url https://APPROVED.onrender.com --private-output /private/demo-acceptance.json --acknowledge-fixtures
+```
+
+The output contains only synthetic account credentials/tokens and must stay 0600
+outside Git/public artifacts. This is automated acceptance, not desktop/mobile
+visual acceptance; verify the actual browser product separately. Preserve the
+Phase 4 visual debt until the relevant journeys are actually observed.
 
 Route: feature/* or fix/* → PR → develop; main remains the owner's responsibility.
