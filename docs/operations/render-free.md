@@ -132,10 +132,43 @@ node scripts/operations/public_acceptance.mjs --url https://APPROVED.onrender.co
 
 The output contains only synthetic account credentials/tokens and must stay 0600
 outside Git/public artifacts. This is automated acceptance, not desktop/mobile
-visual acceptance; verify the actual browser product separately. Preserve the
+visual acceptance; use optional `--visual-pauses` to stop at key game phases
+while observing the actual browser product. Preserve the
 Phase 4 visual debt until the relevant journeys are actually observed.
 
 Route: feature/* or fix/* → PR → develop; main remains the owner's responsibility.
+
+
+## Current supervised acceptance checkpoint (2026-11-04)
+
+Initial service `dixit-demo-20261103-a`, id `srv-dblmh5tg1s2s73ct21i0`,
+https://dixit-demo-20261103-a.onrender.com, deploy
+`dep-dblmh6dg1s2s73ct23b0`, actual SHA
+`8377bad18af4226c82e36c104b7cef19b3b2d828` (Actions 41874465899 SUCCESS).
+Render marked Live at 18:23:13 CET. Startup on 0.1 CPU took 180.6 seconds for
+Spring; do not promise a one-minute cold start. Health may include group names
+(liveness/readiness), with no component/details exposure.
+
+Public four-PLAYER acceptance completed eight rounds, reconnection, scoped REST
+views, live WSS/STOMP, replenishment, friendship/invitation, history/statistics and
+achievements. One participant's actual desktop UI was observed through the key
+phases, including original art, social presence, chat and final reveal; this is
+not four independent GUI clients or full inherited Phase 4 visual acceptance.
+Mobile viewport override did not take effect, so no mobile claim is made.
+
+`public_persistence.py` is read-only and uses only the protected synthetic fixture:
+
+```sh
+python3 scripts/operations/public_persistence.py --url https://APPROVED.onrender.com --fixture /private/demo-acceptance.json --save-baseline /private/demo-baseline.json
+python3 scripts/operations/public_persistence.py --url https://REPLACEMENT.onrender.com --fixture /private/demo-acceptance.json --compare /private/demo-baseline.json
+```
+
+It checks stable JWT/private hands, all historical authors/votes, final hands,
+stats/history and per-actor view fingerprints. It preserves playedCards order in
+the fingerprint so an anonymous-order change after restart is detected. The
+second URL must be explicitly selected as the authorized replacement; credentials
+are neither printed nor sent to an arbitrary host. Ordinary CI never runs this.
+Idle startup was subsequently verified: Render stopped instance 6v54q at 17:54:44Z; wake request at 17:56:25Z reached health UP after 220.7 seconds on qv4rw. Recovery cancelled zero games. The read-only continuity checker passed with all four previous JWTs and identical history/view fingerprints. Stop-first replacement to a different application SHA remains pending.
 
 ## Provider maintenance and the approved database guard (2026-11-04)
 
@@ -146,5 +179,33 @@ stop it before starting a guarded replacement. Do not enable this by a rolling
 update over A. The guard fences runtime database sessions; it cannot prevent
 Render physically starting another JVM or guarantee uninterrupted service.
 A rejected provider replacement can require a manual stop/retry. Keep monitoring
-Render notices. Managed session-pooler validation and guarded public replacement
-are pending; do not describe the protection as already deployed.
+Render notices. Four actual Supabase session-pooler tests passed (cohorts, concurrent claim,
+connection termination/reconnect and Hikari physical-session lifetime), with no
+application-table writes. Guarded public replacement remains pending; do not describe the protection as already deployed.
+
+
+## Resume after the owner's computer shutdown
+
+The public service runs on Render, independently of the owner's computer. Leave
+A running; do not resume the suspended probe or create a second playable service.
+The owner has already approved the guard; no new architecture permission is needed.
+
+1. Check PR #62 CI, including actual concurrent-JAR rejection. Resolve failures,
+   review the final diff, then integrate feature/single-instance-guard → PR → develop
+   preserving commits. Confirm integration CI and select its exact SHA.
+2. Ask the owner to run the protected `close-demo-for-update` launcher locally to
+   authenticate ADMIN with hidden password; require maintenance enabled and zero
+   active games. Never request the password in chat.
+3. Make and verify an encrypted backup/isolated restore. Existing latest pre-demo
+   backup is 20261103T182607Z; it does not include the new public acceptance game.
+4. Suspend A; verify provider suspension and matching application shutdown logs.
+   Keep it suspended. Create the approved replacement Free service with Auto-Deploy
+   Off, exact checked develop SHA, same stable JWT/database roles/TLS CA, new exact
+   origin and DIXIT_SINGLE_INSTANCE_GUARD=true. No card or paid resources.
+5. Verify health, old fixture continuity against the private baseline, another full
+   four-player WSS/STOMP game and actual browser UI. Record the new URL/SHA, actual
+   guard evidence and controlled replacement. Only then assess Phase 5 closure.
+
+Private operator files/configs/fixtures/backups remain outside Git or ignored;
+paths and safe launcher usage are documented in the changelog/runbooks, never
+actual values. Full Phase 4 visual debt/mobile/other-network acceptance remains.
