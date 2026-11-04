@@ -172,3 +172,19 @@ Maintenance acceptance is available as `--phase maintenance` after the approved
 implementation: ADMIN control, admission transaction completion/rollback and the
 full four-player game finishing while closed (six targeted cases). It creates
 fictitious fixtures; it does not run first-admin bootstrap on the managed database.
+
+### Owner administrator acceptance (2026-11-03)
+
+The owner explicitly authorized downgrading exactly the six privately inventoried
+synthetic administrators to PLAYER. A new encrypted dump was restored and its
+16 tables, Flyway history, sequence and production JAR verified first. Only the
+six authority references changed; accounts, passwords and game history remain.
+The owner then ran the existing interactive bootstrap and chose their own hidden
+password. Read-only verification found one owner ADMIN and no synthetic ADMIN.
+Do not rerun retirement as routine housekeeping or broaden its scope.
+
+For an old completed-game acceptance fixture, `supabase_restore.py --history-fixture`
+can refresh a short-lived synthetic PLAYER token solely for the isolated restored
+database's smoke checks. It does not extend production token lifetimes or alter
+the managed database. Backup files, encryption keys and fixtures remain private,
+outside Git; the owner is responsible for separate protected custody.
