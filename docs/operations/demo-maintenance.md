@@ -84,10 +84,12 @@ DIXIT_RECOVER_INTERRUPTED_GAMES=true, so normal restarts do not await an absent
 ADMIN. Explicit true remains a deliberate closed-start override; do not leave it
 configured for the ordinary demo. Never overlap playable application instances.
 
-Managed acceptance currently contains identifiable fictitious ADMIN accounts.
-They must be reviewed and retired with owner authorization before using the
-first-admin bootstrap there. No owner administrator has been invented or created.
-No bulk deletion is performed by either helper.
+On 2026-11-03 the owner authorized downgrading exactly six privately inventoried
+fictitious ADMIN accounts to PLAYER after a restored encrypted backup. All six
+changes were verified without deleting accounts/history or changing passwords.
+The owner then completed hidden terminal bootstrap; a read-only check confirmed
+one owner ADMIN and no synthetic ADMIN. No bulk deletion is performed by either
+helper. See DEV-064; do not repeat bootstrap or broaden retirement authorization.
 
 ## Verification scope
 
