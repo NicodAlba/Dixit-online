@@ -14,6 +14,8 @@ import secrets
 import socket
 import subprocess
 import tempfile
+import time
+import re
 from supabase_check import Operator, ROOT
 
 
@@ -40,6 +42,7 @@ def main():
     parser.add_argument('--project-ref', required=True)
     parser.add_argument('--backup-dir', type=Path, required=True)
     parser.add_argument('--key-file', type=Path, required=True)
+    parser.add_argument('--history-fixture', type=Path, help='Private synthetic completed-game access fixture to verify on the isolated restore')
     parser.add_argument('--acknowledge-test-data', action='store_true', required=True)
     args = parser.parse_args()
     operator = Operator(args.config, args.pg_bin, args.project_ref)
@@ -133,6 +136,26 @@ def main():
                        DIXIT_DB_USERNAME='dixit_runtime', DIXIT_DB_PASSWORD=runtime_password,
                        DIXIT_MIGRATION_DB_USERNAME='dixit_migrator', DIXIT_MIGRATION_DB_PASSWORD=migration_password,
                        DIXIT_DB_ROLE='dixit_runtime', DIXIT_DB_SSL_MODE='disable', DIXIT_MIGRATION_DB_SSL_MODE='disable')
+            # Refresh only a synthetic PLAYER access fixture on the isolated restore.
+            # The old fixture can legitimately be expired days after acceptance; never
+            # disable JWT expiry or change production passwords/TTL to make it pass.
+            fixture_path = ROOT / 'target/postgres-completed-game.json'
+            if args.history_fixture:
+                source = json.loads(args.history_fixture.read_text())
+            else:
+                source = json.loads(fixture_path.read_text())
+            game_id = source['gameId']
+            assert isinstance(game_id, int) and game_id > 0
+            account = json.loads(query("SELECT json_build_object('id',u.id,'username',u.username) FROM dixit.games g JOIN dixit.appusers u ON u.id=g.leader_id JOIN dixit.authorities a ON a.id=u.authority_id WHERE g.id=" + str(game_id) + " AND g.end_date IS NOT NULL AND NOT g.cancelled AND a.authority='PLAYER'"))
+            assert re.fullmatch(r'(security_[0-9a-f]{32}|restart_[0-9a-f]{16})', account['username']), 'Only synthetic PLAYER fixtures may be refreshed'
+            now = int(time.time())
+            encode = lambda value: base64.urlsafe_b64encode(json.dumps(value,separators=(',',':')).encode()).rstrip(b'=')
+            signing_input = encode({'alg':'HS512','typ':'JWT'}) + b'.' + encode({'sub':account['username'],'id':account['id'],'authorities':['PLAYER'],'iat':now,'exp':now+900})
+            signature = base64.urlsafe_b64encode(hmac.new(base64.b64decode(operator.values['DIXIT_JWT_SECRET']), signing_input, hashlib.sha512).digest()).rstrip(b'=')
+            fixture_path.parent.mkdir(exist_ok=True)
+            fixture_path.write_text(json.dumps({'gameId':game_id,'token':(signing_input+b'.'+signature).decode()}))
+            fixture_path.chmod(0o600)
+            print('Isolated synthetic PLAYER history access refreshed with normal expiry; no production account changed', flush=True)
             log_path = ROOT / 'target/supabase-restored-app.log'
             with log_path.open('w') as log:
                 log_path.chmod(0o600)
