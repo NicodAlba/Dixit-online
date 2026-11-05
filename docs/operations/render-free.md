@@ -168,4 +168,47 @@ stats/history and per-actor view fingerprints. It preserves playedCards order in
 the fingerprint so an anonymous-order change after restart is detected. The
 second URL must be explicitly selected as the authorized replacement; credentials
 are neither printed nor sent to an arbitrary host. Ordinary CI never runs this.
-Idle startup and stop-first game-service replacement are pending at this checkpoint.
+Idle startup was subsequently verified: Render stopped instance 6v54q at 17:54:44Z; wake request at 17:56:25Z reached health UP after 220.7 seconds on qv4rw. Recovery cancelled zero games. The read-only continuity checker passed with all four previous JWTs and identical history/view fingerprints. Stop-first replacement to a different application SHA remains pending.
+
+## Provider maintenance and the approved database guard (2026-11-04)
+
+Render may overlap stateless processes during its own maintenance, including
+Free without advance notice. ADR-0011 adds DIXIT_SINGLE_INSTANCE_GUARD=true to
+**the next** service's required configuration. Initial service A is unguarded;
+stop it before starting a guarded replacement. Do not enable this by a rolling
+update over A. The guard fences runtime database sessions; it cannot prevent
+Render physically starting another JVM or guarantee uninterrupted service.
+A rejected provider replacement can require a manual stop/retry. Keep monitoring
+Render notices. Four actual Supabase session-pooler tests passed (cohorts, concurrent claim,
+connection termination/reconnect and Hikari physical-session lifetime), with no
+application-table writes. A local production JAR also migrated an empty isolated PostgreSQL 17 database and
+reached health UP; a second JAR was rejected before migrations/HTTP/recovery while
+the first remained live. Spring bean-registration regression passes. Full CI and
+guarded public replacement remain pending; do not describe the protection as already deployed.
+
+
+## Resume after the owner's computer shutdown
+
+The public service runs on Render, independently of the owner's computer. Leave
+A running; do not resume the suspended probe or create a second playable service.
+The owner has already approved the guard; no new architecture permission is needed.
+
+1. Check PR #62 CI, including actual concurrent-JAR rejection. Resolve failures,
+   review the final diff, then integrate feature/single-instance-guard → PR → develop
+   preserving commits. Confirm integration CI and select its exact SHA.
+2. Ask the owner to run the protected `close-demo-for-update` launcher locally to
+   authenticate ADMIN with hidden password; require maintenance enabled and zero
+   active games. Never request the password in chat.
+3. Make and verify an encrypted backup/isolated restore. Existing latest pre-demo
+   backup is 20261103T182607Z; it does not include the new public acceptance game.
+4. Suspend A; verify provider suspension and matching application shutdown logs.
+   Keep it suspended. Create the approved replacement Free service with Auto-Deploy
+   Off, exact checked develop SHA, same stable JWT/database roles/TLS CA, new exact
+   origin and DIXIT_SINGLE_INSTANCE_GUARD=true. No card or paid resources.
+5. Verify health, old fixture continuity against the private baseline, another full
+   four-player WSS/STOMP game and actual browser UI. Record the new URL/SHA, actual
+   guard evidence and controlled replacement. Only then assess Phase 5 closure.
+
+Private operator files/configs/fixtures/backups remain outside Git or ignored;
+paths and safe launcher usage are documented in the changelog/runbooks, never
+actual values. Full Phase 4 visual debt/mobile/other-network acceptance remains.

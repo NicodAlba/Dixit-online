@@ -73,7 +73,7 @@ jobs:
           ./mvnw --batch-mode --no-transfer-progress
           -Dspring.profiles.active=prod
           -Dtest.reports.dir=target/postgres-surefire-reports
-          -Dtest=PostgresPersistenceIT,GameActionPermissionsTest,GamePhasePrivacyTest,FriendRelationshipsTest,GameCancellationTest,ChatAccountIdentityTest,StompPermissionsTest,MaintenancePermissionsTest,MaintenanceTransactionTest,BootstrapAdminIT,InterruptedGamePersistenceTest
+          -Dtest=SingleInstanceConnectionsIT,PostgresPersistenceIT,GameActionPermissionsTest,GamePhasePrivacyTest,FriendRelationshipsTest,GameCancellationTest,ChatAccountIdentityTest,StompPermissionsTest,MaintenancePermissionsTest,MaintenanceTransactionTest,BootstrapAdminIT,InterruptedGamePersistenceTest
           test
       - name: Package production JAR without academic seeds
         run: ./mvnw --batch-mode --no-transfer-progress -DskipTests -Pproduction-package package
