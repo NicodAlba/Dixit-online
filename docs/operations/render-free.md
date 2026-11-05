@@ -12,7 +12,9 @@ Deployment: `dep-dbm7iu8ae00c738ja4qg`.
 Source: develop `07efbbe1088304280a0859961511272c02b0a3ce`, integration CI
 [42027840587](https://github.com/NicodAlba/Dixit-online/actions/runs/42027840587)
 SUCCESS. The complete four-player game, privacy/reconnection, history/statistics, HTTPS and
-actual desktop views passed. Final idle-wake verification is in progress; see DEV-070.
+actual desktop views passed. Final C idle wake passed in 220.9 seconds, preserving
+all sixteen tables/Flyway/sequence, stable JWT/private views and a new WSS/STOMP
+subscription. Phase 5 is closed for this occasional demo; see DEV-070/072.
 
 A (`srv-dblmh5tg1s2s73ct21i0`), B (`srv-dbm7ai8u01pc738jomv0`) and the isolated
 probe (`srv-dbl262d9fdbs73cljur0`) remain **suspended**. Never resume a predecessor
@@ -58,9 +60,16 @@ Shared Free quotas documented by Render: 750 instance hours, 5 GB bandwidth and
 500 pipeline minutes/month. Idle spin-down after 15 minutes, cold starts, provider
 restarts and quota suspension are accepted. No uptime pings or paid fallback.
 Measured initial Spring starts took about three minutes; an observed idle wake
-on A took 220.7 seconds. Do not promise a one-minute cold start. Official limits
-checked 2026-11-03, current account quotas/no-card/zero-cost panel checked 2026-11-05: https://render.com/docs/free and
+on A took 220.7 seconds and final C took 220.9 seconds. Do not promise a one-minute cold start. Official limits
+checked again 2026-11-05 together with account quotas/no-card/zero-cost panel: https://render.com/docs/free and
 https://render.com/docs/compute-plans. Current selection is Free, not a paid trial.
+
+Render can also suspend a Free service for unusually high service-initiated public
+traffic, including external JDBC. Its documented remedy is a paid upgrade, which
+is outside this project's budget: stop and discuss a separately approved free
+alternative instead of spending. No-card quota overages suspend/disable services
+or builds instead of introducing charges. This is an accepted occasional-demo
+limit, not a continuous-production guarantee.
 
 ## Start and first publication
 
@@ -86,7 +95,9 @@ Detailed provider evidence is in DEV-062/065/070 and ADR-0010.
 
 ## Update or rollback
 
-1. Owner authenticates through the existing interactive helper, never chat or
+1. If idle, wake the current URL and wait for health UP before using the operator
+   helper (its requests time out before a several-minute cold start). Owner
+   authenticates through the existing interactive helper, never chat or
    password arguments: `maintenance.py --url CURRENT_URL --enable`.
 2. Require enabled=true and activeGameCount=0. Let active games finish; do not
    silently cancel historical records or remove waiting lobbies.
