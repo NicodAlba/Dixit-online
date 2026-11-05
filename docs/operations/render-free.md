@@ -1,214 +1,168 @@
-# Occasional demo on Render Free
+# Operate the occasional Render Free demo
 
-Updated 2026-11-03. The owner authorizes manual publication from a CI-green develop
-SHA, strictly 0 €, Supabase Dixit Free only. No main/release, card, upgrade, paid
-disk/domain or Auto-Deploy. ADR-0010 records the approved changing-URL procedure.
-Actual publication and acceptance evidence is recorded in CHANGELOG_DEV; a probe
-URL is not a playable demo.
+Updated 2026-11-05. Budget **0 EUR**: no card, paid plan, addon, domain, disk or
+registry publication. One Spring Boot application serves React; Supabase Dixit
+Free provides PostgreSQL. Main/releases remain the owner's responsibility.
 
-## Free account and configuration
+## Current publication
 
-Dashboard: Hobby, no card, $0 accrued/projected, shared monthly quotas of 750
-instance hours, 5 GB bandwidth and 500 pipeline minutes. Free web compute is
-0.1 CPU/512 MB, ephemeral filesystem, no scaling. Frankfurt app → Stockholm DB.
-Idle spin-down after 15 minutes, cold starts, provider restarts and quota
-suspension are accepted for this occasional demo; no uptime guarantee or paid
-fallback. [Free limits](https://render.com/docs/free),
-[compute plans](https://render.com/docs/compute-plans), checked 2026-11-03.
+Final service: `dixit-demo-20261105-c`, `srv-dbm7itgae00c738ja350`.
+URL: https://dixit-demo-20261105-c.onrender.com
+Deployment: `dep-dbm7iu8ae00c738ja4qg`.
+Source: develop `07efbbe1088304280a0859961511272c02b0a3ce`, integration CI
+[42027840587](https://github.com/NicodAlba/Dixit-online/actions/runs/42027840587)
+SUCCESS. The complete four-player game, privacy/reconnection, history/statistics, HTTPS and
+actual desktop views passed. Final C idle wake passed in 220.9 seconds, preserving
+all sixteen tables/Flyway/sequence, stable JWT/private views and a new WSS/STOMP
+subscription. Phase 5 is closed for this occasional demo; see DEV-070/072.
 
-One active Docker web service serves React and Spring. Repository
-NicodAlba/Dixit-online, branch develop, explicit CI-green SHA. Root/build context
-repository root, Dockerfile `./Dockerfile`, default Java entrypoint, external PORT,
-Auto-Deploy **Off**, health `/actuator/health`. No Render database, disk, registry
-credentials, extra frontend service or build-time production secrets.
+A (`srv-dblmh5tg1s2s73ct21i0`), B (`srv-dbm7ai8u01pc738jomv0`) and the isolated
+probe (`srv-dbl262d9fdbs73cljur0`) remain **suspended**. Never resume a predecessor
+while the current service uses this database. Do not use Manual Deploy, Restart,
+Rollback, scaling or an environment save-and-deploy over a live game process.
 
-Copy the private backend variables in production.md through Render Environment,
-never Git, frontend, logs or screenshots. Limited runtime and migration roles
-remain separate. Stable JWT is copied unchanged. Mount the official public CA
-as secret file `supabase-ca.crt`; both JDBC URLs/properties use
-`/etc/secrets/supabase-ca.crt` and verify-full. Replace any owner's local CA path
-inside URL query parameters too. Session pooler port 5432 provides IPv4; do not
-switch to transaction port 6543 or buy IPv4.
+## Configuration and accepted limits
 
-Use the new exact HTTPS origin for DIXIT_ALLOWED_ORIGINS. Keep trusted forwarding
-restricted until verified; do not invent a broad proxy regex. React uses relative
-REST URLs and the current HTTPS origin for SockJS. Verify TLS, HTTP redirect and
-actual authenticated transport after publication.
+Render Free Frankfurt: 0.1 CPU, 512 MB RAM, ephemeral filesystem. Supabase Free
+Stockholm: PostgreSQL 17.11, dedicated dixit schema, separate restricted runtime
+and migration roles. JDBC uses the session pooler on 5432, IPv4, verify-full TLS
+and the official CA file `/etc/secrets/supabase-ca.crt`. No transaction pooler,
+Supabase Auth/Realtime/Storage, browser database access or exposed Data API.
 
-```
+Auto-Deploy **Off**, repository NicodAlba/Dixit-online, branch develop, root Docker
+context, `./Dockerfile`, default Java entrypoint, external Render PORT (10000),
+health `/actuator/health`. No extra frontend, Render database, registry or disk.
+
+Provide production.md variables privately through Render Environment. Never put
+values in Git, React, Docker build arguments, logs or screenshots. Keep the JWT
+key unchanged across replacements. Set the exact new HTTPS allowed origin and
+replace local CA paths inside both JDBC URLs as well as SSL properties.
+
+```text
 SPRING_PROFILES_ACTIVE=prod
+DIXIT_SINGLE_INSTANCE_GUARD=true
 DIXIT_RECOVER_INTERRUPTED_GAMES=true
 DIXIT_MAINTENANCE_ENABLED=false
 ```
 
-Recovery closes admission/health until its cancellation transaction completes.
-Interrupted active games close without new wins/rewards; completed games,
-accounts, relationships, cards, turns, votes and lobbies remain. It does not
-recover live timers/broker/presence. Explicit maintenance=true is a deliberately
-closed start requiring ADMIN reopening; ordinary cold starts use false.
+Readiness/admissions stay closed until startup recovery completes. Interrupted
+started games are cancelled without wins/rewards; accounts, completed history,
+relationships, turns, votes and waiting lobbies remain. Timers, broker and presence
+are not resumed. Ordinary starts reopen; explicit maintenance=true starts closed.
 
-## Accredited provider behavior and failed update path
+The guard fences **runtime physical database sessions**, including reconnections;
+minimum idle one, maximum five, no extra dedicated connection. It does not prevent
+Render physically creating a second JVM. A provider maintenance replacement can
+fail while the old cohort is alive and need manual stop/retry; do not promise
+availability or automatic continuity. See ADR-0011.
 
-The isolated Free probe `dixit-online-demo` (`srv-dbl262d9fdbs73cljur0`) deployed
-commit `14eca3c1595d389ed11293e865b2601300839512`, without DB, secrets or Dixit assets.
-Health and logs identified boot `0b515602-9a78-4c33-a37b-592c40529558`, instance
-suffix l9hnh, PID 1. Suspension showed **Suspended by you** and `PROBE_STOP` for
-that same boot at **2026-11-03T18:13:17.861Z**. The metrics chart had no series yet;
-no numerical instance count is claimed from it. Free has no multi-instance scaling.
+Shared Free quotas documented by Render: 750 instance hours, 5 GB bandwidth and
+500 pipeline minutes/month. Idle spin-down after 15 minutes, cold starts, provider
+restarts and quota suspension are accepted. No uptime pings or paid fallback.
+Measured initial Spring starts took about three minutes; an observed idle wake
+on A took 220.7 seconds and final C took 220.9 seconds. Do not promise a one-minute cold start. Official limits
+checked again 2026-11-05 together with account quotas/no-card/zero-cost panel: https://render.com/docs/free and
+https://render.com/docs/compute-plans. Current selection is Free, not a paid trial.
 
-An actual POST to its existing secret hook, selecting that SHA while suspended,
-returned **HTTP 409**, `{"conflict":"service is suspended"}`. Manual Deploy is
-absent while suspended. Saving a Docker-command setting does not build a new
-commit. [Official hook responses](https://render.com/docs/deploy-hooks) agree.
-Resume started boot `3c442349-9fb8-406c-8ab8-526ee021d977`, suffix p7cc6, at
-18:16:58.347Z, after the previous STOP, using the same artifact. It was suspended
-again and logged STOP at **18:17:37.659Z**. This proves stop/resume, not a new-SHA
-update while suspended. Private hook stays outside Git/Actions.
+Render can also suspend a Free service for unusually high service-initiated public
+traffic, including external JDBC. Its documented remedy is a paid upgrade, which
+is outside this project's budget: stop and discuss a separately approved free
+alternative instead of spending. No-card quota overages suspend/disable services
+or builds instead of introducing charges. This is an accepted occasional-demo
+limit, not a continuous-production guarantee.
 
-Render [deploy/restart behavior](https://render.com/docs/deploys) overlaps old/new
-instances. Do not use Manual Deploy, Restart or Rollback on a running Dixit
-process connected to this database. Memory-only maintenance does not coordinate
-processes. Do not resume a suspended predecessor after a replacement is active.
+## Start and first publication
 
-## Approved stop-first publication/update (changing URL)
+1. Select an exact develop SHA with successful CI, including actual image/JAR,
+   PostgreSQL, guard overlap rejection and isolated restore. Check remaining
+   shared quotas and all predecessors suspended with matching shutdown logs.
+2. For a new runtime/configuration, first create one **closed verification** Free
+   service with maintenance=true, guard=true, Auto-Deploy Off and limited secrets.
+   Review health, migration history, TLS/origin, React/deep links, old account/JWT
+   and completed history, and actual cohort exclusion without touching game rows.
+3. Suspend that verification service; confirm Tomcat/broker/Hikari closure and
+   released advisory locks. Create the reviewed final Free service with its exact
+   new origin and maintenance=false. This is deliberate reopening after review,
+   not a second concurrently playable application. Verify public behavior before
+   sharing its URL. Keep every predecessor suspended.
 
-The owner explicitly approved this alternative after the 409 test:
+Render **cannot deploy a new SHA while suspended** (actual 409). Resume starts
+its previous deployment. A verified B test also showed that **Save only**, then
+suspend/resume, retains previous runtime environment values: maintenance remained
+true. Do not use that path to apply a new version or new startup configuration.
+[Official save semantics](https://render.com/docs/configure-environment-variables).
+Detailed provider evidence is in DEV-062/065/070 and ADR-0010.
 
-1. Select a develop SHA with successful CI including actual image and restoration.
-   Confirm available shared quotas, no paid selection and Auto-Deploy Off.
-2. For an existing game service, owner runs `maintenance.py --enable` with hidden
-   ADMIN input. Wait activeGameCount=0; let games finish, preserve waiting lobbies.
-3. Create the protected backup and verify isolated restoration. Keep dump/key/JWT
-   separately outside Git. No managed database is overwritten for testing.
-4. Suspend the old service. Confirm provider Suspended, no pending deployment and
-   matching shutdown/process-closure logs. A failed HTTP request alone is not
-   proof. If closure cannot be established, stop and obtain provider evidence.
-5. Create one **new Free** Docker service, with the approved SHA and the above
-   external backend configuration. Never start it before predecessor closure.
-   Verify actual deployed SHA and one playable service. Keep all predecessors
-   suspended; no horizontal scaling or rolling update.
-6. Wait health UP, then check React/deep links/assets/notices, login/registration,
-   authenticated REST/STOMP/SockJS, reconnection, privacy, history/statistics.
-   Publish the **new URL** only after acceptance. Existing JWT/account/history
-   remain usable on the new origin; a browser may need to sign in there.
-7. Exercise an idle cold start without uptime pings, and a controlled game-service
-   replacement. Record HTTP, automated and visual results separately.
+## Update or rollback
 
-A new service means a new onrender.com URL. That tradeoff and downtime are
-accepted, not a promise of a fixed public hostname. Suspended services are not
-billed; do not delete predecessors or add resources without the relevant scope.
+1. If idle, wake the current URL and wait for health UP before using the operator
+   helper (its requests time out before a several-minute cold start). Owner
+   authenticates through the existing interactive helper, never chat or
+   password arguments: `maintenance.py --url CURRENT_URL --enable`.
+2. Require enabled=true and activeGameCount=0. Let active games finish; do not
+   silently cancel historical records or remove waiting lobbies.
+3. Make an encrypted dump and verify isolated restoration/application startup
+   using supabase.md. Keep dump, encryption key and JWT separately outside Git.
+4. Suspend the current service. Require provider Suspended, no pending deployment
+   and matching Tomcat/broker/Hikari shutdown logs. A failed URL or a blank metrics
+   graph is not proof. Check advisory cohort locks are released before replacement.
+5. Follow the closed-review/final-Free sequence above for the exact CI-green SHA.
+   Verify actual source, one playable service, old fixture continuity and gameplay.
+   Distribute the **new URL** only after acceptance.
 
-Rollback follows the same drain/backup/suspend/closure/new-Free-service sequence,
-built from a schema-compatible previous SHA. Reverting application code does not
-undo migrations or data. For incompatible recovery restore into an isolated
-compatible database, contrast rows/sequence/Flyway and boot there before agreeing
-any controlled switch. Never test restore over the managed source.
+Rollback uses the same stop-first procedure and a schema-compatible **guarded**
+SHA (712116a or later verified guard implementation), not resuming unguarded A.
+Code rollback does not reverse migrations/data. An incompatible data recovery
+requires a separately reviewed switch after restoring into an isolated compatible
+database and checking tables, sequence, Flyway and real startup. Never test restore
+over the managed source. No automatic CD is configured; first and subsequent
+publications are manual. Any future CD needs manual approval before publishing.
 
-## Resource and administrator gates
+## Verification and diagnostics
 
-Owner-approved original art and the self-hosted OFL Bree Serif font replace the
-unaccredited inherited graphics/font. All 36 cards are distinct narrative images;
-IDs and database history remain. See public-assets.md and shipped notices under
-/static/notices. Code/academic notices remain; no inference from the POM's licence
-was used for inherited illustrations.
-
-Exactly six privately inventoried fictitious ADMINs were downgraded to PLAYER
-only after verified encrypted backup. Passwords and history were preserved. The
-owner then ran hidden terminal bootstrap and chose their own credentials. A
-read-only check found one ADMIN and no synthetic ADMIN. No default password,
-public bootstrap endpoint or bulk deletion. See DEV-064 and supabase.md.
-
-## Reproducible public acceptance
-
-After `npm ci` with the project's supported Node 22, the owner-run script creates
-four identifiable PLAYER fixtures and plays eight rounds through HTTPS REST and
-live authenticated WebSockets/STOMP. It checks hands/votes/order, replenishment,
-reconnection, history/statistics/achievements. It never reads backend secrets or
-runs in ordinary CI. Use a private owner-controlled output directory:
+Health may include liveness/readiness group names, but no components/details.
+Check HTTPS/redirect, root/deep links/assets/licence notices, anonymous private API
+401, authenticated REST, actual WSS/STOMP/SockJS, privacy, reconnection, a complete
+four-player game, replenishment/history/statistics/achievements, idle wake and
+stable data after replacement. Separate automated HTTP/WS from actual visual
+observations; inherited Phase 4 visual debt/mobile/other-network checks remain.
 
 ```sh
-node scripts/operations/public_acceptance.mjs --url https://APPROVED.onrender.com --private-output /private/demo-acceptance.json --acknowledge-fixtures
-```
-
-The output contains only synthetic account credentials/tokens and must stay 0600
-outside Git/public artifacts. This is automated acceptance, not desktop/mobile
-visual acceptance; use optional `--visual-pauses` to stop at key game phases
-while observing the actual browser product. Preserve the
-Phase 4 visual debt until the relevant journeys are actually observed.
-
-Route: feature/* or fix/* → PR → develop; main remains the owner's responsibility.
-
-
-## Current supervised acceptance checkpoint (2026-11-04)
-
-Initial service `dixit-demo-20261103-a`, id `srv-dblmh5tg1s2s73ct21i0`,
-https://dixit-demo-20261103-a.onrender.com, deploy
-`dep-dblmh6dg1s2s73ct23b0`, actual SHA
-`8377bad18af4226c82e36c104b7cef19b3b2d828` (Actions 41874465899 SUCCESS).
-Render marked Live at 18:23:13 CET. Startup on 0.1 CPU took 180.6 seconds for
-Spring; do not promise a one-minute cold start. Health may include group names
-(liveness/readiness), with no component/details exposure.
-
-Public four-PLAYER acceptance completed eight rounds, reconnection, scoped REST
-views, live WSS/STOMP, replenishment, friendship/invitation, history/statistics and
-achievements. One participant's actual desktop UI was observed through the key
-phases, including original art, social presence, chat and final reveal; this is
-not four independent GUI clients or full inherited Phase 4 visual acceptance.
-Mobile viewport override did not take effect, so no mobile claim is made.
-
-`public_persistence.py` is read-only and uses only the protected synthetic fixture:
-
-```sh
+node scripts/operations/public_acceptance.mjs --url https://APPROVED.onrender.com --private-output /private/demo-acceptance.json --acknowledge-fixtures --visual-pauses
 python3 scripts/operations/public_persistence.py --url https://APPROVED.onrender.com --fixture /private/demo-acceptance.json --save-baseline /private/demo-baseline.json
 python3 scripts/operations/public_persistence.py --url https://REPLACEMENT.onrender.com --fixture /private/demo-acceptance.json --compare /private/demo-baseline.json
 ```
 
-It checks stable JWT/private hands, all historical authors/votes, final hands,
-stats/history and per-actor view fingerprints. It preserves playedCards order in
-the fingerprint so an anonymous-order change after restart is detected. The
-second URL must be explicitly selected as the authorized replacement; credentials
-are neither printed nor sent to an arbitrary host. Ordinary CI never runs this.
-Idle startup was subsequently verified: Render stopped instance 6v54q at 17:54:44Z; wake request at 17:56:25Z reached health UP after 220.7 seconds on qv4rw. Recovery cancelled zero games. The read-only continuity checker passed with all four previous JWTs and identical history/view fingerprints. Stop-first replacement to a different application SHA remains pending.
+Use supported Node 22 with the locked frontend ws dependency installed by npm ci.
+The --visual-pauses option requires an interactive terminal before any fixture
+creation; ordinary non-paused automation does not.
+Synthetic PLAYER credentials/results remain private 0600 files outside Git; never
+run these against an arbitrary host or ordinary CI. Keep playedCards order in
+continuity fingerprints; only inherently unordered collections are normalized.
+The owner-operated maintenance launchers target the current C URL. Owner account
+identity is in a local protected reference, not its password. Reset uses the
+backup-gated console-only helper documented in supabase.md.
 
-## Provider maintenance and the approved database guard (2026-11-04)
+For failure: inspect Render Events/logs and appropriate health only; never enable
+SQL bind logging or show environment values. If a guard conflict appears, do not
+disable it: establish predecessor closure, then retry through the approved path.
+Free platform maintenance can require operator intervention before Render's
+failure deadline. No high availability is claimed.
 
-Render may overlap stateless processes during its own maintenance, including
-Free without advance notice. ADR-0011 adds DIXIT_SINGLE_INSTANCE_GUARD=true to
-**the next** service's required configuration. Initial service A is unguarded;
-stop it before starting a guarded replacement. Do not enable this by a rolling
-update over A. The guard fences runtime database sessions; it cannot prevent
-Render physically starting another JVM or guarantee uninterrupted service.
-A rejected provider replacement can require a manual stop/retry. Keep monitoring
-Render notices. Four actual Supabase session-pooler tests passed (cohorts, concurrent claim,
-connection termination/reconnect and Hikari physical-session lifetime), with no
-application-table writes. A local production JAR also migrated an empty isolated PostgreSQL 17 database and
-reached health UP; a second JAR was rejected before migrations/HTTP/recovery while
-the first remained live. Spring bean-registration regression passes. Full CI and
-guarded public replacement remain pending; do not describe the protection as already deployed.
+## Resources, backups and permissions
 
+All 36 distinct narrative cards and public visuals now have original-art CC0
+provenance; Bree Serif is self-hosted under OFL with required notices. IDs and
+historical relations are preserved. See public-assets.md and /static/notices.
+Exactly six authorized fictitious ADMINs became PLAYER after a verified backup;
+the owner has their own administrator, with no default/public bootstrap password.
 
-## Resume after the owner's computer shutdown
+Backups are **manual**, not supplied as an assumed Free-plan guarantee. The owner
+is responsible for a verified encrypted copy before updates/migrations and on
+days with real demo activity, and separate protected key/JWT custody. Existing
+copies are local and outside Git; external physical custody is not accredited.
+Do not upload dumps to public Actions artifacts or add paid storage. Restore
+procedure and actual evidence are in supabase.md and DEV-070/071.
 
-The public service runs on Render, independently of the owner's computer. Leave
-A running; do not resume the suspended probe or create a second playable service.
-The owner has already approved the guard; no new architecture permission is needed.
-
-1. Check PR #62 CI, including actual concurrent-JAR rejection. Resolve failures,
-   review the final diff, then integrate feature/single-instance-guard → PR → develop
-   preserving commits. Confirm integration CI and select its exact SHA.
-2. Ask the owner to run the protected `close-demo-for-update` launcher locally to
-   authenticate ADMIN with hidden password; require maintenance enabled and zero
-   active games. Never request the password in chat.
-3. Make and verify an encrypted backup/isolated restore. Existing latest pre-demo
-   backup is 20261103T182607Z; it does not include the new public acceptance game.
-4. Suspend A; verify provider suspension and matching application shutdown logs.
-   Keep it suspended. Create the approved replacement Free service with Auto-Deploy
-   Off, exact checked develop SHA, same stable JWT/database roles/TLS CA, new exact
-   origin and DIXIT_SINGLE_INSTANCE_GUARD=true. No card or paid resources.
-5. Verify health, old fixture continuity against the private baseline, another full
-   four-player WSS/STOMP game and actual browser UI. Record the new URL/SHA, actual
-   guard evidence and controlled replacement. Only then assess Phase 5 closure.
-
-Private operator files/configs/fixtures/backups remain outside Git or ignored;
-paths and safe launcher usage are documented in the changelog/runbooks, never
-actual values. Full Phase 4 visual debt/mobile/other-network acceptance remains.
+All evolution follows **feature/* or fix/* → PR → develop**, preserving commits.
+No main changes, releases or Phase 6/7 work are part of this operation.

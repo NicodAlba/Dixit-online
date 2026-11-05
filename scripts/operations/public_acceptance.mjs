@@ -9,6 +9,7 @@ const require=createRequire(new URL('../../frontend/package.json',import.meta.ur
 const WebSocket=require('ws'); // Existing locked frontend tooling; npm ci first.
 const {values}=parseArgs({options:{url:{type:'string'},'private-output':{type:'string'},'acknowledge-fixtures':{type:'boolean'},'visual-pauses':{type:'boolean'}}});
 assert(!process.env.CI && !process.env.GITHUB_ACTIONS,'Not an ordinary CI task');
+assert(!values['visual-pauses'] || (process.stdin.isTTY && process.stdout.isTTY),'Visual pauses require an interactive terminal before creating fixtures');
 assert(values['acknowledge-fixtures'] && values['private-output'],'Explicit fixture acknowledgement and private output required');
 const base=new URL(values.url);assert(base.protocol==='https:' && base.hostname.endsWith('.onrender.com') && base.pathname==='/','Approved HTTPS Render demo only');
 const origin=base.origin;

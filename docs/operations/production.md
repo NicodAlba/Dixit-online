@@ -146,3 +146,22 @@ Main/releases corresponden al propietario; hay autorización condicionada de dem
 pero no existe URL pública. Bloqueos y procedimiento en render-free.md.
 
 Integración concreta de Supabase, roles, conexión y validación gestionada: [supabase.md](supabase.md). No añadir sus secretos a Actions; las PR siguen usando PostgreSQL aislado.
+
+## Exclusión de instancia para Render
+
+`DIXIT_SINGLE_INSTANCE_GUARD=true` es obligatorio en el runtime de la demo Render.
+Instala el inicializador en todas las conexiones físicas Hikari, reclama antes
+de Flyway/JPA/recuperación y rechaza otro proceso con SQLSTATE 55000. Pool máximo
+cinco, mínimo inactivo uno; sin tabla o conexión dedicada nueva. Solo conexión
+directa o pooler de sesión (5432), nunca transaccional. Herramientas offline del
+propietario siguen siendo operaciones separadas explícitas y no ejecutan el
+motor de partidas. ADR-0011 delimita garantías y fallos de sustitución posibles.
+
+Producción ordinaria usa `DIXIT_RECOVER_INTERRUPTED_GAMES=true` y
+`DIXIT_MAINTENANCE_ENABLED=false`: salud/admisión cerradas hasta recuperar mediante
+cancelación aprobada, después reapertura. True en mantenimiento fuerza arranque
+cerrado; no confundir reabrir la bandera en memoria con actualizar configuración
+de un despliegue. Render Save only/Resume no aplica la nueva configuración al
+artefacto anterior: seguir el procedimiento de render-free.md. No rolling sobre
+el proceso activo, incluso con guard. No continuidad automática de temporizadores,
+presencia o WebSockets ni revocación JWT global inmediata por cambiar contraseña.
