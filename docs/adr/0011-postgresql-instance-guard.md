@@ -1,7 +1,8 @@
 # ADR-0011 — Fence runtime PostgreSQL sessions by application process
 
-Status: approved by the owner on 2026-11-04; implementation under verification,
-not yet enabled on the initial public service.
+Status: approved by the owner on 2026-11-04; implemented and verified locally,
+in CI, on Supabase session pooling and on actual Render B/C processes on 2026-11-05.
+The original unguarded A remains suspended.
 
 ## Context
 
@@ -55,3 +56,13 @@ Tests must cover competing cohorts, multiple sessions, pool return/close,
 connection termination/reconnect, and rejection of a second executable before
 migrations/recovery. Actual managed-pooler and public replacement validation must
 be recorded separately from local tests and CI.
+
+
+## Executed evidence
+
+CI 41883769953 and integration 42025226658 proved second-JAR rejection before
+migrations/recovery. Four actual managed-session tests passed. Render B held one
+cohort and rejected a competing UUID (55000), then released every guard on verified
+shutdown. Render C expanded to five physical sessions in one cohort while its
+complete four-player game passed. See DEV-069/070 for exact SHAs, times and limits.
+This does not promise physical JVM exclusivity or uninterrupted provider updates.

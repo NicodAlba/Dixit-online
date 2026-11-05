@@ -108,3 +108,14 @@ completed history/lobby/JWT and new admissions without ADMIN. PostgreSQL regress
 checks row/score preservation and idempotence; recovery unit checks failure/health
 and deliberate closed mode. The image enables recovery and explicit maintenance.
 This is cancellation after interruption, not continuation of an active game.
+
+## Runtime exclusivity and owner recovery tools
+
+The PostgreSQL selection includes competing runtime cohorts, physical pooled
+connections, connection termination/reconnect and owner password recovery
+restricted to an exact ADMIN identity. The production JAR smoke holds one guarded
+process healthy while a second executable must fail before migrations, HTTP
+startup or interrupted-game recovery. It repeats normal starts/restored data
+without connecting CI to Supabase or Render. The owner-only console recovery
+wrapper is never invoked against a managed database by CI. Actual publication
+remains manual; no workflow or push deploys a public application.

@@ -47,3 +47,18 @@ See operations/render-free.md and DEV-062/065. Probe lifecycle logs, unique boot
 and instance identifiers, suspended provider state and the actual 409 were
 observed. This decision does not itself establish successful public gameplay,
 visual acceptance, cold startup or a game-service update; those need execution.
+
+
+## Operational clarification (2026-11-05)
+
+ADR-0011 explicitly approves a PostgreSQL session guard for provider maintenance;
+this supersedes the earlier exclusion of adding a database guard without approval.
+Manual updates still use stop-first/new-Free-service, never overlapping engines.
+
+Actual B testing showed that saving environment changes with **Save only**, then
+suspending/resuming, starts the previous deployment configuration (maintenance
+remained true). Resume is not a way to deploy a new configuration. Use a closed
+verification service, stop it after review, then create the final reviewed Free
+service with ordinary maintenance=false. This preserves automatic reopening after
+cold startup instead of silently requiring ADMIN after each idle. New public
+origin and any runtime differences must be checked before sharing the final URL.
