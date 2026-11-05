@@ -188,3 +188,16 @@ can refresh a short-lived synthetic PLAYER token solely for the isolated restore
 database's smoke checks. It does not extend production token lifetimes or alter
 the managed database. Backup files, encryption keys and fixtures remain private,
 outside Git; the owner is responsible for separate protected custody.
+
+## Forgotten owner administrator password
+
+The chosen product password is never stored in documentation/configuration; only
+its BCrypt hash is persisted. With explicit owner authorization, first query the
+existing ADMIN identity using the restricted JDBC role, then create and verify a
+protected encrypted backup. Use `scripts/operations/reset_admin_password.py`
+with protected backend config, the production JAR and `--verified-backup` outside
+Git. The owner personally enters the exact username/account ID and chooses a
+new password twice through hidden terminal input. Only that ADMIN row's password
+changes; role, ID and history remain. No endpoint, default password, shell password
+argument or infrastructure-secret reuse. Existing JWTs are not globally revoked
+immediately; this pre-existing limitation remains until their normal expiry.
