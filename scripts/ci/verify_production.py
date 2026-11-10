@@ -105,6 +105,10 @@ with server("first") as base:
     print("Second production process rejected before migrations/recovery while the first remains healthy", flush=True)
     for path in ("/", "/login", "/register", "/friends", "/games/123/game", "/users/123/achievements"):
         assert b'<div id="root"></div>' in request(base, path)
+    definition = request(base, "/v3/api-docs")
+    assert re.fullmatch(r"3\.\d+\.\d+", definition["openapi"]), "Missing OpenAPI version"
+    assert "/api/v1/games/{id}" in definition["paths"], "Game API missing from documentation"
+    assert definition["components"]["securitySchemes"]["bearerAuth"]["scheme"] == "bearer"
     assert request(base, "/ws/info")["websocket"] is True
     for origin, expected in ((os.environ["DIXIT_ALLOWED_ORIGINS"].split(",")[0], 200), ("https://untrusted.example", 403)):
         req = Request(base + "/ws/info", headers={"Origin": origin})
