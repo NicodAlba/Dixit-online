@@ -2,6 +2,7 @@ package es.us.dp1.lx_xy_24_25.dixit.configuration;
 import org.springframework.context.annotation.Configuration;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 
 @Configuration
 @OpenAPIDefinition(
+  servers = @Server(url = "/", description = "Current application"),
   info =@Info(
     title = "Game APIs",
     version = "v1.0",
