@@ -2,7 +2,7 @@
 
 ## Abrir y jugar
 
-Demo: https://dixit-demo-20261110-e.onrender.com
+Demo: https://dixit-demo-20261110-f.onrender.com
 
 Abre el enlace y utiliza **Create account** o **Log in**. No necesitas ejecutar
 la aplicación en tu ordenador; Render y Supabase siguen funcionando cuando lo
@@ -44,7 +44,7 @@ queda oculta. Exige `enabled: true` y `activeGameCount: 0`. Si hay partidas acti
 deja que terminen. El programador debe comprobar copia/restauración y parada antes
 de sustituir el servicio. Si solo se hizo mantenimiento sin sustituirlo, el helper
 `open-demo-after-update` reabre el servicio actual con la misma autenticación.
-Los launchers locales apuntan al servicio E; deben actualizarse al cambiar de URL.
+Los launchers locales apuntan al servicio F; deben actualizarse al cambiar de URL.
 
 Los pushes y la CI de GitHub no publican automáticamente la aplicación. La
 publicación sigue siendo manual y supervisada; main y releases son tuyos.

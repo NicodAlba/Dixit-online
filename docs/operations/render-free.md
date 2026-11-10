@@ -6,20 +6,24 @@ Free provides PostgreSQL. Main/releases remain the owner's responsibility.
 
 ## Current publication
 
-Current service: `dixit-demo-20261110-e`, `srv-dbpfilugekts739qqdvg`.
-URL: https://dixit-demo-20261110-e.onrender.com
-Deployment: `dep-dbpfimegekts739qqg90`.
-Source: develop `442183faabe5481f8bea3f3eabd4c6faf7dbd022`, integration CI
-[42802578357](https://github.com/NicodAlba/Dixit-online/actions/runs/42802578357)
-SUCCESS. This update contains public OpenAPI/Docs and the embedded lobby friend
-cards. Public Swagger uses the relative current origin, and anonymous private
-requests still return 401. The sixteen tables/Flyway/sequence match the clean
-pre-start baseline. DEV-073–077 distinguish current verification from historical acceptance.
-The historical complete four-player game and 220.9-second idle wake of C are
-recorded in DEV-070/072; they are not new performance measurements of E.
+Current service: `dixit-demo-20261110-f`, `srv-dbpka6qfngtc73do3fk0`.
+URL: https://dixit-demo-20261110-f.onrender.com
+Deployment: `dep-dbpka7afngtc73do3gdg`.
+Source: develop `f2602d988e6f87d5361989de9ef466d1103f8ad8`, integration CI
+[42852721720](https://github.com/NicodAlba/Dixit-online/actions/runs/42852721720)
+SUCCESS: frontend 33 suites/192 tests, backend 277, PostgreSQL 17 49, Python 14;
+executable JAR, restored database and actual Docker image verified.
+DEV-078–080 cover durable invitation retirement, shared social cards and removal
+of decorative piles. Public desktop/mobile invitation review, confirmed acceptance
+and automatic lobby-to-game navigation were observed; the game hand remains visible
+and decorative nodes are absent. Full card-table interaction and expiration-message
+visual checks were performed locally, not repeated as a complete public game.
+All sixteen tables/Flyway/sequence matched the post-approved-cleanup baseline at
+startup. The historical complete four-player game and idle wake remain historical;
+the 226.2-second build/start observation of F is not an idle cold-start measurement.
 
 A (`srv-dblmh5tg1s2s73ct21i0`), B (`srv-dbm7ai8u01pc738jomv0`),
-C (`srv-dbm7itgae00c738ja350`), D (`srv-dbpf67rm8hqs73docftg`) and the isolated probe (`srv-dbl262d9fdbs73cljur0`)
+C (`srv-dbm7itgae00c738ja350`), D (`srv-dbpf67rm8hqs73docftg`) E (`srv-dbpfilugekts739qqdvg`) and the isolated probe (`srv-dbl262d9fdbs73cljur0`)
 remain **suspended**. Never resume a predecessor while the current service uses
 this database. Do not use Manual Deploy, Restart, Rollback, scaling or an
 environment save-and-deploy over a live game process.
@@ -177,3 +181,5 @@ procedure and actual evidence are in supabase.md and DEV-070/071.
 
 All evolution follows **feature/* or fix/* → PR → develop**, preserving commits.
 No main changes, releases or Phase 6/7 work are part of this operation.
+
+Operator note: avoid full accessibility/DOM dumps of Render environment forms: masked fields may still serialize secret values. Use metadata-only checks. DEV-080 records a private tool-output exposure; review rotation before sharing the technical conversation. No values belong in this manual.
