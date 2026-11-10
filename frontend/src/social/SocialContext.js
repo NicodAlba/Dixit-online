@@ -2,7 +2,7 @@ import React, {createContext, useCallback, useContext, useEffect, useRef, useSta
 import {useLocation, useNavigate} from "react-router-dom";
 import tokenService from "../services/token.service";
 import SocialPanel from "./SocialPanel";
-import {useApplicationConnection} from "../presence/PresenceContext";
+import {useApplicationConnection, usePresenceData} from "../presence/PresenceContext";
 import SocialNotifications from "./SocialNotifications";
 import {socialChanges} from "./socialChanges";
 
@@ -16,6 +16,7 @@ export function SocialProvider({jwt, children}) {
     const baseline = useRef(null);
     const seen = useRef(new Set());
     const connection = useApplicationConnection();
+    const presence = usePresenceData();
     const connectionState = connection?.state;
     const generation = connection?.generation;
     const [friends, setFriends] = useState([]);
@@ -93,7 +94,7 @@ export function SocialProvider({jwt, children}) {
     };
     const relation = accountId => relationships.find(item => item.accountId === accountId);
     const context = {
-        open, openPanel, closePanel, section, setSection, notifications, dismissNotification, friends, relationships, loading, loaded, error, feedback, pending,
+        presence, open, openPanel, closePanel, section, setSection, notifications, dismissNotification, friends, relationships, loading, loaded, error, feedback, pending,
         refresh, request, perform, relation, notifyChat, clearChatNotifications, selfId: tokenService.getUser()?.id,
         sendRequest: accountId => perform(() => request(`/api/v1/friends/addFriend/${accountId}`, "POST"), "Friend request sent."),
         acceptRequest: requestId => perform(() => request(`/api/v1/friends/${requestId}/accept`, "PATCH"), "Friend request accepted."),
