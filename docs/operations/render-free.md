@@ -1,25 +1,28 @@
 # Operate the occasional Render Free demo
 
-Updated 2026-11-05. Budget **0 EUR**: no card, paid plan, addon, domain, disk or
+Updated 2026-11-10. Budget **0 EUR**: no card, paid plan, addon, domain, disk or
 registry publication. One Spring Boot application serves React; Supabase Dixit
 Free provides PostgreSQL. Main/releases remain the owner's responsibility.
 
 ## Current publication
 
-Final service: `dixit-demo-20261105-c`, `srv-dbm7itgae00c738ja350`.
-URL: https://dixit-demo-20261105-c.onrender.com
-Deployment: `dep-dbm7iu8ae00c738ja4qg`.
-Source: develop `07efbbe1088304280a0859961511272c02b0a3ce`, integration CI
-[42027840587](https://github.com/NicodAlba/Dixit-online/actions/runs/42027840587)
-SUCCESS. The complete four-player game, privacy/reconnection, history/statistics, HTTPS and
-actual desktop views passed. Final C idle wake passed in 220.9 seconds, preserving
-all sixteen tables/Flyway/sequence, stable JWT/private views and a new WSS/STOMP
-subscription. Phase 5 is closed for this occasional demo; see DEV-070/072.
+Current service: `dixit-demo-20261110-e`, `srv-dbpfilugekts739qqdvg`.
+URL: https://dixit-demo-20261110-e.onrender.com
+Deployment: `dep-dbpfimegekts739qqg90`.
+Source: develop `442183faabe5481f8bea3f3eabd4c6faf7dbd022`, integration CI
+[42802578357](https://github.com/NicodAlba/Dixit-online/actions/runs/42802578357)
+SUCCESS. This update contains public OpenAPI/Docs and the embedded lobby friend
+cards. Public Swagger uses the relative current origin, and anonymous private
+requests still return 401. The sixteen tables/Flyway/sequence match the clean
+pre-start baseline. DEV-073–077 distinguish current verification from historical acceptance.
+The historical complete four-player game and 220.9-second idle wake of C are
+recorded in DEV-070/072; they are not new performance measurements of E.
 
-A (`srv-dblmh5tg1s2s73ct21i0`), B (`srv-dbm7ai8u01pc738jomv0`) and the isolated
-probe (`srv-dbl262d9fdbs73cljur0`) remain **suspended**. Never resume a predecessor
-while the current service uses this database. Do not use Manual Deploy, Restart,
-Rollback, scaling or an environment save-and-deploy over a live game process.
+A (`srv-dblmh5tg1s2s73ct21i0`), B (`srv-dbm7ai8u01pc738jomv0`),
+C (`srv-dbm7itgae00c738ja350`), D (`srv-dbpf67rm8hqs73docftg`) and the isolated probe (`srv-dbl262d9fdbs73cljur0`)
+remain **suspended**. Never resume a predecessor while the current service uses
+this database. Do not use Manual Deploy, Restart, Rollback, scaling or an
+environment save-and-deploy over a live game process.
 
 ## Configuration and accepted limits
 
@@ -106,9 +109,13 @@ Detailed provider evidence is in DEV-062/065/070 and ADR-0010.
 4. Suspend the current service. Require provider Suspended, no pending deployment
    and matching Tomcat/broker/Hikari shutdown logs. A failed URL or a blank metrics
    graph is not proof. Check advisory cohort locks are released before replacement.
-5. Follow the closed-review/final-Free sequence above for the exact CI-green SHA.
-   Verify actual source, one playable service, old fixture continuity and gameplay.
-   Distribute the **new URL** only after acceptance.
+5. For new startup/guard/security/database infrastructure, follow the closed-review/
+   final-Free sequence above. For a presentation/OpenAPI patch with unchanged
+   startup, admission, instance guard and migrations, the existing runtime review
+   plus CI image/restore and local UI verification can precede a single replacement
+   Free service after the old process has stopped. Verify the exact CI-green SHA,
+   one playable service, existing normal data and the affected public UI/API.
+   Distribute the **new URL** only after acceptance; never overlap playable processes.
 
 Rollback uses the same stop-first procedure and a schema-compatible **guarded**
 SHA (712116a or later verified guard implementation), not resuming unguarded A.
@@ -139,7 +146,7 @@ creation; ordinary non-paused automation does not.
 Synthetic PLAYER credentials/results remain private 0600 files outside Git; never
 run these against an arbitrary host or ordinary CI. Keep playedCards order in
 continuity fingerprints; only inherently unordered collections are normalized.
-The owner-operated maintenance launchers target the current C URL. Owner account
+The owner-operated maintenance launchers target the current E URL. Owner account
 identity is in a local protected reference, not its password. Reset uses the
 backup-gated console-only helper documented in supabase.md.
 
@@ -154,8 +161,12 @@ failure deadline. No high availability is claimed.
 All 36 distinct narrative cards and public visuals now have original-art CC0
 provenance; Bree Serif is self-hosted under OFL with required notices. IDs and
 historical relations are preserved. See public-assets.md and /static/notices.
-Exactly six authorized fictitious ADMINs became PLAYER after a verified backup;
-the owner has their own administrator, with no default/public bootstrap password.
+The six fictitious ADMINs first became PLAYER; the subsequent authorized cleanup
+retired 144 exactly inventoried synthetic accounts and their test-only graphs.
+The four ordinary accounts, owner ADMIN and three normal games remain. Do not
+run managed acceptance again to repopulate public rankings; use isolated fixtures.
+Backup verification can generate an eight-round fixture only in its disposable
+restored PostgreSQL after all original rows have matched. See DEV-074.
 
 Backups are **manual**, not supplied as an assumed Free-plan guarantee. The owner
 is responsible for a verified encrypted copy before updates/migrations and on
