@@ -52,23 +52,27 @@ export function SocialProvider({jwt, children}) {
         const revision = ++requestRevision.current;
         setLoading(true);
         try {
-            const [[friends, relationships], invitationResult] = await Promise.all([
-                Promise.all([request("/api/v1/friends"), request("/api/v1/friends/relationships")]),
+            const [socialResult, invitationResult] = await Promise.all([
+                Promise.all([request("/api/v1/friends"), request("/api/v1/friends/relationships")])
+                    .then(data => ({data}), error => ({error})),
                 request("/api/v1/games/invitations").then(data => ({data}), error => ({data: null, error})),
             ]);
             if (!alive.current || revision !== requestRevision.current) return;
-            if (![friends, relationships].every(Array.isArray)) throw new Error("Unable to load social updates. Please try again.");
-            // Invitation failure must not disable friendship actions. Its section retains its own error feedback.
-            if (Array.isArray(invitationResult.data)) {
+            // Process invitation data/errors even when Friends fails (including an expired session).
+            const invitationsAvailable = Array.isArray(invitationResult.data);
+            if (invitationsAvailable) {
                 setInvitations(invitationResult.data); setInvitationError(null);
+            } else setInvitationError(invitationResult.error || new Error("Unable to load invitations."));
+            if (socialResult.error) throw socialResult.error;
+            const [friends, relationships] = socialResult.data;
+            if (![friends, relationships].every(Array.isArray)) throw new Error("Unable to load social updates. Please try again.");
+            // Friendship actions and notifications remain independent of invitation failure.
+            if (invitationsAvailable) {
                 const snapshot = {relationships, invitations: invitationResult.data};
                 const changes = socialChanges(baseline.current, snapshot, seen.current);
                 baseline.current = snapshot;
                 if (changes.length) setNotifications(previous => [...previous, ...changes].slice(-3));
-            } else {
-                baseline.current = null;
-                setInvitationError(invitationResult.error || new Error("Unable to load invitations."));
-            }
+            } else baseline.current = null;
             setFriends(friends); setRelationships(relationships); setError(null); setLoaded(true);
         } catch (error) {if (alive.current && revision === requestRevision.current) {baseline.current = null; setError(error.message);}}
         finally {if (alive.current && revision === requestRevision.current) setLoading(false);}
