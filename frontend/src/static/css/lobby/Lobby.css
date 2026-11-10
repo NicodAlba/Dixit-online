@@ -211,8 +211,6 @@
 .lobby-lobby-card {width: min(100%, 384px); padding-top: 3.2rem; background: rgba(255, 250, 240, .96); overflow-wrap: anywhere;}
 .lobby-lobby-card h1 {font-size: 1.5rem;}
 .lobby-friends {max-width: 100%;}
-.lobby-friends .ls-container {width: 330px; max-width: 100%; max-height: 65vh; padding: 12px; background: rgba(255, 250, 240, .96);}
-.lobby-friends td {vertical-align: middle; overflow-wrap: anywhere;}
 .lobby-status, .lobby-help {font-size: .9rem;}
 .lobby-error {padding: 10px; background: #f9dce2; border: 1px solid #a43c55; border-radius: 6px; color: #6c182c;}
 .lobby-player-count.enough {color: #146334;}
@@ -226,10 +224,31 @@
 @media (max-width: 760px) {
     .lobby-page-container {padding: 20px 12px; align-content: flex-start; gap: 16px;}
     .lobby-lobby-card, .lobby-friends {width: 100%; max-width: 440px;}
-    .lobby-friends .ls-container {width: 100%; max-height: none;}
 }
 
 .lobby-page-container {min-height: calc(100vh - 64px); min-height: calc(100dvh - 64px);}
 .lobby-lobby-card h1 {color: #24180f !important;}
 .lobby-player-empty {color: #5d5662;}
 .lobby-btn, .btn-cancel, .btn-confirm {min-height: 44px;}
+
+/* Embedded version of the shared social cards; no second drawer or social transport. */
+.lobby-friends {width: min(100%, 350px);}
+.lobby-friend-panel {overflow: hidden; border: 1px solid #c9a36b; border-radius: 18px; background: #fff8eb; color: #37261b; box-shadow: 0 12px 32px #59412124;}
+.lobby-friend-header {padding: 20px; border-bottom: 1px solid #dfc69a; background: linear-gradient(#fff8e8bf, #fff1d5d9), url('../../images/SocialBackground.png') center 45% / cover;}
+.lobby-friend-header h2 {display: flex; align-items: center; gap: 9px; margin: 0; font-size: 1.4rem; color: #543b25;}
+.lobby-friend-header p {margin: 7px 0 0; font: 13px/1.5 'Segoe UI', sans-serif; color: #6b5033;}
+.lobby-friend-body {padding: 16px; background: linear-gradient(#fffaf1, #fff3df);}
+.lobby-friend-toolbar {display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; font-size: .85rem; color: #705335;}
+.lobby-friend-panel button {font: inherit; min-height: 44px; border: 1px solid #b78c42; border-radius: 9px; padding: 9px 12px; background: #fff7e8; color: #503916; transition: background-color .15s, box-shadow .15s, transform .15s;}
+.lobby-friend-panel button.social-action-primary {background: #f4d38e;}
+.lobby-friend-panel button:hover:not(:disabled) {background: #ffe1a1; box-shadow: 0 3px 8px #51361b22; transform: translateY(-1px);}
+.lobby-friend-panel button:disabled {opacity: .65; cursor: default;}
+.lobby-friend-panel .lobby-friend-refresh {display: grid; place-items: center; min-width: 44px; padding: 8px; background: transparent;}
+.lobby-friend-list {max-height: min(48dvh, 420px); overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 3px;}
+.lobby-friend-list .social-person {transition: border-color .15s, box-shadow .15s;}
+.lobby-friend-list .social-person:hover {border-color: #bc9457; box-shadow: 0 4px 12px #70512b14;}
+.lobby-invite-result {margin: 0; color: #35613a; font-size: .85rem;}
+.lobby-friend-panel .social-error {margin: 0;}
+.lobby-friend-panel :is(button, a):focus-visible {outline: 3px solid #a16b16; outline-offset: 3px;}
+@media(max-width: 760px) {.lobby-friends {width: 100%; max-width: 440px;} .lobby-friend-list {max-height: 360px;}}
+@media(prefers-reduced-motion: reduce) {.lobby-friend-panel *, .lobby-friend-panel *:hover {transition: none !important; animation: none !important; transform: none !important;}}
