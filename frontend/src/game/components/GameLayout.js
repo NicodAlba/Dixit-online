@@ -42,7 +42,6 @@ export default function GameLayout({gameId, game, perspectiveId, loading, connec
                     <section className="game-turn-panel" aria-label="Game table">
                         {effect && <span key={effect.key} className={`game-motion-cue cue-${effect.kind}`} aria-hidden="true"><img src="/Cards/card_reversed.png" alt="" /></span>}
                         {children}<RoundRecap game={game} />
-                        <div className="table-piles" aria-hidden="true"><span className="table-pile"><img src="/Cards/card_reversed.png" alt="" />Draw pile</span><span className="table-pile table-discard"><img src="/Cards/card_reversed.png" alt="" />Discard</span></div>
                     </section>
                     {animatedHand}
                 </div>
