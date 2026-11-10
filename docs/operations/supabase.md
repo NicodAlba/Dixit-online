@@ -201,3 +201,22 @@ new password twice through hidden terminal input. Only that ADMIN row's password
 changes; role, ID and history remain. No endpoint, default password, shell password
 argument or infrastructure-secret reuse. Existing JWTs are not globally revoked
 immediately; this pre-existing limitation remains until their normal expiry.
+
+## Retirada de fixtures autorizada (2026-11-10)
+
+El propietario autorizó retirar las cuentas de aceptación identificadas exactamente en
+inventarios privados: 136 security_/restart_ y ocho demo_ acreditadas por sus archivos
+de aceptación. Se conservaron las cuatro cuentas normales, su ADMIN y tres partidas.
+No ejecutar de nuevo las fases de aceptación gestionada en esta base pública: crean
+fixtures. Utilizar PostgreSQL aislado para pruebas ordinarias.
+
+`scripts/operations/retire_test_accounts.py` exige inventario 0600, copia cifrada
+restaurada/verificada y reconocimiento explícito. Por defecto ensaya y revierte;
+`--apply` confirma únicamente ese inventario. Aborta ante identidad/rol cambiado,
+partida activa o participación normal. No usar prefijos como autorización de borrado.
+
+Después de limpiar la demo, `supabase_restore.py` verifica todas las filas originales
+y, si ya no existe una fixture sintética histórica válida de ocho turnos, genera
+una partida mediante la prueba existente **solo en PostgreSQL restaurado y aislado**
+para comprobar los reinicios del JAR. Esa alternativa requiere Maven/Java 21 y las
+fuentes del proyecto; no reintroduce usuarios de prueba en Supabase.
