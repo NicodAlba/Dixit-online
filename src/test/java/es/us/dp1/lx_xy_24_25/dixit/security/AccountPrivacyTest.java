@@ -19,6 +19,20 @@ class AccountPrivacyTest extends SecurityHttpSupport {
         } else if(node.isArray()) node.forEach(this::noAccountSecrets);
         else if(node.isTextual()) assertFalse(node.asText().matches(".*\\$2[aby]\\$[0-9]{2}\\$.*"),"No BCrypt hash in response");
     }
+    @Test void eachSessionReadsItsOwnIdentityAndAchievementsWithoutAnotherAccountsName() {
+        Account first=account(), second=account();
+        for(Account actor:List.of(first,second)) {
+            var profile=request(HttpMethod.GET,"/users/"+actor.id(),actor.token(),null);
+            status(200,profile);
+            assertEquals(actor.id(),profile.getBody().path("id").asInt());
+            assertEquals(actor.name(),profile.getBody().path("username").asText());
+            var achievements=request(HttpMethod.GET,"/users/"+actor.id()+"/achievements",actor.token(),null);
+            status(200,achievements);
+            assertEquals(12,achievements.getBody().size());
+            String other=actor.id()==first.id()?second.name():first.name();
+            assertFalse(achievements.getBody().toString().contains(other));
+        }
+    }
     @Test void readsRequireSessionAndAdminListButKeepSafeNameLookupAndProfile() {
         Account owner=account(), other=account(), admin=admin();
         status(401,request(HttpMethod.GET,"/users",null,null));
