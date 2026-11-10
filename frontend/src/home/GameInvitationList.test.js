@@ -6,6 +6,7 @@ const mockNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({useNavigate: () => mockNavigate}));
 jest.mock("../services/token.service", () => ({getLocalAccessToken: () => "token"}));
 jest.mock("../util/useFetchState", () => jest.fn());
+jest.mock("../social/SocialContext", () => ({useSocial: () => null}));
 const originalFetch = global.fetch;
 beforeEach(() => {
     jest.clearAllMocks();
@@ -28,7 +29,7 @@ test("network failures are visible and retain a valid invitation row", async () 
     global.fetch = jest.fn().mockRejectedValue(new Error("Network unavailable"));
     const {container} = render(<GameInvitationList />);
     expect(container.querySelector("tbody tbody")).toBeNull();
-    expect(screen.getByRole("button", {name: "Accept"}).closest("tr")).toHaveTextContent("host: 42");
+    expect(screen.getByRole("button", {name: "Accept"}).closest("li")).toHaveTextContent("Lobby 42");
     fireEvent.click(screen.getByRole("button", {name: "Accept"}));
     expect(await screen.findByRole("alert")).toHaveTextContent("Network unavailable");
     expect(screen.getByRole("button", {name: "Accept"})).toBeEnabled();
@@ -45,4 +46,23 @@ test("successful acceptance navigates once while duplicate clicks are blocked", 
     await act(async () => finish({ok: true, json: async () => ({})}));
     expect(mockNavigate).toHaveBeenCalledTimes(1);
     expect(mockNavigate).toHaveBeenCalledWith("/games/42");
+});
+
+test("permanent expiry removes the row and shows integrated feedback without navigation", async () => {
+    const remove = jest.fn();
+    useFetchState.mockReturnValue([[{id:7,gameId:42,inviter:"host"}],remove]);
+    global.fetch = jest.fn().mockResolvedValue({ok:false,status:410,json:async()=>({message:"This invitation is no longer available."})});
+    render(<GameInvitationList/>); fireEvent.click(screen.getByRole("button",{name:"Accept"}));
+    expect(await screen.findByRole("alert")).toHaveTextContent("This invitation is no longer available.");
+    expect(remove).toHaveBeenCalledWith(expect.any(Function));
+    expect(remove.mock.calls[0][0]([{id:7},{id:8}])).toEqual([{id:8}]);
+    expect(mockNavigate).not.toHaveBeenCalled();
+});
+test("server failures retain the invitation and accepting state is visible", async () => {
+    let finish; global.fetch=jest.fn().mockReturnValue(new Promise(resolve=>{finish=resolve;}));
+    render(<GameInvitationList/>); fireEvent.click(screen.getByRole("button",{name:"Accept"}));
+    expect(screen.getByRole("button",{name:"Accepting…"})).toBeDisabled();
+    await act(async()=>finish({ok:false,status:500,json:async()=>({message:"Please try again."})}));
+    expect(screen.getByRole("button",{name:"Accept"})).toBeEnabled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Please try again.");
 });

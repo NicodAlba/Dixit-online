@@ -1,6 +1,8 @@
 import React, {useCallback, useRef, useState} from "react";
 import tokenService from "../services/token.service";
-import {Button, Table} from "reactstrap";
+import {FiMail, FiCheck} from "react-icons/fi";
+import SocialAvatar from "../social/SocialAvatar";
+import {useSocial} from "../social/SocialContext";
 import useFetchState from "../util/useFetchState";
 import "../../src/static/css/social/social.css"
 import {useNavigate} from "react-router-dom";
@@ -13,7 +15,9 @@ export function GameInvitationList({emptyMessage, refreshToken}) {
 function AuthenticatedGameInvitationList({jwt, emptyMessage, refreshToken}) {
     const [message, setMessage] = useState(null)
     const [visible, setVisible] = useState(false)
-    const [pending, setPending] = useState(false);
+    const [pendingId, setPendingId] = useState(null);
+    const social = useSocial();
+    const pending = social ? social.invitationPending !== null : pendingId !== null;
     const pendingRef = useRef(false);
 
     const navigate = useNavigate()
@@ -27,9 +31,9 @@ function AuthenticatedGameInvitationList({jwt, emptyMessage, refreshToken}) {
         return true;
     }, [jwt]);
 
-    const [invitations, , status] = useFetchState(
+    const [localInvitations, setLocalInvitations, status] = useFetchState(
         [],
-        "/api/v1/games/invitations",
+        social ? null : "/api/v1/games/invitations",
         jwt,
         setMessage,
         setVisible,
@@ -37,10 +41,19 @@ function AuthenticatedGameInvitationList({jwt, emptyMessage, refreshToken}) {
         expireSession
     )
 
+    const invitations = social ? social.invitations : localInvitations;
+    const removeInvitation = id => social ? social.removeInvitation(id)
+        : setLocalInvitations(previous => previous.filter(item => item.id !== id));
+    React.useEffect(() => {
+        if (social?.invitationError && !expireSession(social.invitationError)) {
+            setMessage(social.invitationError.message); setVisible(true);
+        }
+    }, [social?.invitationError, expireSession]);
+
     async function handleAccept(invitation) {
-        if (pendingRef.current) return;
+        if (pendingRef.current || (social && !social.beginInvitation(invitation.id))) return;
         pendingRef.current = true;
-        setPending(true);
+        setPendingId(invitation.id);
         setVisible(false);
         try {
             const response = await fetch(`/api/v1/games/invitations/${invitation.id}/accept`, {
@@ -52,49 +65,45 @@ function AuthenticatedGameInvitationList({jwt, emptyMessage, refreshToken}) {
                 }
             });
             const data = await response.json().catch(() => ({}));
+            if (tokenService.getLocalAccessToken() !== jwt) return;
             if (!response.ok) {
                 if (response.status === 401 && expireSession({status: 401}, "/login")) return;
+                if (response.status === 410) {
+                    removeInvitation(invitation.id);
+                    setMessage("This invitation is no longer available."); setVisible(true);
+                    return;
+                }
                 const fallback = response.status === 404 ? "Game not found."
                     : response.status === 403 ? "You are not invited to this game."
                     : "Unable to join this game.";
                 throw new Error(data.message || fallback);
             }
+            removeInvitation(invitation.id);
             navigate(`/games/${invitation.gameId}`);
         } catch (error) {
             setMessage(error.message || "Unable to join this game.");
             setVisible(true);
         } finally {
             pendingRef.current = false;
-            setPending(false);
+            setPendingId(null);
+            if (social) social.endInvitation();
         }
     }
 
-    const invitationList =
-        invitations.map((i) => {
-            return (
-                <tr key={i.id}>
-                    <td className="text-center">{i.inviter}: {i.gameId}</td>
-                    <td><Button color="primary" disabled={pending} onClick={() => handleAccept(i)}>Accept</Button></td>
-                </tr>
-            );
-        });
-
-    return (
-        <div>
-            {visible && message && <div role="alert">{message}</div>}
-            {emptyMessage && status?.loading && <p role="status">Loading invitations…</p>}
-            {emptyMessage && !status?.loading && !invitations.length && !visible && <p>{emptyMessage}</p>}
-            { invitations.length > 0 &&
-                <div className="ls-container">
-                    <h3 className="text-center">Invitations</h3>
-                    <div>
-                        <Table aria-label="invitations" className="text-center">
-                            <tbody>{invitationList}</tbody>
-                        </Table>
-                    </div>
-                </div>
-            }
-        </div>
-    );
-
+    return <section className="game-invitations" aria-label="Game invitations">
+        {visible && message && <p className="social-error" role="alert">{message}</p>}
+        {emptyMessage && (social ? social.loading && !social.loaded : status?.loading) && <p role="status">Loading invitations…</p>}
+        {emptyMessage && !(social ? social.loading : status?.loading) && !invitations.length && !visible && <p className="social-empty">{emptyMessage}</p>}
+        {invitations.length > 0 && <>
+            <h3><FiMail aria-hidden="true" /> Invitations</h3>
+            <ul className="social-list">{invitations.map(invitation => <li key={invitation.id} className="social-person invitation-card">
+                <div className="social-person-name"><SocialAvatar username={invitation.inviter} /><div>
+                    <strong>{invitation.inviter}</strong><span>invited you to <b>Lobby {invitation.gameId}</b></span>
+                </div></div>
+                <button type="button" className="social-action-primary" disabled={pending} onClick={() => handleAccept(invitation)}>
+                    <FiCheck aria-hidden="true" />{(social ? social.invitationPending : pendingId) === invitation.id ? "Accepting…" : "Accept"}
+                </button>
+            </li>)}</ul>
+        </>}
+    </section>;
 }

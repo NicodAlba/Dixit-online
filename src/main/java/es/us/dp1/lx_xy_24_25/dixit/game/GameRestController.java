@@ -255,6 +255,8 @@ public class GameRestController {
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(new MessageResponse(e.getMessage()), HttpStatus.CONFLICT);
         }
+        if (game == null) return ResponseEntity.status(HttpStatus.GONE)
+            .body(new MessageResponse("This invitation is no longer available."));
         messagingTemplate.convertAndSend("/topic/game/" + game.getId(), GameEvent.changed(game.getId()));
         return new ResponseEntity<>(new MessageResponse("Invitation successfully accepted!"), HttpStatus.OK);
     }

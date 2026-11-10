@@ -5,6 +5,7 @@ import {SocialProvider} from "./SocialContext";
 import SocialToggle from "./SocialToggle";
 import SocialView from "./SocialView";
 import GameLayout from "../game/components/GameLayout";
+import {GameInvitationList} from "../home/GameInvitationList";
 jest.mock("../home", () => () => <h1>Home under panel</h1>);
 const originalFetch = global.fetch;
 let relationships, friends;
@@ -90,9 +91,10 @@ test("inviting chooses an authorized existing lobby and sends the account ID",as
 });
 test("received game invitations and their acceptance remain available",async()=>{
     const {dialog}=await open();
-    global.fetch.mockResolvedValue(reply([{id:8,gameId:42,inviter:"host"}]));
+    global.fetch.mockImplementation(async url=>reply(url === "/api/v1/games/invitations" ? [{id:8,gameId:42,inviter:"host"}] : []));
+    fireEvent.click(screen.getByRole("button",{name:"Refresh",exact:true}));
     fireEvent.click(within(dialog).getByRole("button",{name:"Invitations",exact:true}));
-    expect(await screen.findByText("host: 42")).toBeInTheDocument();
+    expect(await screen.findByText("Lobby 42")).toBeInTheDocument();
     global.fetch.mockResolvedValue(reply({id:42}));
     fireEvent.click(screen.getByRole("button",{name:"Accept",exact:true}));
     await waitFor(()=>expect(global.fetch).toHaveBeenCalledWith("/api/v1/games/invitations/8/accept",expect.objectContaining({method:"PATCH"})));
@@ -143,5 +145,26 @@ test("refresh also reloads game invitations while retaining the panel",async()=>
     expect(await screen.findByText("No game invitations.")).toBeInTheDocument();
     global.fetch.mockImplementation(async url=>reply(url === "/api/v1/games/invitations" ? [{id:8,gameId:42,inviter:"host"}] : url.endsWith("relationships") ? relationships : friends));
     fireEvent.click(screen.getByRole("button",{name:"Refresh",exact:true}));
-    expect(await screen.findByText("host: 42")).toBeInTheDocument();
+    expect(await screen.findByText("Lobby 42")).toBeInTheDocument();
+});
+
+test("Home and drawer share expiry and block cross-view duplicate submissions",async()=>{
+    let finish;
+    global.fetch.mockImplementation(async (url,options)=> {
+        if(options.method === "PATCH") return new Promise(resolve=>{finish=resolve;});
+        return reply(url === "/api/v1/games/invitations" ? [{id:8,gameId:42,inviter:"host"}] : []);
+    });
+    show(<><SocialToggle/><GameInvitationList/></>);
+    await screen.findByText("Lobby 42");
+    fireEvent.click(screen.getByRole("button",{name:"Friends",exact:true}));
+    const dialog=await screen.findByRole("dialog",{name:"Friends"});
+    fireEvent.click(within(dialog).getByRole("button",{name:"Invitations",exact:true}));
+    const buttons=screen.getAllByRole("button",{name:"Accept",hidden:true});
+    fireEvent.click(buttons[0]); fireEvent.click(buttons[1]);
+    expect(global.fetch.mock.calls.filter(([,options])=>options.method === "PATCH")).toHaveLength(1);
+    await act(async()=>finish({ok:false,status:410,json:async()=>({message:"This invitation is no longer available."})}));
+    expect(screen.queryAllByText("Lobby 42")).toHaveLength(0);
+    expect(screen.getAllByText("This invitation is no longer available.").length).toBeGreaterThan(0);
+    // Opening the drawer did not create another invitation poll.
+    expect(global.fetch.mock.calls.filter(([url])=>url === "/api/v1/games/invitations")).toHaveLength(1);
 });
