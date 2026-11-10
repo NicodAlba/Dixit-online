@@ -107,6 +107,7 @@ with server("first") as base:
         assert b'<div id="root"></div>' in request(base, path)
     definition = request(base, "/v3/api-docs")
     assert re.fullmatch(r"3\.\d+\.\d+", definition["openapi"]), "Missing OpenAPI version"
+    assert definition["servers"] == [{"url": "/", "description": "Current application"}], "API docs must use the current HTTPS origin"
     assert "/api/v1/games/{id}" in definition["paths"], "Game API missing from documentation"
     assert definition["components"]["securitySchemes"]["bearerAuth"]["scheme"] == "bearer"
     assert request(base, "/ws/info")["websocket"] is True
