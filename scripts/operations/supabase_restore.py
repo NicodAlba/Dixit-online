@@ -136,26 +136,38 @@ def main():
                        DIXIT_DB_USERNAME='dixit_runtime', DIXIT_DB_PASSWORD=runtime_password,
                        DIXIT_MIGRATION_DB_USERNAME='dixit_migrator', DIXIT_MIGRATION_DB_PASSWORD=migration_password,
                        DIXIT_DB_ROLE='dixit_runtime', DIXIT_DB_SSL_MODE='disable', DIXIT_MIGRATION_DB_SSL_MODE='disable')
-            # Refresh only a synthetic PLAYER access fixture on the isolated restore.
-            # The old fixture can legitimately be expired days after acceptance; never
-            # disable JWT expiry or change production passwords/TTL to make it pass.
+            # Existing synthetic history may have been retired from the public demo.
+            # Never recreate acceptance data on Supabase or mint access for a real user.
             fixture_path = ROOT / 'target/postgres-completed-game.json'
-            if args.history_fixture:
-                source = json.loads(args.history_fixture.read_text())
+            source_path = args.history_fixture or fixture_path
+            source = json.loads(source_path.read_text()) if source_path.exists() else {}
+            game_id = source.get('gameId')
+            account = None
+            if type(game_id) is int and game_id > 0:
+                account = json.loads(query("SELECT coalesce((SELECT jsonb_build_object('id',u.id,'username',u.username) FROM dixit.games g JOIN dixit.appusers u ON u.id=g.leader_id JOIN dixit.authorities a ON a.id=u.authority_id WHERE g.id=" + str(game_id) + " AND g.end_date IS NOT NULL AND NOT g.cancelled AND a.authority='PLAYER' AND (SELECT count(*) FROM dixit.turns t WHERE t.game_id=g.id)=8),'null'::jsonb)"))
+            if account and re.fullmatch(r'(security_[0-9a-f]{32}|restart_[0-9a-f]{16})', account['username']):
+                now = int(time.time())
+                encode = lambda value: base64.urlsafe_b64encode(json.dumps(value,separators=(',',':')).encode()).rstrip(b'=')
+                signing_input = encode({'alg':'HS512','typ':'JWT'}) + b'.' + encode({'sub':account['username'],'id':account['id'],'authorities':['PLAYER'],'iat':now,'exp':now+900})
+                signature = base64.urlsafe_b64encode(hmac.new(base64.b64decode(operator.values['DIXIT_JWT_SECRET']), signing_input, hashlib.sha512).digest()).rstrip(b'=')
+                fixture_path.parent.mkdir(exist_ok=True)
+                fixture_path.write_text(json.dumps({'gameId':game_id,'token':(signing_input+b'.'+signature).decode()}))
+                fixture_path.chmod(0o600)
+                print('Isolated synthetic PLAYER history access refreshed with normal expiry; no production account changed', flush=True)
             else:
-                source = json.loads(fixture_path.read_text())
-            game_id = source['gameId']
-            assert isinstance(game_id, int) and game_id > 0
-            account = json.loads(query("SELECT json_build_object('id',u.id,'username',u.username) FROM dixit.games g JOIN dixit.appusers u ON u.id=g.leader_id JOIN dixit.authorities a ON a.id=u.authority_id WHERE g.id=" + str(game_id) + " AND g.end_date IS NOT NULL AND NOT g.cancelled AND a.authority='PLAYER'"))
-            assert re.fullmatch(r'(security_[0-9a-f]{32}|restart_[0-9a-f]{16})', account['username']), 'Only synthetic PLAYER fixtures may be refreshed'
-            now = int(time.time())
-            encode = lambda value: base64.urlsafe_b64encode(json.dumps(value,separators=(',',':')).encode()).rstrip(b'=')
-            signing_input = encode({'alg':'HS512','typ':'JWT'}) + b'.' + encode({'sub':account['username'],'id':account['id'],'authorities':['PLAYER'],'iat':now,'exp':now+900})
-            signature = base64.urlsafe_b64encode(hmac.new(base64.b64decode(operator.values['DIXIT_JWT_SECRET']), signing_input, hashlib.sha512).digest()).rstrip(b'=')
-            fixture_path.parent.mkdir(exist_ok=True)
-            fixture_path.write_text(json.dumps({'gameId':game_id,'token':(signing_input+b'.'+signature).decode()}))
-            fixture_path.chmod(0o600)
-            print('Isolated synthetic PLAYER history access refreshed with normal expiry; no production account changed', flush=True)
+                # All original tables/sequence have already matched the managed dump.
+                # Generate a genuine eight-round fixture only on this disposable restore.
+                assert env['DIXIT_DB_URL'] == url and env['DIXIT_TEST_POSTGRES_URL'] == url
+                fixture_log = ROOT / 'target/supabase-restored-fixture.log'
+                with fixture_log.open('w') as output:
+                    fixture_log.chmod(0o600)
+                    fixture_result = subprocess.run(['./mvnw', '--batch-mode', '--no-transfer-progress',
+                        '-Dspring.profiles.active=prod',
+                        '-Dtest=PostgresPersistenceIT#completesFourPlayersWithReplenishmentHistoryAndPostgresStatistics',
+                        'test'], env=env, cwd=ROOT, stdout=output, stderr=subprocess.STDOUT)
+                assert fixture_result.returncode == 0, 'Isolated restore fixture failed; inspect private fixture log'
+                assert fixture_path.exists(), 'Isolated history fixture was not generated'
+                print('Fresh eight-round fixture generated only on the verified isolated restore; managed database untouched', flush=True)
             log_path = ROOT / 'target/supabase-restored-app.log'
             with log_path.open('w') as log:
                 log_path.chmod(0o600)
