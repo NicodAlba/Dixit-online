@@ -73,7 +73,7 @@ jobs:
           ./mvnw --batch-mode --no-transfer-progress
           -Dspring.profiles.active=prod
           -Dtest.reports.dir=target/postgres-surefire-reports
-          -Dtest=ResetAdminPasswordIT,SingleInstanceConnectionsIT,PostgresPersistenceIT,GameActionPermissionsTest,GamePhasePrivacyTest,FriendRelationshipsTest,GameCancellationTest,ChatAccountIdentityTest,StompPermissionsTest,MaintenancePermissionsTest,MaintenanceTransactionTest,BootstrapAdminIT,InterruptedGamePersistenceTest
+          -Dtest=InvitationLifecycleTest,ResetAdminPasswordIT,SingleInstanceConnectionsIT,PostgresPersistenceIT,GameActionPermissionsTest,GamePhasePrivacyTest,FriendRelationshipsTest,GameCancellationTest,ChatAccountIdentityTest,StompPermissionsTest,MaintenancePermissionsTest,MaintenanceTransactionTest,BootstrapAdminIT,InterruptedGamePersistenceTest
           test
       - name: Isolated acceptance-account cleanup guards and rollback
         run: python3 scripts/ci/verify_account_cleanup.py --container '${{ job.services.postgres.id }}'
