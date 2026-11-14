@@ -1,12 +1,10 @@
 # DIXIT — Online Multiplayer Game
 
-An illustrated storytelling game for three or four players, developed with **Java 21, Spring Boot and React**. Create a lobby, invite friends, choose a card and a clue, and vote for the storyteller's card. Each player tells two stories before the final score is calculated.
+Dixit is an online storytelling game for three or four people. Start a lobby with friends, take turns giving clues about illustrated cards, and try to pick the storyteller’s card from the table. Everyone gets two turns as storyteller.
 
-Originally a collaborative **University of Seville, Design & Tests I (2025–2026)** project, this repository records its subsequent evolution into an occasional hosted demo. It derives from the course's Spring Petclinic-based SPA template. Academic authorship and upstream notices remain applicable; this presentation does not claim sole authorship or official affiliation with the commercial game.
+[Play Dixit](https://dixit-demo-20261110-g.onrender.com) · [API documentation](https://dixit-demo-20261110-g.onrender.com/docs) · [Documentation](docs/README.md)
 
-[Play the last documented demo](https://dixit-demo-20261110-f.onrender.com) · [API documentation](https://dixit-demo-20261110-f.onrender.com/docs) · [Documentation](docs/README.md)
-
-The free server may take several minutes to wake up. Availability and response times are limited. The deployment reference above is documented in DEV-080; it is not a live availability guarantee.
+The demo runs on Render Free. If the server has gone to sleep, the first visit can take a few minutes.
 
 ## Features
 
@@ -128,25 +126,13 @@ sequenceDiagram
 - **Process failure.** A PostgreSQL session guard fences competing application runtimes. A restart can cancel interrupted games and preserve recorded results and history. Live connections, timers and the in-memory broker are recreated on startup.
 - **Build and delivery.** GitHub Actions tests React and Java, runs PostgreSQL acceptance checks, verifies the executable JAR and Docker image, and exercises backup and restore. Render updates are manual. Planned replacement closes admissions, waits for live games to finish, verifies a backup and stops the running process before starting its replacement.
 
-## How the project evolved
-
-| Work | Engineering outcome | Evidence |
-| --- | --- | --- |
-| Gameplay and lobby reliability | Fixed finalization, achievement accounting, lobby races and card replenishment for four players. | DEV-002–014, ADR-0001 |
-| Authorization and privacy | Enforced account and game boundaries and replaced shared game graphs with private views and minimal STOMP events. | DEV-015–028, ADR-0002–0004 |
-| Frontend quality and game UX | Recovered reproducible tests and added responsive interaction, keyboard controls, presence and reduced-motion alternatives. | DEV-029–054, ADR-0005 |
-| Hosted demo | Packaged a single image and verified PostgreSQL persistence, restoration and guarded replacement. | DEV-055–072, ADR-0006–0011 |
-| Post-deployment fixes | Restored OpenAPI docs, improved lobby friends and invitation handling, and removed decorative piles without changing gameplay. | DEV-073–081 |
-
-See the [development changelog](docs/CHANGELOG_DEV.md) for the evidence and the [academic deliverables index](docs/README.md) for the original team design.
-
 ## Original design diagrams and the current implementation
 
-| Academic diagram | Current reading |
+| Earlier diagram | Current reading |
 | --- | --- |
 | [Layer diagram](docs/diagrams/layer-diagram.mmd) | The three original backend layers remain. The runtime diagram above adds React delivery, the security boundary, STOMP, the read models and deployment. |
 | [Domain diagram](docs/diagrams/domain-diagram.mmd) | The account/participation and illustration/card distinctions remain central. See the updated gameplay view above and ADR-0001 for the historical card lifecycle. |
-| [Class diagram](docs/diagrams/class-diagram.mmd) | The detailed academic class inventory provides design context. See the current transaction and transport views above for how those classes cooperate at runtime. |
+| [Class diagram](docs/diagrams/class-diagram.mmd) | The detailed class inventory provides design context. See the current transaction and transport views above for how those classes cooperate at runtime. |
 
 Read the [current architecture guide](docs/architecture.md) for the ADR map and the [documentation index](docs/README.md) for requirements, testing and operations.
 
@@ -174,18 +160,10 @@ Open http://localhost:3000. Development uses disposable H2 data; restarting can 
 
 GitHub Actions runs frontend/backend tests, isolated PostgreSQL acceptance, executable JAR checks, backup/restore and actual Docker-image checks. CI does **not** deploy the demo. Results belong to a specific commit; consult [CI documentation](docs/operations/ci.md) and [Actions](https://github.com/NicodAlba/Dixit-online/actions), rather than treating historical counts as a current guarantee.
 
-Changes follow **`fix/*` or `feature/*` → PR → `develop`**. Only the owner promotes changes to `main` and authorizes releases or deployments. [CHANGELOG_DEV.md](docs/CHANGELOG_DEV.md) records evidence, decisions and limitations.
+Changes follow **`fix/*` or `feature/*` → PR → `develop`**. Only the owner promotes changes to `main` and authorizes releases or deployments.
 
 ## Status and limitations
 
 The demo uses a single application instance, manual backups and a manual replacement procedure. A server restart cancels interrupted games while preserving history; it does not resume sockets or timers. Free hosting can sleep or be suspended. Full visual acceptance across browsers and physical devices remains incomplete, and inherited frontend build warnings remain documented.
 
 [Owner guide](docs/operations/demo-owner.md) · [Production configuration](docs/operations/production.md) · [Render operation](docs/operations/render-free.md) · [Supabase operation](docs/operations/supabase.md)
-
-## Provenance and permissions
-
-Academic source: [gii-is-DP1/dp1-2025-2026-li-02](https://github.com/gii-is-DP1/dp1-2025-2026-li-02). Template origin: [Spring Petclinic](https://github.com/spring-projects/spring-petclinic). Existing developer credits remain in [pom.xml](pom.xml) and the academic deliverables.
-
-Current demo artwork and Bree Serif font have separate notices in [asset provenance](docs/operations/public-assets.md). The Maven Apache-2.0 declaration does not resolve all third-party artwork, historical resources or collaborative authorship permissions. See [publication review](docs/publication-review.md) for the precise scope and unresolved items. No blanket new license is granted by this README.
-
-Screenshots will be added after a current, privacy-reviewed capture is approved; historical screenshots are not presented as the current interface.

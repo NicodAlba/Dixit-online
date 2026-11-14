@@ -4,7 +4,6 @@ import org.springframework.context.annotation.Configuration;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
-import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.info.License;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
@@ -15,9 +14,6 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
   info =@Info(
     title = "Game APIs",
     version = "v1.0",
-    contact = @Contact(
-      name = "DP1-2025-Group 2", email = "dp1-2X2Y-groupZ@gmail.com", url = "https://github.com/gii-is-DP1/dp1-2025-2026-li-02"
-    ),
     license = @License(
       name = "Apache 2.0", url = "https://www.apache.org/licenses/LICENSE-2.0"
     ),

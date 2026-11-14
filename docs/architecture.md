@@ -38,6 +38,6 @@ Presence, deadlines and the broker are in memory. Restart recovery cancels inter
 
 Local development uses disposable H2. The demo uses PostgreSQL 17, Flyway V1–V3, restricted runtime/migration roles and Hibernate validation. A multistage Docker build packages React with Spring Boot. CI checks tests, real JAR startup, isolated PostgreSQL, restore and actual image behavior. Publication is a separate manual operation, with Auto-Deploy Off and a stop-first replacement procedure.
 
-## Reading the older diagrams
+## Design diagrams
 
-`diagrams/domain-diagram.mmd`, `class-diagram.mmd` and `layer-diagram.mmd` belong to the academic design. They are retained with D1/D2 as historical design evidence, not as current security/API inventories. In particular, private projections, account presence, cancellation and production session fencing require the later ADRs and implementation. This document supplies the current runtime view without rewriting academic history.
+The [layer](diagrams/layer-diagram.mmd), [domain](diagrams/domain-diagram.mmd) and [class](diagrams/class-diagram.mmd) diagrams show the original design. Use the runtime view above and [ADRs](adr/) for current behavior.
