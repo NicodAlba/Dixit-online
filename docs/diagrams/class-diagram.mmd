@@ -4,10 +4,6 @@ classDiagram
     class User {
         String username
         String password
-        Authorities authority
-        List~Achievement~ achievements
-        List~Player~ players
-        List~Game~ gamesToSpectate
     }
     class Authorities {
         String authority
@@ -17,68 +13,36 @@ classDiagram
         Date startDate
         Date endDate
         boolean cancelled
-        User leader
-        List~Player~ winners
-        List~Turn~ turns
-        List~Player~ players
-        List~Message~ messages
-        List~Card~ deck
-        List~User~ spectators
     }
     class Player {
-        User user
-        List~Card~ cards
-        Game game
-        Card playerVote
         Integer points
     }
     class Turn {
         String tableOrderSeed
-        Card answer
-        TurnState state
         String clue
-        Player storyteller
-        Game game
-        List~Card~ playedCards
     }
-    class Card {
-        Image image
-        Player owner
-        User user
-        Game game
-        Turn turn
-        List~Player~ votes
-    }
+    class Card
     class Image {
         String url
     }
     class Message {
         Date date
         String text
-        Player player
-        Game game
     }
     class FriendRequest {
-        User sender
-        User receiver
         Date dateAccepted
     }
     class GameInvitation {
         String inviter
-        User invited
-        Integer gameId
         String password
     }
     class Achievement {
         String description
         Date dateObtained
-        BadgeImage badgeImage
         Integer threshold
-        User user
     }
     class BadgeImage {
         String url
-        AchievementType type
     }
     class WinAchievement
     class PlayAchievement
@@ -123,32 +87,29 @@ classDiagram
     Achievement <|-- TrickAchievement
     BaseEntity <|-- NamedEntity
     BaseEntity <|-- Person
-    Authorities "1" <-- "0..*" User : authority
+    Authorities "1" <-- "0..*" User
     User "1" <-- "0..*" Game : leader
-    User "1" <-- "0..*" Player : account
+    User "1" <-- "0..*" Player
     Game "0..1" *-- "0..*" Player : seats
     Game "0..*" --> "0..*" Player : winners
     Game "0..*" --> "0..*" User : spectators
-    Game "1" *-- "0..*" Turn : rounds
+    Game "1" *-- "0..*" Turn
     Game "1" *-- "0..*" Card : deck and history
-    Game "1" *-- "0..*" Message : chat
+    Game "1" *-- "0..*" Message
     Player "1" <-- "0..*" Message : author
     Player "1" <-- "0..*" Turn : storyteller
     Turn "0..*" --> "0..1" Card : answer
     Turn "0..1" --> "0..*" Card : played cards
     Player "0..1" <-- "0..*" Card : hand owner
     User "0..1" <-- "0..*" Card : recorded author
-    Card "0..*" --> "1" Image : illustration
+    Card "0..*" --> "1" Image
     Card "0..*" --> "0..*" Player : historical votes
     Player "0..*" --> "0..1" Card : playerVote
     FriendRequest "0..*" --> "1" User : sender
     FriendRequest "0..*" --> "1" User : receiver
     GameInvitation "0..*" --> "1" User : recipient
-    GameInvitation ..> Game : gameId without FK
-    User "1" --> "0..*" Achievement : achievements
-    Achievement "0..*" --> "1" BadgeImage : badge
-    note for Game "Host starts with 3 or 4 seats"
-    note for Card "A reused illustration gets a new Card ID. Prior turns and votes stay recorded."
-    note for User "PLAYER and ADMIN are authorities on User"
+    GameInvitation ..> Game : gameId (no FK)
+    User "1" --> "0..*" Achievement
+    Achievement "0..*" --> "1" BadgeImage
     Turn --> TurnState : phase
     BadgeImage --> AchievementType : type

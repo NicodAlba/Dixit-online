@@ -35,8 +35,6 @@ classDiagram
     }
     namespace Persistence {
         class AchievementRepository {
-            findAll() List~Achievement~
-            findById(Integer id) Optional~Achievement~
             findByUserAndType(User user, Class~? extends Achievement~ type) List~Achievement~
             findAllAchievementsByUserId(Integer id) List~Achievement~
         }
@@ -44,7 +42,6 @@ classDiagram
             findByName(String authority) Optional~Authorities~
         }
         class BadgeImageRepository {
-            findAll() List~BadgeImage~
             findByType(AchievementType type) List~BadgeImage~
         }
         class CardRepository {
@@ -66,12 +63,10 @@ classDiagram
             findByIdForUpdate(Integer id) Optional~GameInvitation~
         }
         class GameRepository {
-            findAll() List~Game~
             countByStartDateIsNotNullAndEndDateIsNull() long
             countByStartDateIsNullAndEndDateIsNull() long
             existsByIdAndLeaderUsername(Integer id, String username) boolean
             existsByIdAndStartDateNotNullAndEndDateNull(Integer id) boolean
-            findById(Integer id) Optional~Game~
             findByPassword(String password) Optional~Game~
             findByIdForUpdate(Integer id) Optional~Game~
             findGamesByPlayerUsername(String username) List~Game~
@@ -81,9 +76,7 @@ classDiagram
             findByEndDateNotNull() List~Game~
             findInterruptedForUpdate() List~Game~
         }
-        class ImageRepository {
-            findAll() List~Image~
-        }
+        class ImageRepository
         class MessageRepository {
             findByPlayer(Player player) List~Message~
             findByGame(Game game) List~Message~
@@ -118,7 +111,6 @@ classDiagram
         }
         class TurnRepository {
             findTurnStorytellerById(Integer id) Player
-            findById(Integer id) Optional~Turn~
             findGameIdById(Integer id) Optional~Integer~
             findFirstByGameIdOrderByIdDesc(Integer gameId) Optional~Turn~
             findPlayedCardsById(Integer id) List~Card~
@@ -126,7 +118,6 @@ classDiagram
         class UserRepository {
             findByUsername(String username) Optional~User~
             existsByUsername(String username) Boolean
-            findById(Integer id) Optional~User~
             findAllByAuthority(String auth) Iterable~User~
             findPlayersByUsernameLike(String username, int currentId, Pageable pageable) Page~User~
         }
