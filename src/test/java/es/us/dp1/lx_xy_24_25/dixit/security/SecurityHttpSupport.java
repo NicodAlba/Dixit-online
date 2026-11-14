@@ -14,6 +14,15 @@ import static org.junit.jupiter.api.Assertions.*;
     "spring.datasource.url=jdbc:h2:mem:security-acceptance-${random.uuid}",
     "spring.jpa.show-sql=false", "spring.jpa.properties.hibernate.format_sql=false"})
 abstract class SecurityHttpSupport {
+    // Explicit opt-in only; CI/local runner supplies a disposable PostgreSQL database.
+    @org.springframework.test.context.DynamicPropertySource
+    static void productionDatabase(org.springframework.test.context.DynamicPropertyRegistry properties) {
+        String url = System.getenv("DIXIT_TEST_POSTGRES_URL");
+        if (url == null) return;
+        properties.add("spring.datasource.url", () -> url);
+        properties.add("spring.datasource.username", () -> System.getenv("DIXIT_DB_USERNAME"));
+        properties.add("spring.datasource.password", () -> System.getenv("DIXIT_DB_PASSWORD"));
+    }
     @Autowired protected TestRestTemplate rest;
     @Autowired protected JdbcTemplate jdbc;
     protected record Account(int id, String name, String password, String token) {}

@@ -47,7 +47,7 @@ test("authenticated visitor loads invitations and can accept one", async () => {
     session("token");
     global.fetch.mockResolvedValueOnce(response([invitation])).mockResolvedValueOnce(response({id: 42}));
     render(home());
-    expect(await screen.findByText("host: 42")).toBeInTheDocument();
+    expect(await screen.findByText("Lobby 42")).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledWith("/api/v1/games/invitations", {headers: {Authorization: "Bearer token"}});
     fireEvent.click(screen.getByRole("button", {name: "Accept"}));
     expect(await screen.findByRole("heading", {name: "Game lobby"})).toBeInTheDocument();
@@ -70,16 +70,16 @@ test("authenticated network error remains visible", async () => {
 test("mounted invitation component clears private data on session loss and loads on a new session", async () => {
     session("token-a"); global.fetch.mockResolvedValue(response([invitation]));
     const {rerender} = render(<MemoryRouter><GameInvitationList /></MemoryRouter>);
-    expect(await screen.findByText("host: 42")).toBeInTheDocument();
+    expect(await screen.findByText("Lobby 42")).toBeInTheDocument();
     session(null);
     rerender(<MemoryRouter><GameInvitationList /></MemoryRouter>);
-    expect(screen.queryByText("host: 42")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lobby 42")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", {name: "Accept"})).not.toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledTimes(1);
     session("token-b"); global.fetch.mockResolvedValue(response([{id: 8, gameId: 43, inviter: "new-host"}]));
     rerender(<MemoryRouter><GameInvitationList /></MemoryRouter>);
-    expect(await screen.findByText("new-host: 43")).toBeInTheDocument();
-    expect(screen.queryByText("host: 42")).not.toBeInTheDocument();
+    expect(await screen.findByText("Lobby 43")).toBeInTheDocument();
+    expect(screen.queryByText("Lobby 42")).not.toBeInTheDocument();
     expect(global.fetch).toHaveBeenLastCalledWith("/api/v1/games/invitations", {headers: {Authorization: "Bearer token-b"}});
 });
 
@@ -91,7 +91,7 @@ test("pending private response cannot reappear after session loss", async () => 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
     session(null); rerender(<MemoryRouter><GameInvitationList /></MemoryRouter>);
     await act(async () => {complete(response([invitation]));});
-    expect(screen.queryByText("host: 42")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lobby 42")).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledTimes(1);
 });
@@ -99,14 +99,14 @@ test("pending private response cannot reappear after session loss", async () => 
 test("switching authenticated sessions hides the previous account while new invitations load", async () => {
     session("token-a"); global.fetch.mockResolvedValueOnce(response([invitation]));
     const {rerender} = render(<MemoryRouter><GameInvitationList /></MemoryRouter>);
-    expect(await screen.findByText("host: 42")).toBeInTheDocument();
+    expect(await screen.findByText("Lobby 42")).toBeInTheDocument();
     let complete;
     global.fetch.mockReturnValueOnce(new Promise(resolve => {complete = resolve;}));
     session("token-b"); rerender(<MemoryRouter><GameInvitationList /></MemoryRouter>);
-    expect(screen.queryByText("host: 42")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lobby 42")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", {name: "Accept"})).not.toBeInTheDocument();
     await act(async () => {complete(response([{id: 8, gameId: 43, inviter: "new-host"}]));});
-    expect(await screen.findByText("new-host: 43")).toBeInTheDocument();
+    expect(await screen.findByText("Lobby 43")).toBeInTheDocument();
     expect(global.fetch).toHaveBeenCalledTimes(2);
 });
 

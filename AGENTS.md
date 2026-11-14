@@ -2,7 +2,7 @@
 
 ## Registro obligatorio de cada intervención
 
-Por petición expresa del propietario (unificación de DEV-006), antes de cerrar cada intervención actualiza **solo `docs/CHANGELOG_DEV.md`**. Este fichero reúne el historial de desarrollo y el razonamiento arquitectónico/técnico.
+Por petición expresa del propietario (unificación de DEV-006), antes de cerrar cada intervención actualiza **solo `docs/CHANGELOG_DEV.md`**. Este fichero privado y excluido de Git reúne el historial de desarrollo y el razonamiento arquitectónico/técnico. Consérvalo localmente y no lo añadas a ningún commit, diff público ni PR.
 
 Registra fecha e identificador, problema y evidencia, comportamiento esperado, causa técnica, solución y por qué, alternativas relevantes, archivos, impacto sobre reglas/datos/API/frontend/módulos, verificaciones y resultados reales, riesgos, límites, pendientes, estado final y rama/commits/PR cuando existan. Una entrada breve basta para cambios triviales. No basta con enumerar archivos ni con el mensaje del chat.
 
@@ -21,4 +21,4 @@ El antiguo documento externo `../# DIXIT — Software Architecture & SDD Sp.md` 
 
 - Las ramas `local/received-baseline` y `local/prepublication-history` conservan historia privada con contratos universitarios: no las publiques.
 - Publica solo ramas revisadas mediante nombres explícitos. No uses push de todas las ramas ni mirror.
-- Conserva las exclusiones de contratos, `.env`, credenciales privadas, dependencias, builds, logs y copias temporales. Mantén las atribuciones y entregables técnicos académicos.
+- Conserva las exclusiones de contratos, `.env`, credenciales privadas, dependencias, builds, logs y copias temporales. Conserva los avisos y atribuciones requeridos. Los entregables originales permanecen en copias locales excluidas de Git.

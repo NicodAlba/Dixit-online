@@ -115,7 +115,7 @@ class GameLobbyHttpIntegrationTest {
         assertStatus(200, accept(invitation, invitee));
         assertFalse(hasInvitation(invitation, invitee));
         assertEquals(4, read(id, host).path("players").size());
-        assertStatus(404, accept(invitation, invitee));
+        assertStatus(410, accept(invitation, invitee));
         assertEquals(1, count("select count(*) from players where game_id = ? and user_id = ?", id, invitee.id()));
     }
 
@@ -129,8 +129,8 @@ class GameLobbyHttpIntegrationTest {
         assertEquals(2, read(id, host).path("players").size());
         int missing = invite(id, host, invitee);
         assertStatus(200, request(HttpMethod.PATCH, "/games/" + id + "/leave", host, null));
-        assertStatus(404, accept(missing, invitee));
-        assertTrue(hasInvitation(missing, invitee));
+        assertStatus(410, accept(missing, invitee));
+        assertFalse(hasInvitation(missing, invitee));
         assertEquals(1, count("select count(*) from players where user_id = ?", invitee.id()));
     }
 
@@ -164,15 +164,15 @@ class GameLobbyHttpIntegrationTest {
         int invitation = invite(id, host, outsider);
         assertStatus(200, start(id, host));
         assertStatus(409, request(HttpMethod.PATCH, "/games/" + id + "/join", outsider, Map.of()));
-        assertStatus(409, accept(invitation, outsider));
-        assertTrue(hasInvitation(invitation, outsider));
+        assertStatus(410, accept(invitation, outsider));
+        assertFalse(hasInvitation(invitation, outsider));
         finishGame(id, host, second, third);
         JsonNode finished = read(id, host);
         assertFalse(finished.path("endDate").isNull());
         assertEquals(6, finished.path("turns").size());
         assertStatus(409, request(HttpMethod.PATCH, "/games/" + id + "/join", outsider, Map.of()));
-        assertStatus(409, accept(invitation, outsider));
-        assertTrue(hasInvitation(invitation, outsider));
+        assertStatus(410, accept(invitation, outsider));
+        assertFalse(hasInvitation(invitation, outsider));
         assertStatus(400, start(id, host));
         assertEquals(finished.path("endDate"), read(id, host).path("endDate"));
         assertEquals(6, count("select count(*) from turns where game_id = ?", id));
@@ -207,7 +207,7 @@ class GameLobbyHttpIntegrationTest {
         Account host = account(), invitee = account();
         int id = lobby(null, host);
         int invitation = invite(id, host, invitee);
-        assertEquals(List.of(200, 404), race(
+        assertEquals(List.of(200, 410), race(
             () -> accept(invitation, invitee).getStatusCode().value(),
             () -> accept(invitation, invitee).getStatusCode().value()).stream().sorted().toList());
         assertEquals(2, read(id, host).path("players").size());

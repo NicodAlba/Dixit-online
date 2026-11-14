@@ -59,8 +59,19 @@ public class SecurityConfiguration {
                 }))
 
             .authorizeHttpRequests(auth -> auth
+                .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
+                .requestMatchers(HttpMethod.GET, SpaConfiguration.ROUTES).permitAll()
+                .requestMatchers(HttpMethod.HEAD, SpaConfiguration.ROUTES).permitAll()
+                .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 // Recursos estáticos comunes (css, js, images, webjars…) públicos
                 .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
+                // Public files bundled by CRA; private data remains under /api/v1.
+                .requestMatchers(HttpMethod.GET, "/index.html", "/static/**", "/Cards/**",
+                    "/Achievements/**", "/favicon.ico", "/manifest.json", "/robots.txt",
+                    "/logo192.png", "/logo512.png").permitAll()
+                .requestMatchers(HttpMethod.HEAD, "/index.html", "/static/**", "/Cards/**",
+                    "/Achievements/**", "/favicon.ico", "/manifest.json", "/robots.txt",
+                    "/logo192.png", "/logo512.png").permitAll()
                 // A disabled console has no servlet/properties bean: don't use toH2Console().
                 .requestMatchers("/h2-console/**").access((authentication, context) ->
                     new org.springframework.security.authorization.AuthorizationDecision(h2ConsoleEnabled))
@@ -86,6 +97,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/users/{id}").hasAuthority(ADMIN)
                 .requestMatchers(HttpMethod.GET, "/api/v1/users", "/api/v1/users/authorities").hasAuthority(ADMIN)
                 .requestMatchers(HttpMethod.GET, "/api/v1/users/**").hasAnyAuthority(PLAYER, ADMIN)
+
+                .requestMatchers("/api/v1/operations/**").hasAuthority(ADMIN)
 
                 // API restringida para administradores
                 .requestMatchers(HttpMethod.GET, "/api/v1/games", "/api/v1/games/inProgress", "/api/v1/games/pastGames").hasAuthority(ADMIN)

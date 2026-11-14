@@ -8,12 +8,13 @@
 }
 
 @font-face {
-    font-family: 'american-typewriter'; /*a name to be used later*/
-    src: url('./static/fonts/American\ Typewriter\ Bold.ttf'); /*URL to font*/
+    font-family: 'Bree Serif'; /*a name to be used later*/
+    src: url('./static/fonts/BreeSerif-Regular.ttf') format('truetype');
+    font-display: swap;
 }
 
 * {
-    font-family: 'american-typewriter';
+    font-family: 'Bree Serif';
 }
 
 /* div {

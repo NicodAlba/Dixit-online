@@ -2,7 +2,7 @@ import React, {createContext, useCallback, useContext, useEffect, useRef, useSta
 import {useLocation, useNavigate} from "react-router-dom";
 import tokenService from "../services/token.service";
 import SocialPanel from "./SocialPanel";
-import {useApplicationConnection} from "../presence/PresenceContext";
+import {useApplicationConnection, usePresenceData} from "../presence/PresenceContext";
 import SocialNotifications from "./SocialNotifications";
 import {socialChanges} from "./socialChanges";
 
@@ -16,8 +16,13 @@ export function SocialProvider({jwt, children}) {
     const baseline = useRef(null);
     const seen = useRef(new Set());
     const connection = useApplicationConnection();
+    const presence = usePresenceData();
     const connectionState = connection?.state;
     const generation = connection?.generation;
+    const [invitations, setInvitations] = useState([]);
+    const [invitationError, setInvitationError] = useState(null);
+    const [invitationPending, setInvitationPending] = useState(null);
+    const invitationLock = useRef(false);
     const [friends, setFriends] = useState([]);
     const [relationships, setRelationships] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -37,21 +42,32 @@ export function SocialProvider({jwt, children}) {
     const request = useCallback(async (path, method = "GET", body) => {
         const response = await fetch(path, {method, headers: {Authorization: `Bearer ${jwt}`, "Content-Type": "application/json"}, ...(body === undefined ? {} : {body: JSON.stringify(body)})});
         const data = await response.json().catch(() => null);
-        if (!response.ok) throw new Error(data?.message || (response.status === 401 ? "Your session expired. Please log in again." : "Unable to complete this request. Please try again."));
+        if (!response.ok) {
+            const error = new Error(data?.message || (response.status === 401 ? "Your session expired. Please log in again." : "Unable to complete this request. Please try again."));
+            error.status = response.status; throw error;
+        }
         return data;
     }, [jwt]);
     const refresh = useCallback(async () => {
         const revision = ++requestRevision.current;
         setLoading(true);
         try {
-            const [[friends, relationships], invitationResult] = await Promise.all([
-                Promise.all([request("/api/v1/friends"), request("/api/v1/friends/relationships")]),
-                request("/api/v1/games/invitations").then(data => ({data}), () => ({data: null})),
+            const [socialResult, invitationResult] = await Promise.all([
+                Promise.all([request("/api/v1/friends"), request("/api/v1/friends/relationships")])
+                    .then(data => ({data}), error => ({error})),
+                request("/api/v1/games/invitations").then(data => ({data}), error => ({data: null, error})),
             ]);
             if (!alive.current || revision !== requestRevision.current) return;
+            // Process invitation data/errors even when Friends fails (including an expired session).
+            const invitationsAvailable = Array.isArray(invitationResult.data);
+            if (invitationsAvailable) {
+                setInvitations(invitationResult.data); setInvitationError(null);
+            } else setInvitationError(invitationResult.error || new Error("Unable to load invitations."));
+            if (socialResult.error) throw socialResult.error;
+            const [friends, relationships] = socialResult.data;
             if (![friends, relationships].every(Array.isArray)) throw new Error("Unable to load social updates. Please try again.");
-            // Invitation failure must not disable friendship actions. Its section retains its own error feedback.
-            if (Array.isArray(invitationResult.data)) {
+            // Friendship actions and notifications remain independent of invitation failure.
+            if (invitationsAvailable) {
                 const snapshot = {relationships, invitations: invitationResult.data};
                 const changes = socialChanges(baseline.current, snapshot, seen.current);
                 baseline.current = snapshot;
@@ -92,8 +108,19 @@ export function SocialProvider({jwt, children}) {
         if (location.pathname === "/friends") navigate("/", {replace: true});
     };
     const relation = accountId => relationships.find(item => item.accountId === accountId);
+    const removeInvitation = id => {
+        // Invalidate in-flight snapshots so a delayed poll cannot resurrect an accepted/expired row.
+        invalidateRequests(); setLoading(false);
+        setInvitations(previous => previous.filter(item => item.id !== id));
+    };
+    const beginInvitation = id => {
+        if (invitationLock.current) return false;
+        invitationLock.current = true; setInvitationPending(id); return true;
+    };
+    const endInvitation = () => {invitationLock.current = false; setInvitationPending(null);};
     const context = {
-        open, openPanel, closePanel, section, setSection, notifications, dismissNotification, friends, relationships, loading, loaded, error, feedback, pending,
+        invitations, invitationError, invitationPending, removeInvitation, beginInvitation, endInvitation,
+        presence, open, openPanel, closePanel, section, setSection, notifications, dismissNotification, friends, relationships, loading, loaded, error, feedback, pending,
         refresh, request, perform, relation, notifyChat, clearChatNotifications, selfId: tokenService.getUser()?.id,
         sendRequest: accountId => perform(() => request(`/api/v1/friends/addFriend/${accountId}`, "POST"), "Friend request sent."),
         acceptRequest: requestId => perform(() => request(`/api/v1/friends/${requestId}/accept`, "PATCH"), "Friend request accepted."),

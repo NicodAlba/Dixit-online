@@ -1,0 +1,167 @@
+# Preparación local de producción
+
+Estado: aplicación única + PostgreSQL 17/Flyway aprobados para preparación local.
+Supabase Free está elegido como proveedor PostgreSQL; el propietario ha creado el proyecto Dixit. El proveedor de aplicación y la publicación siguen pendientes. Presupuesto máximo 0 €; propuestas y
+límites en [production-proposal.md](production-proposal.md). CI sin CD automático.
+
+## Configuración
+
+Java 21, Node de frontend/.nvmrc, Maven wrapper y PostgreSQL 17 (mismo major en
+pruebas y futuro proveedor). Usar el último parche soportado; evidencia inicial
+con 17.11. Flyway 11.7.2 administrado por Boot 3.5.5. pgJDBC se fija en 42.7.14, parche
+de seguridad de la dependencia recién introducida; se evita el 42.7.7 heredado del
+BOM sin actualizar Spring Boot. [Aviso oficial](https://jdbc.postgresql.org/security/).
+
+`.env.prod.example` enumera placeholders. Spring **no** carga ese archivo: el
+operador debe inyectar valores mediante entorno/gestor seguro, sin guardarlos
+en Git, builds, frontend o logs. No generar la clave JWT en cada arranque.
+
+- `DIXIT_DB_URL`: JDBC PostgreSQL sin credenciales en URL.
+- `DIXIT_DB_USERNAME`, `DIXIT_DB_PASSWORD`: conexión de aplicación.
+- `DIXIT_DB_ROLE`: identificador simple del rol real; normalmente igual al usuario,
+  pero un pooler puede requerir un nombre de conexión distinto.
+- `DIXIT_MIGRATION_DB_USERNAME`, `DIXIT_MIGRATION_DB_PASSWORD`: rol DDL distinto.
+- `DIXIT_MIGRATION_DB_URL`: endpoint opcional distinto para Flyway; por defecto usa DIXIT_DB_URL.
+- `DIXIT_DB_SSL_ROOT_CERT`: ruta de la CA externa legible; por defecto ~/.postgresql/root.crt.
+- `DIXIT_MIGRATION_DB_SSL_MODE` y `DIXIT_MIGRATION_DB_SSL_ROOT_CERT`: opcionales para un endpoint de migración distinto; heredan los valores runtime.
+- `DIXIT_JWT_SECRET`: Base64 de al menos 64 bytes aleatorios privados, estable entre
+  reinicios. Guardar copia segura por separado de los dumps de datos.
+- `DIXIT_ALLOWED_ORIGINS`: orígenes HTTPS exactos separados por comas, sin slash
+  final ni wildcard. HTTP loopback únicamente para pruebas aisladas.
+- `DIXIT_DB_SSL_MODE`: por defecto `verify-full`; certificado/hostname válidos.
+  La CI y la prueba PostgreSQL local usan `disable` solo en su loopback aislado.
+- `DIXIT_TRUSTED_PROXY_REGEX`: direcciones del proxy autorizado confirmadas con el
+  proveedor. Tomcat native procesa cabeceras de proxies confiables; por defecto
+  solo loopback. No usar una expresión que confíe en cualquier cliente.
+- `PORT`: puerto del proceso, predeterminado 8080.
+
+Crear previamente dos roles LOGIN privados. El rol migrador necesita crear/ser
+propietario del esquema dixit en la base elegida; runtime no debe ser superusuario,
+propietario del esquema/base o tener CREATE. Revocar privilegios heredados que
+lo permitan. Ambos necesitan conexión a la base; Flyway otorga al runtime solo
+lecturas de catálogos, DML de tablas de aplicación y uso de la secuencia.
+El nombre `dixit` es un esquema dedicado; en Supabase no exponerlo a Data API y
+revocar permisos anon/authenticated. Confirmar conexión/pool/SSL sin addon de pago.
+No usar una conexión de producción para ejecutar los scripts de CI.
+
+## Compilar y arrancar
+
+Primero ejecutar las verificaciones de [ci.md](ci.md). Desde la raíz:
+
+```sh
+./mvnw --batch-mode --no-transfer-progress -DskipTests -Pproduction-package package
+java -jar target/LI-02-2425-dixit-0.1.0.BUILD-SNAPSHOT.jar --spring.profiles.active=prod
+```
+
+Requiere el build React previo. El perfil Maven excluye `data.sql` y el perfil
+MySQL académico del JAR; no cambia las pruebas de desarrollo. El perfil Spring
+prod exige configuración válida antes de crear beans de datos/autenticación,
+aplica Flyway V1–V3, valida JPA y no ejecuta semillas académicas. El arranque no
+inserta usuarios, partidas ni logros concedidos. El paquete de producción selecciona prod por defecto, incluso sin argumento;
+no sobrescribirlo con perfiles de desarrollo. El paquete normal usa dev;
+CI activa test mediante una configuración que solo existe en src/test/resources. Una migración fallida impide arrancar; no activar baseline-on-migrate,
+clean o ddl-auto=update para sortearla.
+
+Spring sirve únicamente las rutas React enumeradas en SpaConfiguration; APIs,
+SockJS, gestión y recursos inexistentes conservan su tratamiento propio. Las
+vistas UI públicas contienen código estático; la autorización de datos/acciones
+permanece en REST/STOMP. `/actuator/health` devuelve solo estado; consola H2 y
+otros endpoints de gestión no son públicos. OpenAPI queda desactivado en prod.
+
+Detener mediante SIGTERM. Spring permite hasta 20 s para peticiones pendientes;
+no equivale a esperar una partida completa o restaurar sesiones. La demo puede
+activar DIXIT_RECOVER_INTERRUPTED_GAMES=true: cancela iniciadas sin cierre mediante
+la regla existente, sin borrar datos ni premiar, y solo entonces presenta salud UP.
+Requiere haber detenido el proceso anterior. No reconstruye plazos/sesiones.
+Arranque ordinario maintenance=false; cierre explícito true solo supervisado.
+Ver ADR-0009 y [render-free.md](render-free.md).
+
+## Pruebas PostgreSQL y artefacto
+
+CI crea un servicio PostgreSQL 17.11 desechable con roles aleatorios, ejecuta las
+migraciones y repite pruebas REST/STOMP, concurrencia y una partida de cuatro
+participantes/ocho turnos. `PostgresPersistenceIT` comprueba 52 apariciones,
+32 cartas históricas con autor, 24 votos, 20 cartas en mano y consultas de
+estadísticas/logros. También comprueba privilegios, catálogo y FK reales.
+
+Para repetir localmente, preparar una base **exclusivamente desechable** y cargar
+las variables anteriores sin imprimir valores, más
+`DIXIT_TEST_POSTGRES_URL` igual a `DIXIT_DB_URL`. Entonces:
+
+```sh
+./mvnw --batch-mode --no-transfer-progress -Dspring.profiles.active=prod \
+  -Dtest.reports.dir=target/postgres-surefire-reports \
+  -Dtest=PostgresPersistenceIT,GameActionPermissionsTest,GamePhasePrivacyTest,FriendRelationshipsTest,GameCancellationTest,ChatAccountIdentityTest,StompPermissionsTest test
+./mvnw --batch-mode --no-transfer-progress -DskipTests -Pproduction-package package
+python3 scripts/ci/verify_production.py
+```
+
+El script verifica ausencia de semillas en el JAR, fallo sin clave, salud mínima,
+rutas, exclusión de APIs del fallback, orígenes SockJS y dos arranques del proceso
+con persistencia de cuenta, JWT, lobby e historial completado. Los tokens de
+fixtures permanecen solo en `target`, fuera de Git y de artefactos publicados.
+No verifica continuidad de una partida activa, navegador, proxy externo o red móvil.
+
+## Actualización, rollback y copia
+
+Antes de publicar: acordar ventana sin partidas activas y mecanismo para impedir
+nuevas; ese mantenimiento y la recuperación tras caída aún no están implementados.
+No actualizar con partidas activas ni activar escalado/solapamiento de instancias.
+Despliegue manual de commit aprobado, con CI verde, revisión de migraciones y
+copia previa. El mecanismo del proveedor y el origen definitivo requieren aprobación.
+
+Preferir migraciones aditivas y commits de app compatibles. Rollback de aplicación
+no revierte datos ni una migración destructiva. Ante incompatibilidad, detener,
+valorar corrección hacia delante o restaurar una copia en otra base y validar
+antes de redirigir tráfico. No ejecutar Flyway clean ni borrar historia para arrancar.
+
+Plan de backup gratuito: pg_dump formato custom por TLS antes de cambios y después
+de cada sesión de demo, copia cifrada fuera de Git/proveedor y retención inicial
+7 copias. Credenciales por entorno protegido/pgpass con permisos restrictivos,
+nunca en argumentos o historial del shell. pg_restore se prueba en otra base con
+el mismo major y roles, comprobando todas las tablas, secuencia, cuentas/historia
+y arranque de la app. La CI hace esa prueba con sus datos sintéticos mediante
+`verify_restore.py`; no configura copias periódicas del futuro servicio público.
+El plan gratuito elegido podría no ofrecer backups automáticos ni recuperación
+larga. Acordar RPO/RTO reales con el propietario antes de admitir datos reales.
+
+La clave estable conserva sesiones JWT entre reinicios; el cambio de contraseña
+sigue sin revocación global inmediata. Rotar la clave invalida todos los tokens.
+
+No hay administrador predeterminado. El bootstrap local aprobado está implementado
+con entrada oculta y confirmada, BCrypt y transacción/bloqueo asesor; solo crea el
+primer ADMIN y rechaza sobrescribir cuentas o usar roles de BD privilegiados.
+No existe endpoint público, contraseña inventada ni argumento sensible. Ver
+[demo-maintenance.md](demo-maintenance.md) para comandos, límites y control ADMIN.
+Las cuentas ADMIN ficticias de aceptación requieren retirada autorizada antes del
+bootstrap del propietario; no se eliminan automáticamente.
+
+Supabase está elegido y Docker construido/verificado en CI (ver [docker.md](docker.md)).
+Render Free y la política mínima tras caída están aprobados para demo ocasional
+a 0 €. Faltan autorización de recursos gráficos/fuente, acreditar sustitución sin
+solapamiento, HTTPS/proxy real y creación del administrador del propietario,
+backups operativos, primer despliegue supervisado y validación pública/visual.
+Recorrido de esta entrega: `feature/production-foundation` → PR → `develop`.
+Main/releases corresponden al propietario; hay autorización condicionada de demo,
+pero no existe URL pública. Bloqueos y procedimiento en render-free.md.
+
+Integración concreta de Supabase, roles, conexión y validación gestionada: [supabase.md](supabase.md). No añadir sus secretos a Actions; las PR siguen usando PostgreSQL aislado.
+
+## Exclusión de instancia para Render
+
+`DIXIT_SINGLE_INSTANCE_GUARD=true` es obligatorio en el runtime de la demo Render.
+Instala el inicializador en todas las conexiones físicas Hikari, reclama antes
+de Flyway/JPA/recuperación y rechaza otro proceso con SQLSTATE 55000. Pool máximo
+cinco, mínimo inactivo uno; sin tabla o conexión dedicada nueva. Solo conexión
+directa o pooler de sesión (5432), nunca transaccional. Herramientas offline del
+propietario siguen siendo operaciones separadas explícitas y no ejecutan el
+motor de partidas. ADR-0011 delimita garantías y fallos de sustitución posibles.
+
+Producción ordinaria usa `DIXIT_RECOVER_INTERRUPTED_GAMES=true` y
+`DIXIT_MAINTENANCE_ENABLED=false`: salud/admisión cerradas hasta recuperar mediante
+cancelación aprobada, después reapertura. True en mantenimiento fuerza arranque
+cerrado; no confundir reabrir la bandera en memoria con actualizar configuración
+de un despliegue. Render Save only/Resume no aplica la nueva configuración al
+artefacto anterior: seguir el procedimiento de render-free.md. No rolling sobre
+el proceso activo, incluso con guard. No continuidad automática de temporizadores,
+presencia o WebSockets ni revocación JWT global inmediata por cambiar contraseña.

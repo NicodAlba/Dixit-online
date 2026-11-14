@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17.11
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: 'true'
+      # Only isolated CI/restore smoke may opt into interrupted-game fixture recovery.
+      DIXIT_VERIFY_INTERRUPTED_RECOVERY: 'true'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend from lockfile
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+      - name: Frontend tests (non-interactive)
+        working-directory: frontend
+        run: npm test -- --watchAll=false --runInBand
+      - name: Production frontend build
+        working-directory: frontend
+        # CRA treats inherited lint/source-map warnings as errors under CI=true.
+        # Keep warnings visible; dependency/lint cleanup is a separate task.
+        env:
+          CI: 'false'
+        run: npm run build
+      - name: Backend tests and executable JAR
+        env:
+          SPRING_PROFILES_ACTIVE: test
+        run: ./mvnw --batch-mode --no-transfer-progress clean verify
+      - name: Verify packaged resources and start executable JAR
+        run: python3 scripts/ci/verify_package.py
+      - name: Provision isolated PostgreSQL roles and database
+        run: python3 scripts/ci/provision_postgres.py '${{ job.services.postgres.id }}'
+      - name: PostgreSQL migrations, privacy, concurrency and complete four-player game
+        run: >-
+          ./mvnw --batch-mode --no-transfer-progress
+          -Dspring.profiles.active=prod
+          -Dtest.reports.dir=target/postgres-surefire-reports
+          -Dtest=InvitationLifecycleTest,ResetAdminPasswordIT,SingleInstanceConnectionsIT,PostgresPersistenceIT,GameActionPermissionsTest,GamePhasePrivacyTest,FriendRelationshipsTest,GameCancellationTest,ChatAccountIdentityTest,StompPermissionsTest,MaintenancePermissionsTest,MaintenanceTransactionTest,BootstrapAdminIT,InterruptedGamePersistenceTest
+          test
+      - name: Isolated acceptance-account cleanup guards and rollback
+        run: python3 scripts/ci/verify_account_cleanup.py --container '${{ job.services.postgres.id }}'
+      - name: Package production JAR without academic seeds
+        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests -Pproduction-package package
+      - name: Production startup, routes, secrets, origins and persistence after restart
+        run: |
+          python3 -m unittest discover -s scripts/ci -p 'test_*.py'
+          python3 scripts/ci/verify_production.py
+      - name: Backup and isolated restore with production JAR
+        run: python3 scripts/ci/verify_restore.py '${{ job.services.postgres.id }}'
+      - name: Build single-application Docker image (no registry publication)
+        run: docker build --tag dixit:ci .
+      - name: Verify actual Docker runtime with isolated PostgreSQL
+        run: python3 scripts/ci/verify_image.py dixit:ci '${{ job.services.postgres.id }}'
+      - name: Verify build did not modify tracked files
+        run: git diff --exit-code
+      - name: Diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ci-diagnostics
+          retention-days: 1
+          if-no-files-found: warn
+          path: |
+            target/surefire-reports/
+            target/site/jacoco/
+            target/postgres-surefire-reports/
+            target/production-*.log
+            target/ci-smoke.log
+            target/docker-*.log

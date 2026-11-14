@@ -1,0 +1,18 @@
+DIXIT ONLINE — ORIGINAL DEMO EDITION
+Unofficial educational project; no affiliation with the commercial game's publisher is implied.
+
+Cards 0–35, card back, scenery, achievement artwork, icons and geometric wordmark:
+original vector compositions created for this project with code assistance.
+Dedicated under CC0-1.0. Sources and output manifest: assets/original-art and
+scripts/assets/generate_original_art.py in https://github.com/NicodAlba/Dixit-online.
+Full CC0 text: /static/notices/Original-art-CC0.txt.
+
+Bree Serif Regular, unmodified, by TypeTogether:
+Copyright (c) 2011, TypeTogether (www.type-together.com),
+with Reserved Font Names "Bree" and "Bree Serif".
+Licensed under SIL Open Font License 1.1.
+Full OFL text: /static/notices/BreeSerif-OFL.txt.
+Pinned official source and FONTLOG are retained in docs/licenses in the repository.
+
+Upstream code/dependency licences are separate; existing academic and developer
+attributions remain in README/pom.xml and generated JavaScript LICENSE files.

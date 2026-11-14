@@ -4,6 +4,9 @@
     background: linear-gradient(#241b1528, #241b1555), url('../../images/HomeBackground.png') center / cover;
     display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 24px;
 }
+/* Invitation auto margins must not consume the hero's horizontal centering space. */
+.home-page-container > .game-invitations {margin: 0;}
+.home-page-container > .game-invitations:empty {display: none;}
 .hero-div {
     width: min(100%, 520px); padding: clamp(20px, 4vw, 38px);
     border: 1px solid #fff4d58c; border-radius: 26px; color: #302216;
@@ -55,3 +58,6 @@
     .hero-logo .hero-logo-back {display: none;}
     .hero-logo:hover, .hero-logo:focus-visible {box-shadow: 0 0 0 2px #a8792c;}
 }
+
+.asset-notice {font-size: .72rem; margin: 0 0 .5rem; opacity: .85;}
+.asset-notice a {color: inherit;}

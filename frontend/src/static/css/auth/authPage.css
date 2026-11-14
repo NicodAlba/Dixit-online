@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap');
+
 
 .auth-page-container {
   position: relative;
@@ -51,7 +51,7 @@
 .auth-page-container h1 {
   color: #f7ecd6; 
   text-shadow: 0 2px 6px rgba(0,0,0,0.6);
-  font-family: 'Merriweather', Georgia, serif;
+  font-family: 'Bree Serif', Georgia, serif;
   font-weight: 700;
   letter-spacing: 0.4px;
   line-height: 1.05;

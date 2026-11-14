@@ -60,7 +60,8 @@ class StompPermissionsTest extends SecurityHttpSupport {
                     Throwable cause=failure.getCause();
                     if(!(cause instanceof IllegalStateException) || cause.getMessage()==null
                         || !(cause.getMessage().contains("is not open: current state CLOSING")
-                          || cause.getMessage().contains("is not open: current state CLOSED"))) throw failure;
+                          || cause.getMessage().contains("is not open: current state CLOSED")
+                          || cause.getMessage().equals("Message will not be sent because the WebSocket session has been closed"))) throw failure;
                 }
             }
         } finally {client.stop();}

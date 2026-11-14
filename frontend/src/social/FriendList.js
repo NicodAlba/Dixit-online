@@ -1,14 +1,13 @@
 import React, {useState} from "react";
 import {useNavigate} from "react-router-dom";
 import {FiEye, FiMail, FiUserMinus} from "react-icons/fi";
-import {usePresenceData} from "../presence/PresenceContext";
 import {ConnectionBadge} from "../presence/ParticipantPresence";
 import {useSocial} from "./SocialContext";
 import SocialAvatar from "./SocialAvatar";
 
 export function FriendList() {
     const social = useSocial();
-    const presence = usePresenceData();
+    const presence = social.presence;
     const navigate = useNavigate();
     const [removing, setRemoving] = useState(null);
     const [inviting, setInviting] = useState(null);

@@ -26,7 +26,7 @@ public record GameView(Integer id, Date startDate, Date endDate, boolean cancell
 
     static Account account(User user){return user==null?null:new Account(user.getId(),user.getUsername());}
     static Person person(Player player){return player==null?null:new Person(player.getId(),account(player.getUser()),player.getPoints());}
-    static List<Card> hand(Player player){return player.getCards().stream().filter(c->c.getTurn()==null && c.getOwner()!=null && Objects.equals(c.getOwner().getId(),player.getId())).toList();}
+    static List<Card> hand(Player player){return player.getCards().stream().filter(c->c.getTurn()==null && c.getOwner()!=null && Objects.equals(c.getOwner().getId(),player.getId())).sorted(Comparator.comparing(Card::getId)).toList();}
     static Participant participant(Player player,Integer perspective){
         List<Card> hand=hand(player);
         return new Participant(player.getId(),account(player.getUser()),player.getPoints(),hand.size(),

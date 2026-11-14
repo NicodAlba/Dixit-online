@@ -7,7 +7,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GamePhasePrivacyTest extends SecurityHttpSupport {
-    record Match(int id,LinkedHashMap<Integer,Account> members,Account viewer) {}
+    record Match(int id,LinkedHashMap<Integer,Account> members,Account host,Account viewer) {}
     Match lobbyWithViewer(){
         List<Account> people=List.of(account(),account(),account());Account viewer=account();
         for(Account person:people){
@@ -26,9 +26,15 @@ class GamePhasePrivacyTest extends SecurityHttpSupport {
             Account user=people.stream().filter(p->p.id()==participant.path("user").path("id").asInt()).findFirst().orElseThrow();
             members.put(participant.path("id").asInt(),user);
         }
-        return new Match(id,members,viewer);
+        Account host=people.getFirst();
+        assertEquals(host.id(),created.getBody().path("leader").path("id").asInt());
+        // Deliberately place the host last: SQL/JPA collection order is not actor identity.
+        int hostPlayer=members.entrySet().stream().filter(e->e.getValue().id()==host.id()).findFirst().orElseThrow().getKey();
+        members.remove(hostPlayer);members.put(hostPlayer,host);
+        assertNotEquals(host.id(),members.values().iterator().next().id());
+        return new Match(id,members,host,viewer);
     }
-    void start(Match m){var r=request(HttpMethod.PATCH,"/games/"+m.id()+"/start",m.members().values().iterator().next().token(),null);status(200,r);safe(r.getBody());}
+    void start(Match m){var r=request(HttpMethod.PATCH,"/games/"+m.id()+"/start",m.host().token(),null);status(200,r);safe(r.getBody());}
     JsonNode game(Match m,Account user,Integer perspective){
         var r=request(HttpMethod.GET,"/games/"+m.id()+(perspective==null?"":"?perspectivePlayerId="+perspective),user.token(),null);status(200,r);safe(r.getBody());return r.getBody();
     }
@@ -61,8 +67,9 @@ class GamePhasePrivacyTest extends SecurityHttpSupport {
     String history(int game){return jdbc.queryForList("select c.id,c.image_id,c.turn_id,c.user_id,c.player_id,v.player_id as voter from cards c left join player_votes v on c.id=v.card_id where c.game_id=? and c.turn_id is not null order by c.id,v.player_id",game).toString();}
 
     @Test void initialViewsProtectHandsProfilesLobbySecretAndAdministrativeCatalogs(){
-        Match m=lobbyWithViewer();Account host=m.members().values().iterator().next();
-        JsonNode lobby=game(m,host,null);hands(lobby,m.members().keySet().iterator().next(),0);assertTrue(lobby.path("hasPassword").asBoolean());
+        Match m=lobbyWithViewer();Account host=m.host();
+        int hostPlayer=m.members().entrySet().stream().filter(e->e.getValue().id()==host.id()).findFirst().orElseThrow().getKey();
+        JsonNode lobby=game(m,host,null);hands(lobby,hostPlayer,0);assertTrue(lobby.path("hasPassword").asBoolean());
         start(m);
         for(var member:m.members().entrySet())hands(game(m,member.getValue(),null),member.getKey(),6);
         hands(game(m,m.viewer(),null),null,6);
@@ -152,6 +159,7 @@ class GamePhasePrivacyTest extends SecurityHttpSupport {
             for(var member:m.members().entrySet())if(member.getKey()!=story)status(200,request(HttpMethod.POST,"/turns/"+tid+"/vote/"+member.getKey()+"/"+choices.get(story),member.getValue().token(),null));
             for(int perspective:m.members().keySet())hands(game(m,m.viewer(),perspective),perspective,index==5?5:6);
         }
+        for(int player:m.members().keySet())assertEquals(2,count("select count(*) from turns where game_id=? and storyteller_id=? and state='FINISHED'",m.id(),player));
         JsonNode finalView=game(m,m.viewer(),m.members().keySet().iterator().next());assertFalse(finalView.path("endDate").isNull());assertFalse(finalView.path("winners").isEmpty());
         assertEquals(6,finalView.path("turns").size());assertEquals(18,count("select count(*) from cards where game_id=? and turn_id is not null and user_id is not null",m.id()));
     }

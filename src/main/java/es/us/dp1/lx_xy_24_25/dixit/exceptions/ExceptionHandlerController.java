@@ -18,15 +18,28 @@ import org.springframework.web.context.request.WebRequest;
 @RestControllerAdvice
 public class ExceptionHandlerController {
 
+    @org.springframework.beans.factory.annotation.Value("${dixit.errors.include-internal-details:true}")
+    private boolean includeInternalDetails = true;
+
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<MessageResponse> missingStaticResource() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse("Resource not found."));
+    }
+
     @ExceptionHandler(InvalidRequestException.class)
     public ResponseEntity<MessageResponse> invalidRequest(InvalidRequestException ex) {
         return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(es.us.dp1.lx_xy_24_25.dixit.operations.MaintenanceUnavailableException.class)
+    public ResponseEntity<MessageResponse> maintenanceUnavailable(es.us.dp1.lx_xy_24_25.dixit.operations.MaintenanceUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new MessageResponse(ex.getMessage()));
+    }
+
 	@ExceptionHandler(Exception.class)
 	@ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
 	public ResponseEntity<ErrorMessage> globalExceptionHandler(Exception ex, WebRequest request) {
-		ErrorMessage message = new ErrorMessage(HttpStatus.INTERNAL_SERVER_ERROR.value(), new Date(), ex.getMessage(),
+		ErrorMessage message = new ErrorMessage(HttpStatus.INTERNAL_SERVER_ERROR.value(), new Date(), includeInternalDetails ? ex.getMessage() : "An unexpected error occurred.",
 				request.getDescription(false));
 
 		return new ResponseEntity<>(message, HttpStatus.INTERNAL_SERVER_ERROR);

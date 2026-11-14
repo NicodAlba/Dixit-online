@@ -24,6 +24,9 @@ test("a reused image with a new card ID stays visible and selectable while the h
         setTurn: jest.fn(), players: [player], storyteller: player};
     global.fetch = jest.fn().mockResolvedValue({ok: true, json: async () => ({state: "WAITING_STORYTELLER_CLUE"})});
     render(<Game />);
+    expect(screen.queryByText("Draw pile")).not.toBeInTheDocument();
+    expect(screen.queryByText("Discard")).not.toBeInTheDocument();
+    expect(document.querySelector(".table-piles, .table-pile, .table-discard")).toBeNull();
     const images = screen.getAllByAltText("Card");
     expect(images).toHaveLength(6);
     expect(images.filter(img => img.getAttribute("src") === "/Cards/7.png")).toHaveLength(1);

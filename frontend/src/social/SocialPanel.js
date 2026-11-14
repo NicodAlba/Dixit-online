@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React from "react";
 import {Modal, ModalHeader, ModalBody} from "reactstrap";
 import {FiUsers, FiUserPlus, FiMail, FiSearch, FiRefreshCw, FiX} from "react-icons/fi";
 import Tooltip from "../components/ui/Tooltip";
@@ -12,12 +12,6 @@ import "../static/css/social/social.css";
 export default function SocialPanel() {
     const social = useSocial();
     const {section, setSection} = social;
-    const [inviteRefresh, setInviteRefresh] = useState(0);
-    useEffect(() => {
-        if (!social.open) return;
-        const timer = setInterval(() => setInviteRefresh(value => value + 1), 10000);
-        return () => clearInterval(timer);
-    }, [social.open]);
     const incoming = social.relationships.filter(item => item.status === "INCOMING").length;
     return <Modal id="social-panel" isOpen={social.open} toggle={social.closePanel} className="social-drawer" modalClassName="social-shell" labelledBy="social-title" returnFocusAfterClose onClosed={() => queueMicrotask(() => {
         if (document.activeElement && document.activeElement !== document.body) return;
@@ -33,13 +27,13 @@ export default function SocialPanel() {
                 <button aria-pressed={section === "search"} onClick={() => setSection("search")}><FiSearch aria-hidden="true" /> Search</button>
                 <button aria-pressed={section === "invitations"} onClick={() => setSection("invitations")}><FiMail aria-hidden="true" /> Invitations</button>
             </nav>
-            <div className="social-refresh"><button onClick={() => {social.refresh(); setInviteRefresh(value => value + 1);}} disabled={social.loading || social.pending}><FiRefreshCw aria-hidden="true" /> Refresh</button>{social.loading && <span role="status">{social.loaded ? "Refreshing…" : "Loading friends…"}</span>}</div>
+            <div className="social-refresh"><button onClick={() => {social.refresh();}} disabled={social.loading || social.pending}><FiRefreshCw aria-hidden="true" /> Refresh</button>{social.loading && <span role="status">{social.loaded ? "Refreshing…" : "Loading friends…"}</span>}</div>
             {social.error && <p className="social-error" role="alert">{social.error}</p>}
             {social.feedback && <p className="social-feedback" role="status">{social.feedback}</p>}
             {section === "friends" && social.loaded && <FriendList />}
             {section === "requests" && social.loaded && <FriendRequestList />}
             {section === "search" && <SearchUser />}
-            {section === "invitations" && <section><h3>Game invitations</h3><GameInvitationList refreshToken={inviteRefresh} emptyMessage="No game invitations." /></section>}
+            {section === "invitations" && <section><h3>Game invitations</h3><GameInvitationList emptyMessage="No game invitations." /></section>}
         </ModalBody>
     </Modal>;
 }
