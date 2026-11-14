@@ -130,3 +130,12 @@ target/
 # Generated Python operator/CI bytecode
 __pycache__/
 *.py[cod]
+
+# Private developer records and source documents
+/docs/CHANGELOG_DEV.md
+/docs/publication-review.md
+/docs/deliverables/
+/LA_BIBLIA_DE_DIXIT.md
+/docs/**/*[Cc]ontract*
+/docs/**/*[Cc]ontrato*
+/docs/**/*[Aa]greement*
