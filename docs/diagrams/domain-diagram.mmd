@@ -1,30 +1,81 @@
-flowchart TB
-    subgraph Social["Accounts and social"]
-        U["User · account"]
-        F["FriendRequest"]
-        I["GameInvitation"]
-        A["Achievement"]
-        F -->|sender and recipient| U
-        I -->|recipient| U
-        U -->|earns| A
-    end
-    subgraph Play["Lobby and gameplay"]
-        G["Game · lobby and result"]
-        P["Player · seat, hand and score"]
-        T["Turn · clue, answer and phase"]
-        M["Message"]
-        G -->|seats| P
-        G -->|rounds| T
-        M -->|sent by| P
-        M -->|belongs to| G
-    end
-    subgraph Deck["Cards and history"]
-        C["Card · one occurrence"]
-        ART["Image · reusable illustration"]
-        C -->|uses| ART
-    end
-    U -->|participates as| P
-    I -.->|stores game ID| G
-    G -->|tracks| C
-    T -->|records played cards| C
-    P -->|casts votes on| C
+classDiagram
+    direction TB
+    %% ADMIN is a User authority, not a subclass.
+    class User {
+        String username
+        String password
+    }
+    class Authorities {
+        String authority
+    }
+    class Game {
+        String password
+        Date startDate
+        Date endDate
+        boolean cancelled
+    }
+    class Player {
+        Integer points
+    }
+    class Turn {
+        TurnState state
+        String clue
+    }
+    class Card
+    class Image {
+        String url
+    }
+    class Message {
+        Date date
+        String text
+    }
+    class FriendRequest {
+        Date dateAccepted
+    }
+    class GameInvitation {
+        String inviter
+        Integer gameId
+        String password
+    }
+    class Achievement {
+        String description
+        Date dateObtained
+        Integer threshold
+    }
+    class BadgeImage {
+        String url
+        AchievementType type
+    }
+    class WinAchievement
+    class PlayAchievement
+    class TrickAchievement
+    Achievement <|-- WinAchievement
+    Achievement <|-- PlayAchievement
+    Achievement <|-- TrickAchievement
+    Authorities "1" <-- "0..*" User : authority
+    User "1" <-- "0..*" Game : leader
+    User "1" <-- "0..*" Player : account
+    Game "0..1" *-- "0..*" Player : seats
+    Game "0..*" --> "0..*" Player : winners
+    Game "0..*" --> "0..*" User : spectators
+    Game "1" *-- "0..*" Turn : rounds
+    Game "1" *-- "0..*" Card : deck and history
+    Game "1" *-- "0..*" Message : chat
+    Player "1" <-- "0..*" Message : author
+    Player "1" <-- "0..*" Turn : storyteller
+    Turn "0..*" --> "0..1" Card : answer
+    Turn "0..1" --> "0..*" Card : played cards
+    Player "0..1" <-- "0..*" Card : hand owner
+    User "0..1" <-- "0..*" Card : recorded author
+    Card "0..*" --> "1" Image : illustration
+    Card "0..*" --> "0..*" Player : historical votes
+    Player "0..*" --> "0..1" Card : playerVote
+    FriendRequest "0..*" --> "1" User : sender
+    FriendRequest "0..*" --> "1" User : receiver
+    GameInvitation "0..*" --> "1" User : recipient
+    GameInvitation ..> Game : gameId without FK
+    User "1" --> "0..*" Achievement : achievements
+    Achievement "0..*" --> "1" BadgeImage : badge
+    note for Game "Host starts with 3 or 4 seats"
+    note for Card "A reused illustration gets a new Card ID. Prior turns and votes stay recorded."
+    note for User "PLAYER and ADMIN are authorities on User"
