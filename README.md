@@ -24,13 +24,14 @@ A vote is a REST request. The server locks the game while it checks the current 
 
 STOMP tells the other browsers that something changed. Each browser goes back to the API for its own view. During play you can see your hand and your own vote. The server controls when the answer and the other votes become visible. The same read path lets a browser catch up after reconnecting.
 
-## Why one illustration can have several card IDs
+## Class diagram
+
+[![Class diagram covering accounts, cards, gameplay, chat, friendships and achievements](docs/diagrams/class-diagram.png)](docs/diagrams/class-diagram.png)
+
 
 `User` represents an account. `Player` represents a seat in a game and carries the hand and score for that participation. A `Game` has a series of `Turn` records. Each turn keeps the storyteller, clue, cards and votes for that round.
 
 `Image` is the illustration, and `Card` is an individual appearance of that illustration in a game. A four-player match eventually runs out of fresh illustrations. At that point the server can create a card with a new ID using an eligible illustration from an earlier round. The earlier card still carries its own author, turn and votes. Players start each new round with six cards, and the last round skips the refill.
-
-[![Class diagram covering accounts, cards, gameplay, chat, friendships and achievements](docs/diagrams/class-diagram.png)](docs/diagrams/class-diagram.png)
 
 [Class diagram source](docs/diagrams/class-diagram.mmd) · [Full domain diagram](docs/diagrams/domain-diagram.png)
 
