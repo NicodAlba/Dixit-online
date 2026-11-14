@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="316" viewBox="0 0 900 316" role="img">
+<title>From browser to database</title>
+<rect width="100%" height="100%" rx="12" fill="#f5f4ee"/>
+<g font-family="system-ui, sans-serif">
+<text x="36" y="39" font-size="22" font-weight="700" fill="#202721">From browser to database</text>
+<circle cx="47" cy="82" r="12" fill="#28594b"/>
+<text x="47" y="86" text-anchor="middle" font-size="11" fill="white">1</text>
+<text x="76" y="87" font-size="18" font-weight="650" fill="#202721">Browser · React</text>
+<text x="76" y="113" font-size="15" fill="#3e4d44">Loads the UI, sends actions over HTTPS and subscribes over STOMP/SockJS.</text>
+<path d="M47 117V154" stroke="#879486" stroke-width="2"/>
+<circle cx="47" cy="166" r="12" fill="#28594b"/>
+<text x="47" y="170" text-anchor="middle" font-size="11" fill="white">2</text>
+<text x="76" y="171" font-size="18" font-weight="650" fill="#202721">Render · Spring Boot</text>
+<text x="76" y="197" font-size="15" fill="#3e4d44">Serves React. Controllers authenticate requests and pass game actions to services.</text>
+<path d="M47 201V238" stroke="#879486" stroke-width="2"/>
+<circle cx="47" cy="250" r="12" fill="#28594b"/>
+<text x="47" y="254" text-anchor="middle" font-size="11" fill="white">3</text>
+<text x="76" y="255" font-size="18" font-weight="650" fill="#202721">Spring Data JPA → Supabase PostgreSQL</text>
+<text x="76" y="281" font-size="15" fill="#3e4d44">Services enforce game rules and save changes. Flyway manages the database schema.</text>
+</g></svg>
