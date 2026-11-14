@@ -1,102 +1,73 @@
-# Dixit
-Small project based on spring-petclinic for teaching SPA architectures with react, java and spring developer for teaching DP1 at the Software Engineering degree of University of Sevilla.
+# DIXIT — Online Multiplayer Game
 
-This is a fork of https://github.com/spring-projects/spring-petclinic  The main changes that have been performed were:
-- Trimming several parts of the application to keep the example low
-- Reorganize some parts of the code according to best practices introduced in the course
-- Modifying the Controllers to work as RestControllers creating several API endpoings
-- Modifying the security configuration to use JWT
-- Creating a React frontend.
+An illustrated storytelling game for three or four players, developed with **Java 21, Spring Boot and React**. Create a lobby, invite friends, choose a card and a clue, and vote for the storyteller's card. Each player tells two stories before the final score is calculated.
 
-## Understanding the Spring Petclinic application  backend with a few diagrams
-<a href="https://speakerdeck.com/michaelisvy/spring-petclinic-sample-application">See the presentation here</a>
+Originally a collaborative **University of Seville, Design & Tests I (2025–2026)** project, this repository records its subsequent evolution into an occasional hosted demo. It derives from the course's Spring Petclinic-based SPA template. Academic authorship and upstream notices remain applicable; this presentation does not claim sole authorship or official affiliation with the commercial game.
 
-## Running Dixit backend locally
-Dixit is a [Spring Boot](https://spring.io/guides/gs/spring-boot) application built using [Maven](https://spring.io/guides/gs/maven/). You can build a jar file and run it from the command line:
+[Play the last documented demo](https://dixit-demo-20261110-f.onrender.com) · [API documentation](https://dixit-demo-20261110-f.onrender.com/docs) · [Documentation](docs/README.md)
 
+The free server may take several minutes to wake up. Availability and response times are limited. The deployment reference above is documented in DEV-080; it is not a live availability guarantee.
 
-```
-git clone https://github.com/gii-is-DP1/dp1-2025-2026-li-02.git
-cd dp1-2025-2026-li-02
-./mvnw package
-java -jar target/*.jar
-```
+## Features
 
-You can then access Dixit backend here: [http://localhost:8080/](http://localhost:8080/swagger-ui/index.html)
+- Account registration and JWT authentication; host-controlled lobbies and invitations.
+- Turn-based multiplayer with live updates, chat and authorized spectator views.
+- Private hands and phase-aware responses; stable anonymous card ordering.
+- Friends, presence, invitations, achievements, statistics and game history.
+- Responsive, keyboard-accessible controls and reduced-motion alternatives.
+- Card replenishment that preserves earlier turns, authorship and votes.
 
+## Architecture
 
+One Spring Boot application serves the React production build and the REST API. STOMP/SockJS notifications invalidate client state; React reloads an authorized REST view. PostgreSQL stores game history. Presence and the simple message broker belong to one application process.
 
-Or you can run it from Maven directly using the Spring Boot Maven plugin. If you do this it will pick up changes that you make in the project immediately (changes to Java source files require a compile as well - most people use an IDE for this):
+| Area | Implementation |
+| --- | --- |
+| Backend | Java 21, Spring Boot 3.5.5, Spring Security, JPA/Hibernate |
+| Frontend | React 18, JavaScript, React Router, Create React App |
+| Communication | REST, JWT, STOMP/SockJS |
+| Persistence | H2 for local development; PostgreSQL 17 and Flyway for the demo |
+| Delivery | Maven wrapper, npm lockfile, multistage Docker, GitHub Actions |
+| Hosting | Render Free application and Supabase Free PostgreSQL |
 
-```
+See [the current architecture](docs/architecture.md) and [architectural decisions](docs/adr/).
+
+## Run locally
+
+Use Java 21 and the Node version in `frontend/.nvmrc`. Start from the reviewed development branch:
+
+```sh
+git clone --branch develop https://github.com/NicodAlba/Dixit-online.git
+cd Dixit-online
 ./mvnw spring-boot:run
 ```
-## Database configuration
 
-In its default configuration, Dixit uses an in-memory database (H2) which
-gets populated at startup with data. The INSERTs are specified in the file data.sql.
+In a second terminal, from the repository root:
 
-## Working with React Dixit in your IDE
-
-### Prerequisites
-The following items should be installed in your system:
-* Java 17 or newer.
-* Node.js 18 or newer.
-* git command line tool (https://help.github.com/articles/set-up-git)
-* Your preferred IDE 
-  * Eclipse with the m2e plugin. Note: when m2e is available, there is an m2 icon in `Help -> About` dialog. If m2e is
-  not there, just follow the install process here: https://www.eclipse.org/m2e/
-  * [Spring Tools Suite](https://spring.io/tools) (STS)
-  * IntelliJ IDEA
-  * [VS Code](https://code.visualstudio.com)
-
-### Steps:
-
-1) On the command line
-```
-git clone https://github.com/gii-is-DP1/dp1-2025-2026-li-02.git
-```
-2) Inside Eclipse or STS
-```
-File -> Import -> Maven -> Existing Maven project
-```
-
-Then either build on the command line `./mvnw generate-resources` or using the Eclipse launcher (right click on project and `Run As -> Maven install`) to generate the css. Run the application main method by right clicking on it and choosing `Run As -> Java Application`.
-
-3) Inside IntelliJ IDEA
-
-In the main menu, choose `File -> Open` and select the Dixit [pom.xml](pom.xml). Click on the `Open` button.
-
-CSS files are generated from the Maven build. You can either build them on the command line `./mvnw generate-resources`
-or right click on the `dp1-2025-2026-li-02` project then `Maven -> Generates sources and Update Folders`.
-
-A run configuration named `GameApplication` should have been created for you if you're using a recent Ultimate
-version. Otherwise, run the application by right clicking on the `GameApplication` main class and choosing
-`Run 'GameApplication'`.
-
-4) Navigate to Dixit
-Visit [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) in your browser.
-
-
-## Looking for something in particular?
-
-|Spring Boot Configuration | Class or Java property files  |
-|--------------------------|---|
-|The Main Class | [GameApplication](https://github.com/gii-is-DP1/dp1-2025-2026-li-02/blob/main/src/main/java/es/us/dp1/lx_xy_24_25/dixit/GameApplication.java) |
-|Properties Files | [application.properties](https://github.com/gii-is-DP1/dp1-2025-2026-li-02/blob/main/src/main/resources/application.properties) |
-
-
-## Starting the frontend
-
-Dixit is implemented with a React frontend in the folder named "frontend".
-You can start the development server to see frontend using the command (maybe you should use the command npm insall prior to this):
-```
+```sh
+cd frontend
+npm ci --no-audit --no-fund
 npm start
 ```
-You can then access the Dixit frontend at [http://localhost:3000](http://localhost:3000)
 
-If you receive some error of 'sockjs-client' you need to do the following:
-- Stop the server (go to the terminal where `npm start` was executed and do `Ctrl + C`)
-- Inside de frontend folder, execute `npm install sockjs-client @stomp/stompjs`
-- Now you can do `npm start` again
+Open http://localhost:3000. Development uses disposable H2 data; restarting can reset accounts and games. Do not connect this development setup to the hosted database. See [local setup and verification](docs/local-development.md) for packaging, tests and configuration boundaries.
 
+## Quality and delivery
+
+GitHub Actions runs frontend/backend tests, isolated PostgreSQL acceptance, executable JAR checks, backup/restore and actual Docker-image checks. CI does **not** deploy the demo. Results belong to a specific commit; consult [CI documentation](docs/operations/ci.md) and [Actions](https://github.com/NicodAlba/Dixit-online/actions), rather than treating historical counts as a current guarantee.
+
+Changes follow **`fix/*` or `feature/*` → PR → `develop`**. Only the owner promotes changes to `main` and authorizes releases or deployments. [CHANGELOG_DEV.md](docs/CHANGELOG_DEV.md) records evidence, decisions and limitations.
+
+## Status and limitations
+
+The demo uses a single application instance, manual backups and a manual replacement procedure. A server restart cancels interrupted games while preserving history; it does not resume sockets or timers. Free hosting can sleep or be suspended. Full visual acceptance across browsers and physical devices remains incomplete, and inherited frontend build warnings remain documented.
+
+[Owner guide](docs/operations/demo-owner.md) · [Production configuration](docs/operations/production.md) · [Render operation](docs/operations/render-free.md) · [Supabase operation](docs/operations/supabase.md)
+
+## Provenance and permissions
+
+Academic source: [gii-is-DP1/dp1-2025-2026-li-02](https://github.com/gii-is-DP1/dp1-2025-2026-li-02). Template origin: [Spring Petclinic](https://github.com/spring-projects/spring-petclinic). Existing developer credits remain in [pom.xml](pom.xml) and the academic deliverables.
+
+Current demo artwork and Bree Serif font have separate notices in [asset provenance](docs/operations/public-assets.md). The Maven Apache-2.0 declaration does not resolve all third-party artwork, historical resources or collaborative authorship permissions. See [publication review](docs/publication-review.md) for the precise scope and unresolved items. No blanket new license is granted by this README.
+
+Screenshots will be added after a current, privacy-reviewed capture is approved; historical screenshots are not presented as the current interface.
