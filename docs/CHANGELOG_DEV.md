@@ -1274,3 +1274,8 @@ La propuesta se integra como documentación aprobada; las unidades funcionales t
 - **Cambio:** README en inglés con cuatro diagramas Mermaid de la implementación (despliegue y capas, dominio de juego, ciclo de ronda y secuencia REST/STOMP), más responsabilidades, privacidad, transacciones, presencia, recuperación, despliegue y evolución por fases. Los tres Mermaid académicos se enlazan con notas sobre su alcance; se conservan como evidencia histórica. Se mantiene la guía de arranque, la procedencia académica y la revisión de permisos.
 - **Verificación:** contraste con D1, diagramas académicos, ADR y código de Turn, TurnService, Game, Card, Player, invitaciones y WebSocketConfig. Comprobados los 18 enlaces locales y los cuatro bloques Mermaid. git diff --check correcto. La representación visual en GitHub sigue pendiente. Cambio documental sin impacto funcional.
 - **Entrega:** feature/phase6-publication-readiness → PR → develop. Commit local, con publicación e integración pendientes según DEV-082.
+
+## 2026-11-14 — DEV-084 — Integración de la documentación de Fase 6
+
+- El propietario autoriza subir la documentación a develop. Se normalizan a LF los finales de línea del inventario CSV para pasar la revisión del diff completo, sin modificar sus registros ni conceder licencias.
+- Recorrido feature/phase6-publication-readiness → PR → develop. La PR conserva los commits y registra las verificaciones de integración.
