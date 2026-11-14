@@ -14,6 +14,10 @@ One Spring Boot application serves the React bundle and the API. The backend run
 
 React renders the table, handles input and keeps things like clue drafts and animation state in the browser. Spring Security verifies the session token, and the game services check whose turn it is, what that player can do and which cards they can use. The server calculates the score and decides when to advance the game.
 
+![Spring Boot layers and the REST and STOMP paths](docs/diagrams/layer-diagram.png)
+
+[Layer diagram source](docs/diagrams/layer-diagram.mmd)
+
 ## What happens when you vote
 
 ![A vote goes through REST and commits in PostgreSQL before STOMP tells the other browsers to reload their authorized view](docs/diagrams/vote-flow.svg)
@@ -27,6 +31,10 @@ STOMP tells the other browsers that something changed. Each browser goes back to
 `User` represents an account. `Player` represents a seat in a game and carries the hand and score for that participation. A `Game` has a series of `Turn` records. Each turn keeps the storyteller, clue, cards and votes for that round.
 
 `Image` is the illustration, and `Card` is an individual appearance of that illustration in a game. A four-player match eventually runs out of fresh illustrations. At that point the server can create a card with a new ID using an eligible illustration from an earlier round. The earlier card still carries its own author, turn and votes. Players start each new round with six cards, and the last round skips the refill.
+
+![Game classes showing accounts, seats, rounds, card appearances and illustrations](docs/diagrams/class-diagram.png)
+
+[Class diagram source](docs/diagrams/class-diagram.mmd) · [Domain overview](docs/diagrams/domain-diagram.png)
 
 ## Running the demo
 
