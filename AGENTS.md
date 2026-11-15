@@ -1,24 +1,24 @@
-# Instrucciones de trabajo de DIXIT
+# DIXIT working instructions
 
-## Registro obligatorio de cada intervención
+## Record every change
 
-Por petición expresa del propietario (unificación de DEV-006), antes de cerrar cada intervención actualiza **solo `docs/CHANGELOG_DEV.md`**. Este fichero privado y excluido de Git reúne el historial de desarrollo y el razonamiento arquitectónico/técnico. Consérvalo localmente y no lo añadas a ningún commit, diff público ni PR.
+Before wrapping up a task, update only the private, Git-ignored `docs/CHANGELOG_DEV.md` as the development record (DEV-006). Keep it local and out of commits, public diffs, and pull requests.
 
-Registra fecha e identificador, problema y evidencia, comportamiento esperado, causa técnica, solución y por qué, alternativas relevantes, archivos, impacto sobre reglas/datos/API/frontend/módulos, verificaciones y resultados reales, riesgos, límites, pendientes, estado final y rama/commits/PR cuando existan. Una entrada breve basta para cambios triviales. No basta con enumerar archivos ni con el mensaje del chat.
+Record the date and ID, problem and evidence, expected behavior, root cause, solution and rationale, relevant alternatives, files, impact on rules/data/API/frontend/modules, checks and actual results, risks, limitations, follow-ups, final status, and branch/commit/PR references when available. A short entry suffices for a trivial change.
 
-El antiguo documento externo `../# DIXIT — Software Architecture & SDD Sp.md` se ha fusionado con el changelog y retirado por indicación del propietario. No lo recrees ni mantengas un registro paralelo. Conserva las entradas históricas y distingue verificaciones ejecutadas de inspecciones e hipótesis. Las decisiones arquitectónicas importantes aprobadas se documentan además en `docs/adr/` cuando corresponda.
+The owner retired the former external architecture and SDD document after merging it into the changelog. Preserve historical entries and distinguish executed checks from inspection and hypotheses. Document approved architectural decisions in `docs/adr/` when appropriate.
 
-## Alcance e integración
+## Scope and integration
 
-- Trabaja sobre un problema cada vez y conserva arquitectura, modelo y reglas salvo aprobación expresa.
-- Todo trabajo, incluidos documentación y configuración, se realiza en una rama propia `fix/*` o `feature/*` creada desde `develop`, con el nombre acordado. No hagas cambios ni commits directamente en `develop` o `main`.
-- La entrega de cada tarea termina mediante PR de su rama `fix/*` o `feature/*` hacia `develop`, conservando los commits existentes y verificando la subida e integración. Publica únicamente la rama explícita de la tarea en el repositorio propio autorizado.
-- Indica SIEMPRE este recorrido en los prompts de traspaso, propuestas y cierres: `fix/*` o `feature/*` → PR → `develop`. Identifica la rama concreta cuando se conozca y distingue los pasos pendientes de los completados.
-- El paso de `develop` a `main` lo realiza exclusivamente el propietario. Los agentes no deben hacer merge, commits ni push a `main`, ni crear PR hacia `main` por iniciativa propia.
-- No publiques versiones o despliegues sin aprobación. El permiso de push e integración en `develop` no autoriza esas acciones ni el paso a `main`.
+- Work on one problem at a time. Preserve the architecture, model and rules unless explicitly approved.
+- Use an agreed `fix/*` or `feature/*` branch off `develop` for code, documentation and configuration. Avoid direct changes to `develop` and `main`.
+- Open a PR to `develop`, preserve the existing commits, and verify the push and merge. Publish only the task branch to the authorized repository.
+- Include the route `fix/*` or `feature/*` → PR → `develop` in handoffs, proposals and closing reports. Name the branch and identify which steps are complete.
+- The owner controls promotion to `main`. Agents should not independently commit or push to `main`, merge into it or open PRs targeting it.
+- Releases and deployments require separate approval.
 
-## Historial público y copias locales
+## Public history and local copies
 
-- Las ramas `local/received-baseline` y `local/prepublication-history` conservan historia privada con contratos universitarios: no las publiques.
-- Publica solo ramas revisadas mediante nombres explícitos. No uses push de todas las ramas ni mirror.
-- Conserva las exclusiones de contratos, `.env`, credenciales privadas, dependencias, builds, logs y copias temporales. Conserva los avisos y atribuciones requeridos. Los entregables originales permanecen en copias locales excluidas de Git.
+- Keep `local/received-baseline` and `local/prepublication-history` private. They contain confidential historical material.
+- Push reviewed branches by explicit name. Avoid pushing all branches or mirroring.
+- Preserve exclusions for contracts, `.env` files, private credentials, dependencies, builds, logs and temporary files. Keep required notices and attribution. Original deliverables remain in local copies outside Git.

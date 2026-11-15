@@ -1,91 +1,115 @@
 classDiagram
     direction TB
+    %% ADMIN is a User authority, not a subclass.
+    class User {
+        String username
+        String password
+    }
+    class Authorities {
+        String authority
+    }
+    class Game {
+        String password
+        Date startDate
+        Date endDate
+        boolean cancelled
+    }
+    class Player {
+        Integer points
+    }
+    class Turn {
+        String tableOrderSeed
+        String clue
+    }
+    class Card
+    class Image {
+        String url
+    }
+    class Message {
+        Date date
+        String text
+    }
+    class FriendRequest {
+        Date dateAccepted
+    }
+    class GameInvitation {
+        String inviter
+        String password
+    }
+    class Achievement {
+        String description
+        Date dateObtained
+        Integer threshold
+    }
+    class BadgeImage {
+        String url
+    }
+    class WinAchievement
+    class PlayAchievement
+    class TrickAchievement
     class BaseEntity {
         Integer id
     }
     class NamedEntity {
         String name
     }
-    class Authorities {
-        Authority authority
+    class Person {
+        String firstName
+        String lastName
     }
-    class Game {
-        Date startDate
-        Date endDate
-        String password
+    class TurnState {
+        <<enumeration>>
+        WAITING_STORYTELLER_CARD
+        WAITING_STORYTELLER_CLUE
+        WAITING_PLAYER_CARDS
+        SHOWING_CARDS
+        VOTING
+        SCORING
+        FINISHED
     }
-    class Message {
-        Date datetime
-        String text
+    class AchievementType {
+        <<enumeration>>
     }
-    class Turn {
-        Integer number
-        String hint
-    }
-    class Player {
-        Integer points
-    }
-    class Card
-    class Image {
-        String url
-    }
-    class User {
-        String username
-        String password
-    }
-    class GameInvitation {
-        String inviter
-        String password
-        Integer gameId
-    }
-    class FriendRequest {
-        Date dateAccepted
-    }
-    class Admin
-    class Achievement {
-        String description
-        Integer threshold
-        Date dateObtained
-    }
-    class BadgeImage {
-        String url
-        AchievementType type
-    }
-    class WinAchievement
-    class PlayAchievement
-    class TrickAchievement
-
-    Game *-- "0..N" Message
-    Player "1..1" o-- "0..N" Message
-    User "1..1" --> "0..N" Game : leads
-    Player "0..N" --> "0..1" Game : wins
-    Game *-- "0..N" Turn
-    Game "0..1" *-- "1..4" Player : plays
-    Player "0..1" --> "0..2" Turn : isStoryteller
-    User "1..1" *-- "0..N" Player
-    Player "0..1" --> "0..6" Card : owns
-    Player "0..N" --> "0..N" Card : votes
-    User "1..1" --> "0..N" Card : hasPlayed
-    Card "1..1" --> "0..1" Turn : isAnswer
-    Card "0..N" -- "1..1" Image
-    User "0..N" -- "0..N" GameInvitation
-    User --> User : receives
-    User --> User : sends
-    User .. "0..N" FriendRequest
-    User *-- "0..N" Achievement
-    Achievement "0..N" -- "1..1" BadgeImage
-    User <|-- Admin
+    BaseEntity <|-- User
+    BaseEntity <|-- Authorities
+    BaseEntity <|-- Game
+    BaseEntity <|-- Player
+    BaseEntity <|-- Turn
+    BaseEntity <|-- Card
+    BaseEntity <|-- Image
+    BaseEntity <|-- Message
+    BaseEntity <|-- FriendRequest
+    BaseEntity <|-- GameInvitation
+    NamedEntity <|-- Achievement
+    BaseEntity <|-- BadgeImage
     Achievement <|-- WinAchievement
     Achievement <|-- PlayAchievement
     Achievement <|-- TrickAchievement
-    %% FriendRequest is the association class of the User sends/receives relationship.
-    %% Its 0..N multiplicity is displayed in the source image.
-    User "0..N" -- "0..N" Authorities
     BaseEntity <|-- NamedEntity
-    BaseEntity <|-- Game
-    BaseEntity <|-- Message
-    BaseEntity <|-- Turn
-    BaseEntity <|-- Player
-    BaseEntity <|-- Card
-    BaseEntity <|-- User
-    BaseEntity <|-- BadgeImage
+    BaseEntity <|-- Person
+    Authorities "1" <-- "0..*" User
+    User "1" <-- "0..*" Game : leader
+    User "1" <-- "0..*" Player
+    Game "0..1" *-- "0..*" Player : seats
+    Game "0..*" --> "0..*" Player : winners
+    Game "0..*" --> "0..*" User : spectators
+    Game "1" *-- "0..*" Turn
+    Game "1" *-- "0..*" Card : deck and history
+    Game "1" *-- "0..*" Message
+    Player "1" <-- "0..*" Message : author
+    Player "1" <-- "0..*" Turn : storyteller
+    Turn "0..*" --> "0..1" Card : answer
+    Turn "0..1" --> "0..*" Card : played cards
+    Player "0..1" <-- "0..*" Card : hand owner
+    User "0..1" <-- "0..*" Card : recorded author
+    Card "0..*" --> "1" Image
+    Card "0..*" --> "0..*" Player : historical votes
+    Player "0..*" --> "0..1" Card : playerVote
+    FriendRequest "0..*" --> "1" User : sender
+    FriendRequest "0..*" --> "1" User : receiver
+    GameInvitation "0..*" --> "1" User : recipient
+    GameInvitation ..> Game : gameId (no FK)
+    User "1" --> "0..*" Achievement
+    Achievement "0..*" --> "1" BadgeImage
+    Turn --> TurnState : phase
+    BadgeImage --> AchievementType : type

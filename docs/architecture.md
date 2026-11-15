@@ -40,4 +40,10 @@ Local development uses disposable H2. The demo uses PostgreSQL 17, Flyway V1–V
 
 ## Design diagrams
 
-The [layer](diagrams/layer-diagram.mmd), [domain](diagrams/domain-diagram.mmd) and [class](diagrams/class-diagram.mmd) diagrams show the original design. Use the runtime view above and [ADRs](adr/) for current behavior.
+| Diagram | Scope | Editable source |
+| --- | --- | --- |
+| [Layers](diagrams/layer-diagram.png) | Controllers, services, repositories and query signatures, security, STOMP and runtime operations | [Mermaid](diagrams/layer-diagram.mmd) |
+| [Classes](diagrams/class-diagram.png) | Entities, fields, inheritance, enums, associations and multiplicities | [Mermaid](diagrams/class-diagram.mmd) |
+| [Domain](diagrams/domain-diagram.png) | How gameplay, cards, chat, accounts and invitations fit together | [Mermaid](diagrams/domain-diagram.mmd) |
+
+Open the PNGs at full size to read the member lists and dependencies. The class diagram shows scalar fields and inheritance. Associations show references and collections directly on the connecting lines. The domain diagram focuses on the business relationships, with ADMIN represented by an account authority and invitations linked by a stored game ID. Class fields describe server-side entities. REST response fields follow the projections documented above.

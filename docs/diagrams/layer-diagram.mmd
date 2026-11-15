@@ -1,129 +1,232 @@
 classDiagram
     direction TB
-    namespace Presentation_layer {
-        class PlayerController
-        class UserController
+    class React
+    class Database
+    class StompBroker
+    namespace HTTP {
         class AuthController
-        class GameController
-        class TurnController
-        class MessageController
-        class FriendController
-        class StatisticsController
+        class DevelopersController
+        class FriendRestController
+        class GameRestController
+        class MaintenanceController
+        class MessageRestController
+        class PlayerRestController
+        class PresenceRestController
+        class StatisticsRestController
+        class TurnRestController
+        class UserRestController
     }
-    namespace Business_Logic_Layer {
-        class StatisticsService
-        class UserService
-        class AuthService
+    namespace Services {
         class AchievementService
-        class GameService
-        class FriendRequestService
-        class PlayerService
+        class AuthService
         class AuthoritiesService
-        class GameInvitationService
-        class MessageService
-        class TurnService
         class CardService
+        class FriendRequestService
+        class GameInitializer
+        class GameInvitationService
+        class GameService
+        class GameViews
+        class MessageService
+        class PlayerService
+        class PresenceService
+        class StatisticsService
+        class TurnService
+        class UserService
     }
-    namespace Resources_Layer {
-        class GameRepository {
-            Optional~Game~ findByPassword(String password)
-            List~Game~ findGamesByPlayerUsername(String username)
-            List~Game~ findByWinnerUsername(String username)
-            List~Game~ findByEndDateIsNull()
-            List~Game~ findByEndDateGreaterThan(Date date)
-            List~Game~ findByStartDateNotNullAndEndDateIsNull()
-            List~Game~ findByEndDateNotNull()
-        }
+    namespace Persistence {
         class AchievementRepository {
-            List~Achievement~ findByUserAndType(User user, Class type)
-            List~Achievement~ findAllAchievementsByUserId(Integer id)
+            findByUserAndType(User user, Class~? extends Achievement~ type) List~Achievement~
+            findAllAchievementsByUserId(Integer id) List~Achievement~
         }
         class AuthoritiesRepository {
-            Optional~Authorities~ findByName(String auth)
+            findByName(String authority) Optional~Authorities~
+        }
+        class BadgeImageRepository {
+            findByType(AchievementType type) List~BadgeImage~
         }
         class CardRepository {
-            List~Card~ findByOwnerIsNullAndGameId(Integer gameId)
-            int countByGameAndOwnerIsNull(Game game)
-        }
-        class PlayerRepository {
-            Optional~Player~ findByUser_Username(String username)
-        }
-        class MessageRepository {
-            List~Message~ findByPlayer(Player player)
-            List~Message~ findByGame(Game game)
-        }
-        class UserRepository {
-            Optional~User~ findByUsername(String username)
-            Boolean existsByUsername(String username)
-            Optional~User~ findById(Integer id)
-            Iterable~User~ findAllByAuthority(String auth)
-            Page~User~ findPlayersByUsernameLike(String username, int currentId, Pageable pageable)
-        }
-        class BadgeImageRepository
-        class ImageRepository
-        class TurnRepository {
-            Player findTurnStorytellerById(Integer id)
-            List~Card~ findPlayedCardsById(Integer id)
+            findByGameId(Integer gameId) List~Card~
+            countByGameAndOwnerIsNull(Game game) int
         }
         class FriendRequestRepository {
-            List~FriendRequest~ findByReceiver(User receiver)
-            List~FriendRequest~ findBySender(User sender)
-            List~FriendRequest~ findByReceiverAndDateAcceptedNotNull(User receiver)
-            List~FriendRequest~ findBySenderAndDateAcceptedNotNull(User sender)
-            List~FriendRequest~ findBySenderAndDateAcceptedNull(User sender)
-            List~FriendRequest~ findByReceiverAndDateAcceptedNull(User receiver)
+            findByReceiver(User receiver) List~FriendRequest~
+            findBySender(User sender) List~FriendRequest~
+            findByReceiverAndDateAcceptedNotNull(User receiver) List~FriendRequest~
+            findBySenderAndDateAcceptedNotNull(User sender) List~FriendRequest~
+            findByReceiverAndDateAcceptedNull(User sender) List~FriendRequest~
+            findBySenderAndDateAcceptedNull(User sender) List~FriendRequest~
+            findBySenderAndReceiver(User sender, User receiver) Optional~FriendRequest~
         }
         class GameInvitationRepository {
-            List~GameInvitation~ findAllByInvited(User user)
+            findAllByInvited(User user) List~GameInvitation~
+            deleteUnavailableByInvited(User user) int
+            findByIdForUpdate(Integer id) Optional~GameInvitation~
         }
-        class StatisticsRepository
+        class GameRepository {
+            countByStartDateIsNotNullAndEndDateIsNull() long
+            countByStartDateIsNullAndEndDateIsNull() long
+            existsByIdAndLeaderUsername(Integer id, String username) boolean
+            existsByIdAndStartDateNotNullAndEndDateNull(Integer id) boolean
+            findByPassword(String password) Optional~Game~
+            findByIdForUpdate(Integer id) Optional~Game~
+            findGamesByPlayerUsername(String username) List~Game~
+            findGamesByWinnerUsername(String username) List~Game~
+            findByEndDateIsNotNull() List~Game~
+            findByStartDateNotNullAndEndDateIsNull() List~Game~
+            findByEndDateNotNull() List~Game~
+            findInterruptedForUpdate() List~Game~
+        }
+        class ImageRepository
+        class MessageRepository {
+            findByPlayer(Player player) List~Message~
+            findByGame(Game game) List~Message~
+        }
+        class PlayerRepository {
+            findByUser_Username(String username) Optional~Player~
+        }
+        class StatisticsRepository {
+            countCompletedGames() Long
+            countCompletedGamesByUserId(Integer userId) Long
+            averageGamesPerUser() Double
+            maximumGamesByUser() Long
+            totalDuration() Long
+            averageDuration() Double
+            maximumDuration() Long
+            minimumDuration() Long
+            totalDurationByUserId(Integer userId) Long
+            averageDurationByUserId(Integer userId) Double
+            minimumDurationByUserId(Integer userId) Long
+            maximumDurationByUserId(Integer userId) Long
+            totalUsersThatHavePlayed() Long
+            averagePlayersPerGame() Double
+            maximumPlayersInGame() Long
+            minimumPlayersInGame() Long
+            currentUsersPlaying() Long
+            findMostPlayedCardByUserId(Integer userId) Image
+            countWinsByUserId(Integer userId) Long
+            averagePointsPerGameByUserId(Integer userId) Double
+            totalPointsByUserId(Integer userId) Long
+            totalTrapVotesReceivedByUserId(Integer userId) Long
+            totalTurnsAsNormalPlayerByUserId(Integer userId) Long
+        }
+        class TurnRepository {
+            findTurnStorytellerById(Integer id) Player
+            findGameIdById(Integer id) Optional~Integer~
+            findFirstByGameIdOrderByIdDesc(Integer gameId) Optional~Turn~
+            findPlayedCardsById(Integer id) List~Card~
+        }
+        class UserRepository {
+            findByUsername(String username) Optional~User~
+            existsByUsername(String username) Boolean
+            findAllByAuthority(String auth) Iterable~User~
+            findPlayersByUsernameLike(String username, int currentId, Pageable pageable) Page~User~
+        }
+    }
+    namespace SecurityAndTransport {
+        class AccountPresence
+        class AuthTokenFilter
+        class GameCancellationNotifications
+        class GameEvent
+        class GamePresence
+        class JwtUtils
+        class SecurityConfiguration
+        class StompAccess
+        class UserDetailsServiceImpl
+        class WebSocketConfig
+    }
+    namespace Runtime {
+        class BootstrapAdmin
+        class InterruptedGameRecovery
+        class MaintenanceGate
+        class ProductionConfiguration
+        class ResetAdminPassword
+        class SingleInstanceConnections
+        class SpaConfiguration
     }
     AchievementService ..> AchievementRepository
     AchievementService ..> BadgeImageRepository
     AuthController ..> AchievementService
     AuthController ..> AuthService
+    AuthController ..> JwtUtils
     AuthController ..> UserService
     AuthService ..> AuthoritiesService
     AuthService ..> PlayerService
     AuthService ..> UserService
+    AuthTokenFilter ..> JwtUtils
+    AuthTokenFilter ..> UserDetailsServiceImpl
     AuthoritiesService ..> AuthoritiesRepository
-    AuthoritiesService ..> UserService
     CardService ..> CardRepository
     CardService ..> ImageRepository
-    FriendController ..> FriendRequestService
-    FriendController ..> UserService
     FriendRequestService ..> FriendRequestRepository
-    GameController ..> GameInvitationRepository
-    GameController ..> GameInvitationService
-    GameController ..> GameService
-    GameController ..> TurnService
-    GameController ..> UserService
+    FriendRestController ..> FriendRequestService
+    FriendRestController ..> UserService
+    GameInvitationService ..> FriendRequestService
     GameInvitationService ..> GameInvitationRepository
+    GameInvitationService ..> GameRepository
+    GameInvitationService ..> GameService
+    GameInvitationService ..> UserService
+    GamePresence ..> GameService
+    GameRestController ..> GameInvitationService
+    GameRestController ..> GameService
+    GameRestController ..> GameViews
+    GameRestController ..> TurnService
+    GameRestController ..> UserService
     GameService ..> AchievementService
     GameService ..> FriendRequestService
     GameService ..> GameRepository
     GameService ..> PlayerService
-    GameService ..> TurnRepository
     GameService ..> UserService
-    MessageController ..> GameService
-    MessageController ..> MessageService
-    MessageController ..> UserService
+    GameViews ..> GameRepository
+    GameViews ..> PlayerRepository
+    GameViews ..> TurnRepository
+    GameViews ..> UserService
+    InterruptedGameRecovery ..> GameService
+    InterruptedGameRecovery ..> MaintenanceGate
+    JwtUtils ..> UserService
+    MaintenanceController ..> GameRepository
+    MaintenanceController ..> MaintenanceGate
+    MaintenanceController ..> UserService
+    MessageRestController ..> GameService
+    MessageRestController ..> MessageService
+    MessageRestController ..> UserService
     MessageService ..> GameRepository
     MessageService ..> MessageRepository
     MessageService ..> PlayerRepository
-    PlayerController ..> PlayerService
-    PlayerController ..> UserService
     PlayerService ..> PlayerRepository
-    StatisticsController ..> StatisticsService
+    PresenceRestController ..> PresenceService
+    PresenceService ..> FriendRequestService
+    PresenceService ..> GameService
+    PresenceService ..> StompAccess
+    PresenceService ..> UserService
+    SecurityConfiguration ..> UserDetailsServiceImpl
+    StatisticsRestController ..> StatisticsService
     StatisticsService ..> StatisticsRepository
-    TurnController ..> TurnService
+    StompAccess ..> AccountPresence
+    StompAccess ..> GameEvent
+    StompAccess ..> GameService
+    StompAccess ..> JwtUtils
+    StompAccess ..> TurnRepository
+    StompAccess ..> UserDetailsServiceImpl
+    StompAccess ..> UserService
+    TurnRestController ..> GameViews
+    TurnRestController ..> TurnService
     TurnService ..> CardRepository
     TurnService ..> CardService
     TurnService ..> GameService
     TurnService ..> PlayerRepository
     TurnService ..> TurnRepository
-    UserController ..> AchievementService
-    UserController ..> AuthoritiesService
-    UserController ..> UserService
+    TurnService ..> UserService
+    UserDetailsServiceImpl ..> UserRepository
+    UserRestController ..> AchievementService
+    UserRestController ..> AuthoritiesService
+    UserRestController ..> UserService
+    UserService ..> AuthoritiesRepository
     UserService ..> FriendRequestService
+    UserService ..> GameInvitationRepository
     UserService ..> UserRepository
+    WebSocketConfig ..> StompAccess
+    React ..> SecurityConfiguration : REST
+    React ..> WebSocketConfig : STOMP via SockJS
+    WebSocketConfig ..> StompBroker : simple broker
+    StompBroker ..> React : change events
+    ProductionConfiguration ..> Database : runtime and migration data sources
