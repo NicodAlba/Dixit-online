@@ -4,10 +4,10 @@ Updated 2026-11-10. Budget **0 EUR**: no card, paid plan, addon, domain, disk or
 registry publication. One Spring Boot application serves React; Supabase Dixit
 Free provides PostgreSQL. Main/releases remain the owner's responsibility.
 
-## Current publication
+## Recorded publication
 
-Current service: `dixit-demo-20261110-f`, `srv-dbpka6qfngtc73do3fk0`.
-URL: https://dixit-demo-20261110-f.onrender.com
+Recorded service: `dixit-demo-20261110-f`, `srv-dbpka6qfngtc73do3fk0`.
+For the current public URL, see the [README](../../README.md). The deployment record below describes service F.
 Deployment: `dep-dbpka7afngtc73do3gdg`.
 Source: develop `f2602d988e6f87d5361989de9ef466d1103f8ad8`, integration CI
 [42852721720](https://github.com/NicodAlba/Dixit-online/actions/runs/42852721720)
@@ -139,9 +139,9 @@ stable data after replacement. Separate automated HTTP/WS from actual visual
 observations; inherited Phase 4 visual debt/mobile/other-network checks remain.
 
 ```sh
-node scripts/operations/public_acceptance.mjs --url https://APPROVED.onrender.com --private-output /private/demo-acceptance.json --acknowledge-fixtures --visual-pauses
-python3 scripts/operations/public_persistence.py --url https://APPROVED.onrender.com --fixture /private/demo-acceptance.json --save-baseline /private/demo-baseline.json
-python3 scripts/operations/public_persistence.py --url https://REPLACEMENT.onrender.com --fixture /private/demo-acceptance.json --compare /private/demo-baseline.json
+node scripts/operations/public_acceptance.mjs --url APPROVED_DEMO_URL --private-output /private/demo-acceptance.json --acknowledge-fixtures --visual-pauses
+python3 scripts/operations/public_persistence.py --url APPROVED_DEMO_URL --fixture /private/demo-acceptance.json --save-baseline /private/demo-baseline.json
+python3 scripts/operations/public_persistence.py --url REPLACEMENT_DEMO_URL --fixture /private/demo-acceptance.json --compare /private/demo-baseline.json
 ```
 
 Use supported Node 22 with the locked frontend ws dependency installed by npm ci.

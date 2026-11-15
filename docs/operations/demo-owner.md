@@ -1,67 +1,33 @@
-# Guía breve del propietario
+# Demo owner's guide
 
-## Abrir y jugar
+## Open the demo
 
-Demo: https://dixit-demo-20261110-f.onrender.com
+Use the current demo link in the [README](../../README.md), then choose **Create account** or **Log in**. The free server can take several minutes to wake after inactivity.
 
-Abre el enlace y utiliza **Create account** o **Log in**. No necesitas ejecutar
-la aplicación en tu ordenador; Render y Supabase siguen funcionando cuando lo
-apagas. Tras un rato sin visitas, el plan gratuito duerme el servidor: espera
-varios minutos al volver a abrirlo. No es un servicio con disponibilidad garantizada.
+Your administrator identity is stored locally in `~/.local/share/dixit-review/owner-admin-reference.txt`. Keep your password private. For recovery, follow the [Supabase runbook](supabase.md#forgotten-owner-administrator-password) with a recent verified backup.
 
-La identidad de tu administrador está en el archivo local protegido
-`~/.local/share/dixit-review/owner-admin-reference.txt`. La contraseña la elegiste
-tú con entrada oculta y no está guardada por el agente ni en Git. Conserva tu
-contraseña por un medio privado. Para recuperarla, pide al programador seguir el
-procedimiento con copia reciente de [Supabase](supabase.md); no pegues claves ni
-contraseñas en el chat.
+## Keep the service free
 
-## Mantener el coste en cero
+Use the existing free plans. Check shared quotas in Billing and the [Render free-plan documentation](https://render.com/docs/free). An inactive Supabase project can also pause. Check its dashboard if the application cannot start.
 
-Los servicios elegidos son Free. No añadas tarjeta, upgrades, discos, dominios,
-planes o addons de pago para resolver una suspensión. Las cuotas son compartidas
-con otros servicios de tu cuenta. Si se agotan, puede dejar de funcionar o no
-permitir nuevas construcciones. Consulta [los límites de Render](https://render.com/docs/free)
-y el panel Billing. Supabase Free también puede pausar proyectos inactivos;
-comprueba su panel si la aplicación no consigue arrancar tras una pausa prolongada.
+## Update or close admissions
 
-## Actualizar o hacer mantenimiento
+Follow the [Render replacement procedure](render-free.md). Avoid Manual Deploy, Restart or Rollback on the live service and leave the previous services suspended.
 
-**No pulses Manual Deploy, Restart o Rollback sobre la aplicación activa ni
-reanudes A, B o la sonda antigua.** El programador debe seguir
-[el procedimiento operativo](render-free.md), que comprueba la parada antes de
-arrancar el reemplazo. Cada actualización puede cambiar la URL, según lo acordado.
-
-Antes del mantenimiento, abre la URL actual y espera a que termine de despertar.
-En tu terminal puedes cerrar nuevas partidas con:
+Wake the current demo, verify the local launcher points to it, then run:
 
 ```sh
 /home/nico/.local/share/dixit-tools/close-demo-for-update
 ```
 
-Introduce tu usuario administrador y contraseña cuando se soliciten; la contraseña
-queda oculta. Exige `enabled: true` y `activeGameCount: 0`. Si hay partidas activas,
-deja que terminen. El programador debe comprobar copia/restauración y parada antes
-de sustituir el servicio. Si solo se hizo mantenimiento sin sustituirlo, el helper
-`open-demo-after-update` reabre el servicio actual con la misma autenticación.
-Los launchers locales apuntan al servicio F; deben actualizarse al cambiar de URL.
+Enter the administrator credentials in the terminal. The password input is hidden. Require `enabled: true` and `activeGameCount: 0` before replacing the service. Let any live games finish, verify the backup, and confirm the old process has stopped. For maintenance without a replacement, the `open-demo-after-update` helper reopens admissions. Update the private launchers when the service address changes.
 
-Los pushes y la CI de GitHub no publican automáticamente la aplicación. La
-publicación sigue siendo manual y supervisada; main y releases son tuyos.
+GitHub pushes do not trigger a deployment. The owner controls releases and promotion to `main`.
 
-## Copias y fallos
+## Backups and failures
 
-Las copias son manuales: eres responsable de una copia cifrada/restaurada antes
-de cambios y en días con actividad real, siguiendo supabase.md. Mantén clave de
-cifrado y JWT separados de la copia y conserva una copia protegida independiente
-del ordenador; esa custodia externa no se ha verificado. No hay backup gestionado
-gratuito asumido ni subida de dumps a GitHub.
+Keep a verified encrypted backup before changes and on days with real activity. Store the backup key and JWT key separately from the dump and keep a protected copy off the original machine. See the [Supabase runbook](supabase.md).
 
-Si cae el proceso, las cuentas y el historial están en Supabase. Las partidas
-interrumpidas se cancelan según la política aceptada: no se recuperan temporizadores
-ni conexiones en vivo. Si falla un reemplazo por protección de instancia única,
-el programador debe acreditar el cierre del anterior y reintentar; no desactivar
-la protección. Captura únicamente el mensaje de error, sin secretos.
+After a crash, the database retains accounts and history. The documented recovery policy cancels interrupted games. It cannot recreate live connections or timers. If a replacement is refused by the database guard, verify the previous process has stopped and then retry. Share only a sanitized error message.
 
-La validación visual completa heredada de Fase 4 y las pruebas desde otro dispositivo
-físico/red siguen limitadas. Esta guía no las da por realizadas.
+Visual checks on other browsers, networks and physical devices remain limited.

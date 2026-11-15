@@ -1,60 +1,23 @@
-# ADR-0006 — Aplicación única y PostgreSQL versionado
+# ADR-0006 — Single application and versioned PostgreSQL schema
 
-- Fecha: 2026-10-30.
-- Estado: aprobado expresamente por el propietario para preparación y pruebas
-  locales de una aplicación Spring+React con PostgreSQL 17 y Flyway. Hosting,
-  recursos externos, publicación y política de recuperación siguen pendientes.
-- Contexto/evidencia: DEV-055/056 y propuesta en docs/operations/production-proposal.md.
+Accepted on 2026-10-30 for local preparation and testing. See DEV-055/056. This decision preceded the hosting and restart-policy approvals.
 
-## Decisión
+## Decision
 
-Mantener una instancia Java 21/Spring Boot 3.5.5 que sirve el build React 18 en
-su JAR, con una base PostgreSQL separada. REST sigue ejecutando acciones y vistas
-por actor; STOMP/SockJS con broker simple invalida estados. JWT/BCrypt, servicios,
-JPA y las cinco ADR anteriores se conservan. No se añaden Supabase Auth/Realtime,
-Redis, microservicios o escalado horizontal.
+Run one Java 21 / Spring Boot 3.5.5 instance that serves the React 18 build from its JAR. Use a separate PostgreSQL 17 database. Keep JWT/BCrypt, REST actions and views, JPA, and the in-memory STOMP/SockJS broker. Supabase Auth, Realtime, Redis, microservices and horizontal scaling are outside this design.
 
-PostgreSQL 17 usa pgJDBC y Flyway OSS, Flyway gestionado por Boot 3.5.5 y override puntual pgJDBC 42.7.14 por los
-avisos de seguridad oficiales vigentes, sin actualización general de dependencias.
-Migraciones inmutables: esquema inicial acorde a JPA, catálogos sin cuentas y
-privilegios del rol runtime. Hibernate valida; no crea o actualiza el esquema de
-producción. H2 y data.sql académicos se conservan para desarrollo/pruebas y no
-son evidencia suficiente de compatibilidad PostgreSQL.
+Use Flyway OSS managed by Spring Boot and pin pgJDBC to 42.7.14 for the security fixes available at the time. Immutable migrations create the JPA-compatible schema, seed reference catalogs without accounts and grant runtime privileges. Hibernate validates the production schema. H2 and data.sql remain for local development and tests. The production package excludes data.sql and the original MySQL profile.
 
-El perfil prod valida configuración esencial antes de crear datasources/JWT:
-clave privada estable, PostgreSQL, credenciales separadas de migración/runtime,
-orígenes explícitos y prohibición de create-drop/semillas/consola/SQL detallado.
-El paquete de producción excluye data.sql y el perfil MySQL académico.
+Validate PostgreSQL connectivity settings, separate migration/runtime credentials, a stable private JWT key and explicit origins before creating production data and authentication components. Disable create-drop, seed loading, the H2 console and verbose SQL in production.
 
-## Alternativas y consecuencias
+## Alternatives and consequences
 
-Frontend estático separado aporta CDN y disponibilidad de Home mientras duerme
-Spring, a cambio de dos entregas/orígenes y coordinación adicional. Una aplicación
-reduce esa operación para la primera demo. H2 persistente o reemplazar únicamente
-la URL JDBC no acreditan dialecto, restricciones, secuencias o bloqueos.
+Static frontend hosting could serve the home page while Spring sleeps and add CDN caching. It would add a second release and origin to coordinate. A single application reduces operational work for the demo. Persisting H2 or merely swapping the JDBC URL would leave PostgreSQL constraints, sequences and locking unverified.
 
-Flyway mantiene el esquema dixit; el rol de aplicación no tiene DDL, escritura de
-catálogos ni acceso a la tabla de control. El arranque usa además credenciales de
-migración separadas: la revisión y autorización del cambio de esquema forman
-parte de cada publicación supervisada; estas credenciales no se incorporan al JAR.
-Aislar también el proceso de migración será una decisión operativa posterior si
-el proveedor autorizado lo permite o exige.
+Flyway owns schema changes. The runtime role cannot run DDL, write catalogs or modify Flyway history. Startup uses separate migration credentials supplied outside the JAR. Moving migrations to a separate process can be considered if the hosting model requires it.
 
-Persistir partidas no reconstruye timers/presencia/WebSockets. No se modifican
-partidas históricas durante el arranque. No se promete recuperación automática ni
-continuidad durante reinicio, caída, actualización o sustitución de instancia.
-La política de activas debe acordarse antes del despliegue; no se solapan instancias
-jugables independientes bajo un balanceador.
+Persisted games do not restore sockets, presence or timers. The first design left interrupted games unchanged and required a separate policy before deployment. ADR-0009 records the later decision. Keep independently playable instances from overlapping.
 
-El presupuesto aprobado es 0 €. Render/Neon/Supabase son candidatos comparados,
-no proveedores elegidos; sus cuotas/suspensión impiden prometer un servicio siempre
-disponible. Docker queda propuesto si se aprueba Render, cuyo runtime no incluye
-Java; no es requisito de esta decisión ni está implementado por esta ADR.
+The approved budget was €0. Render, Neon and Supabase were compared. Docker was proposed for Render. ADR-0007 subsequently approved Supabase Free for the database. Visual acceptance remained outstanding; HTTP and database tests do not replace it.
 
-Recorrido: **feature/production-foundation → PR → develop**. Main, releases y
-publicación permanecen bajo control del propietario. La deuda visual DEV-053/054
-continúa explícita; pruebas HTTP y de base de datos no la sustituyen.
-
-Actualización de proveedor aprobada el 30 de octubre de 2026: ADR-0007 elige
-Supabase Free. La comparación histórica anterior no implica mantener abierta
-esa elección; hosting de aplicación/publicación siguen pendientes.
+Delivery: feature/production-foundation → PR → develop.

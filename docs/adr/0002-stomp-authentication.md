@@ -1,9 +1,13 @@
-# ADR-0002 — Autenticar STOMP con el JWT existente
+# ADR-0002 — Authenticate STOMP with the existing JWT
 
-- Fecha: 2026-10-23. Estado: aceptado e implementado en U4 (DEV-021), dentro de U1–U5 autorizadas por el propietario.
-- Contexto: enviar Authorization desde React no autenticaba CONNECT; el broker permitía suscripciones ajenas y SEND de estados. REST sigue siendo el transporte de acciones; se mantienen SockJS, el broker simple y los destinos existentes.
-- Decisión: validar firma/caducidad y cuenta al conectar, asociar un principal confiable, autorizar solo topics concretos de partidas/turnos por pertenencia y volver a comprobar token/cuenta/pertenencia antes de entregar mensajes. Denegar SEND de clientes. Una sala eliminada admite exclusivamente su señal mínima de borrado para suscriptores antes autorizados; no admite una entidad como excepción. Limpiar estado de conexión al desconectar.
-- Clave: la clave fija publicada permitía firmar tokens válidos; se retira como valor predeterminado. DIXIT_JWT_SECRET admite una clave privada Base64 de al menos 64 bytes. Sin configuración, desarrollo genera 64 bytes aleatorios en memoria y las sesiones caducan al reiniciar. No cambia JWT, algoritmo, rutas de login ni se añade proveedor/broker/dependencia. Una instalación que necesite sesiones entre reinicios debe conservar la clave fuera de Git; cualquier clave publicada anteriormente debe considerarse comprometida.
-- Alternativas: proteger solo CONNECT permitiría seguir recibiendo tras caducidad/baja de pertenencia; autenticar solo el handshake no cubre las cabeceras STOMP de SockJS. No se eligen sesiones HTTP, OAuth ni destinos privados nuevos para esta frontera.
-- Consecuencias: lobby envía JWT en CONNECT y se retira el debug de frames. Pruebas de transporte se sincronizan con suscripciones instaladas en el broker, sin publicar ecos desde el cliente. La protección entre participantes y el cambio a invalidaciones mínimas/vistas REST por actor se implementan en U5; esta ADR no los presenta terminados.
-- Límites: no se añade lista global de revocación de JWT por cambio de contraseña; se conserva su caducidad y se revisan existencia y pertenencia. Configuración de desarrollo (H2, create-drop, orígenes) no equivale a despliegue aprobado. Evidencia y resultados en DEV-021. Recorrido: fix/stomp-permissions → PR → develop; main corresponde al propietario.
+Accepted and implemented on 2026-10-23 in U4 (DEV-021).
+
+The HTTP Authorization header did not authenticate STOMP CONNECT. The broker previously accepted subscriptions and client-sent state without the required checks. Keep the existing SockJS transport, simple broker and destinations, with REST handling game actions.
+
+Validate the JWT signature and expiry and resolve the account on CONNECT. Bind the authenticated principal, restrict game and turn subscriptions to eligible users, and recheck token, account and access before delivering messages. Deny client SEND frames. For a deleted lobby, previously authorized subscribers may receive only its minimal deletion notice. Clear connection state on disconnect.
+
+Remove the fixed signing-key default. `DIXIT_JWT_SECRET` accepts a private Base64 key of at least 64 bytes. Development generates an ephemeral key when none is configured. Deployments that need sessions across restarts must keep a stable private key outside Git. Treat previously published signing keys as compromised.
+
+The React lobby sends the JWT on CONNECT and omits frame debug output. Transport tests wait for broker subscriptions and use server events. STOMP authentication alone does not filter private game state among legitimate players. See ADR-0003. Password changes do not immediately revoke every JWT.
+
+Delivery: fix/stomp-permissions → PR → develop.
